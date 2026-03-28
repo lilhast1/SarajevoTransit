@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: vehicle-service
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sarajevo_transit_vehicle
+    username: postgres
+    password: yourpassword
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # 'update' automatically creates/modifies tables based on your Java classes.
+      # Similar to EF Core's automatic migrations during development.
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
