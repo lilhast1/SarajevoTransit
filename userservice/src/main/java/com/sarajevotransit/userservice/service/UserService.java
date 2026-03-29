@@ -18,6 +18,7 @@ import com.sarajevotransit.userservice.model.LoyaltyTransaction;
 import com.sarajevotransit.userservice.model.NotificationChannel;
 import com.sarajevotransit.userservice.model.ThemeMode;
 import com.sarajevotransit.userservice.model.LanguageCode;
+import com.sarajevotransit.userservice.model.DigitalWallet;
 import com.sarajevotransit.userservice.model.TicketPurchaseHistoryEntry;
 import com.sarajevotransit.userservice.model.TravelHistoryEntry;
 import com.sarajevotransit.userservice.model.UserPreference;
@@ -69,7 +70,9 @@ public class UserService {
         user.setFullName(request.fullName().trim());
         user.setEmail(normalizedEmail);
         user.setPasswordHash(hashPassword(request.password()));
-        user.setLoyaltyPointsBalance(0);
+        DigitalWallet wallet = new DigitalWallet();
+        wallet.setLoyaltyPointsTotal(0);
+        user.setWallet(wallet);
 
         UserPreference preference = new UserPreference();
         preference.setLanguageCode(request.languageCode() != null ? request.languageCode() : LanguageCode.BS);
@@ -300,8 +303,12 @@ public class UserService {
                 transaction.getId(),
                 transaction.getTransactionType(),
                 transaction.getPoints(),
+                transaction.getPointsEarned() == null ? 0 : transaction.getPointsEarned(),
+                transaction.getPointsSpent() == null ? 0 : transaction.getPointsSpent(),
                 transaction.getDescription(),
                 transaction.getReferenceType(),
+                transaction.getTransactionId(),
+                transaction.getExpiryDate(),
                 transaction.getCreatedAt());
     }
 }

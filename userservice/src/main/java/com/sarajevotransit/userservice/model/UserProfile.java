@@ -3,6 +3,8 @@ package com.sarajevotransit.userservice.model;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,30 +20,38 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "user_profiles")
+@Table(name = "users")
 public class UserProfile {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
     private Long id;
 
-    @Column(nullable = false)
-    private String fullName;
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
+
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(nullable = false)
-    private Integer loyaltyPointsBalance = 0;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    private UserRole role = UserRole.PASSENGER;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private DigitalWallet wallet;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private UserPreference preference;
@@ -60,8 +70,11 @@ public class UserProfile {
         LocalDateTime now = LocalDateTime.now();
         this.createdAt = now;
         this.updatedAt = now;
-        if (this.loyaltyPointsBalance == null) {
-            this.loyaltyPointsBalance = 0;
+        if (this.role == null) {
+            this.role = UserRole.PASSENGER;
+        }
+        if (this.wallet == null) {
+            setWallet(new DigitalWallet());
         }
     }
 
@@ -74,6 +87,13 @@ public class UserProfile {
         this.preference = preference;
         if (preference != null) {
             preference.setUser(this);
+        }
+    }
+
+    public void setWallet(DigitalWallet wallet) {
+        this.wallet = wallet;
+        if (wallet != null) {
+            wallet.setUser(this);
         }
     }
 
@@ -101,11 +121,38 @@ public class UserProfile {
     }
 
     public String getFullName() {
-        return fullName;
+        String left = this.firstName == null ? "" : this.firstName.trim();
+        String right = this.lastName == null ? "" : this.lastName.trim();
+        return (left + " " + right).trim();
     }
 
     public void setFullName(String fullName) {
-        this.fullName = fullName;
+        String normalized = fullName == null ? "" : fullName.trim();
+        if (normalized.isEmpty()) {
+            this.firstName = "Unknown";
+            this.lastName = "User";
+            return;
+        }
+
+        String[] tokens = normalized.split("\\s+", 2);
+        this.firstName = tokens[0];
+        this.lastName = tokens.length > 1 ? tokens[1] : "";
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     public String getEmail() {
@@ -125,11 +172,25 @@ public class UserProfile {
     }
 
     public Integer getLoyaltyPointsBalance() {
-        return loyaltyPointsBalance;
+        if (wallet == null || wallet.getLoyaltyPointsTotal() == null) {
+            return 0;
+        }
+        return wallet.getLoyaltyPointsTotal();
     }
 
     public void setLoyaltyPointsBalance(Integer loyaltyPointsBalance) {
-        this.loyaltyPointsBalance = loyaltyPointsBalance;
+        if (this.wallet == null) {
+            setWallet(new DigitalWallet());
+        }
+        this.wallet.setLoyaltyPointsTotal(loyaltyPointsBalance == null ? 0 : loyaltyPointsBalance);
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -150,6 +211,10 @@ public class UserProfile {
 
     public UserPreference getPreference() {
         return preference;
+    }
+
+    public DigitalWallet getWallet() {
+        return wallet;
     }
 
     public List<TravelHistoryEntry> getTravelHistoryEntries() {

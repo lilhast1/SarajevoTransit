@@ -2,8 +2,6 @@ package com.sarajevotransit.userservice.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -13,34 +11,41 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "loyalty_transactions")
+@Table(name = "loyalty_points")
 public class LoyaltyTransaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "point_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private UserProfile user;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private LoyaltyTransactionType transactionType;
+    @Column(name = "transaction_id")
+    private Long transactionId;
 
-    @Column(nullable = false)
-    private Integer points;
+    @Column(name = "points_earned", nullable = false)
+    private Integer pointsEarned = 0;
+
+    @Column(name = "points_spent", nullable = false)
+    private Integer pointsSpent = 0;
+
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
 
     @Column(nullable = false)
     private String description;
 
-    @Column(nullable = false)
+    @Column(name = "reference_type", nullable = false)
     private String referenceType;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -66,20 +71,50 @@ public class LoyaltyTransaction {
         this.user = user;
     }
 
-    public LoyaltyTransactionType getTransactionType() {
-        return transactionType;
+    public Long getTransactionId() {
+        return transactionId;
     }
 
-    public void setTransactionType(LoyaltyTransactionType transactionType) {
-        this.transactionType = transactionType;
+    public void setTransactionId(Long transactionId) {
+        this.transactionId = transactionId;
+    }
+
+    public Integer getPointsEarned() {
+        return pointsEarned;
+    }
+
+    public void setPointsEarned(Integer pointsEarned) {
+        this.pointsEarned = pointsEarned;
+    }
+
+    public Integer getPointsSpent() {
+        return pointsSpent;
+    }
+
+    public void setPointsSpent(Integer pointsSpent) {
+        this.pointsSpent = pointsSpent;
+    }
+
+    public LocalDate getExpiryDate() {
+        return expiryDate;
+    }
+
+    public void setExpiryDate(LocalDate expiryDate) {
+        this.expiryDate = expiryDate;
+    }
+
+    public LoyaltyTransactionType getTransactionType() {
+        if (pointsSpent != null && pointsSpent > 0) {
+            return LoyaltyTransactionType.REDEEM;
+        }
+        return LoyaltyTransactionType.EARN;
     }
 
     public Integer getPoints() {
-        return points;
-    }
-
-    public void setPoints(Integer points) {
-        this.points = points;
+        if (pointsSpent != null && pointsSpent > 0) {
+            return pointsSpent;
+        }
+        return pointsEarned == null ? 0 : pointsEarned;
     }
 
     public String getDescription() {

@@ -5,6 +5,7 @@ import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyRedeemRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyTransactionResponse;
 import com.sarajevotransit.userservice.exception.InsufficientLoyaltyPointsException;
+import com.sarajevotransit.userservice.model.DigitalWallet;
 import com.sarajevotransit.userservice.model.LoyaltyTransaction;
 import com.sarajevotransit.userservice.model.LoyaltyTransactionType;
 import com.sarajevotransit.userservice.model.UserProfile;
@@ -34,41 +35,44 @@ public class LoyaltyService {
     @Transactional
     public LoyaltyBalanceResponse earnPoints(Long userId, LoyaltyEarnRequest request) {
         UserProfile user = userService.findUserById(userId);
+        DigitalWallet wallet = getOrCreateWallet(user);
         if (request.points() <= 0) {
             throw new IllegalArgumentException("Points to earn must be greater than zero.");
         }
 
-        user.setLoyaltyPointsBalance(user.getLoyaltyPointsBalance() + request.points());
+        wallet.setLoyaltyPointsTotal(wallet.getLoyaltyPointsTotal() + request.points());
         createTransaction(user, LoyaltyTransactionType.EARN, request.points(), request.description(),
                 request.referenceType());
         userProfileRepository.save(user);
 
-        return new LoyaltyBalanceResponse(user.getId(), user.getLoyaltyPointsBalance());
+        return new LoyaltyBalanceResponse(user.getId(), wallet.getLoyaltyPointsTotal());
     }
 
     @Transactional
     public LoyaltyBalanceResponse redeemPoints(Long userId, LoyaltyRedeemRequest request) {
         UserProfile user = userService.findUserById(userId);
+        DigitalWallet wallet = getOrCreateWallet(user);
         if (request.points() <= 0) {
             throw new IllegalArgumentException("Points to redeem must be greater than zero.");
         }
 
-        if (user.getLoyaltyPointsBalance() < request.points()) {
+        if (wallet.getLoyaltyPointsTotal() < request.points()) {
             throw new InsufficientLoyaltyPointsException("User does not have enough loyalty points for redemption.");
         }
 
-        user.setLoyaltyPointsBalance(user.getLoyaltyPointsBalance() - request.points());
+        wallet.setLoyaltyPointsTotal(wallet.getLoyaltyPointsTotal() - request.points());
         createTransaction(user, LoyaltyTransactionType.REDEEM, request.points(), request.description(),
                 request.referenceType());
         userProfileRepository.save(user);
 
-        return new LoyaltyBalanceResponse(user.getId(), user.getLoyaltyPointsBalance());
+        return new LoyaltyBalanceResponse(user.getId(), wallet.getLoyaltyPointsTotal());
     }
 
     @Transactional(readOnly = true)
     public LoyaltyBalanceResponse getBalance(Long userId) {
         UserProfile user = userService.findUserById(userId);
-        return new LoyaltyBalanceResponse(user.getId(), user.getLoyaltyPointsBalance());
+        DigitalWallet wallet = getOrCreateWallet(user);
+        return new LoyaltyBalanceResponse(user.getId(), wallet.getLoyaltyPointsTotal());
     }
 
     @Transactional(readOnly = true)
@@ -83,11 +87,26 @@ public class LoyaltyService {
     private void createTransaction(UserProfile user, LoyaltyTransactionType type, int points, String description,
             String referenceType) {
         LoyaltyTransaction transaction = new LoyaltyTransaction();
-        transaction.setTransactionType(type);
-        transaction.setPoints(points);
+        if (type == LoyaltyTransactionType.REDEEM) {
+            transaction.setPointsSpent(points);
+            transaction.setPointsEarned(0);
+        } else {
+            transaction.setPointsEarned(points);
+            transaction.setPointsSpent(0);
+        }
         transaction.setDescription(description.trim());
         transaction.setReferenceType(referenceType.trim());
         user.addLoyaltyTransaction(transaction);
         loyaltyTransactionRepository.save(transaction);
+    }
+
+    private DigitalWallet getOrCreateWallet(UserProfile user) {
+        if (user.getWallet() == null) {
+            user.setWallet(new DigitalWallet());
+        }
+        if (user.getWallet().getLoyaltyPointsTotal() == null) {
+            user.getWallet().setLoyaltyPointsTotal(0);
+        }
+        return user.getWallet();
     }
 }
