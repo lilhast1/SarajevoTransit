@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/sarajevo_transit_vehicle
     username: postgres
-    password: yourpassword
+    password: buzabuzabuza
     driver-class-name: org.postgresql.Driver
 
   jpa:
