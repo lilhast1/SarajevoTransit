@@ -26,19 +26,19 @@ public class ProblemReportService {
         boolean hasVehicleReference = request.getVehicleId() != null
                 || StringUtils.hasText(request.getVehicleRegistrationNumber())
                 || StringUtils.hasText(request.getVehicleInternalId());
-        if (!hasVehicleReference && !StringUtils.hasText(request.getStationCode())) {
+        if (!hasVehicleReference && request.getStationId() == null) {
             throw new BadRequestException(
-                    "At least one of vehicleId/vehicleRegistrationNumber/vehicleInternalId or stationCode must be provided.");
+                    "At least one of vehicleId/vehicleRegistrationNumber/vehicleInternalId or stationId must be provided.");
         }
 
         ProblemReport entity = new ProblemReport();
         entity.setReporterUserId(request.getReporterUserId());
-        entity.setLineCode(trimToNull(request.getLineCode()));
+        entity.setLineId(request.getLineId());
         entity.setVehicleId(request.getVehicleId());
         entity.setVehicleRegistrationNumber(trimToNull(request.getVehicleRegistrationNumber()));
         entity.setVehicleInternalId(trimToNull(request.getVehicleInternalId()));
         entity.setVehicleType(normalizeVehicleType(request.getVehicleType()));
-        entity.setStationCode(trimToNull(request.getStationCode()));
+        entity.setStationId(request.getStationId());
         entity.setCategory(request.getCategory());
         entity.setDescription(request.getDescription().trim());
         entity.setPhotoUrls(request.getPhotoUrls());
@@ -80,12 +80,12 @@ public class ProblemReportService {
         ProblemReportResponse response = new ProblemReportResponse();
         response.setId(entity.getId());
         response.setReporterUserId(entity.getReporterUserId());
-        response.setLineCode(entity.getLineCode());
+        response.setLineId(entity.getLineId());
         response.setVehicleId(entity.getVehicleId());
         response.setVehicleRegistrationNumber(entity.getVehicleRegistrationNumber());
         response.setVehicleInternalId(entity.getVehicleInternalId());
         response.setVehicleType(entity.getVehicleType());
-        response.setStationCode(entity.getStationCode());
+        response.setStationId(entity.getStationId());
         response.setCategory(entity.getCategory());
         response.setDescription(entity.getDescription());
         response.setPhotoUrls(entity.getPhotoUrls());

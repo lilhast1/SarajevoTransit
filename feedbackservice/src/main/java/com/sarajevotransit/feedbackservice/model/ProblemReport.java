@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -19,18 +20,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "problem_reports")
+@Table(name = "incident_reports", indexes = {
+        @Index(name = "idx_incident_reports_status_created", columnList = "status, createdAt"),
+        @Index(name = "idx_incident_reports_user_created", columnList = "user_id, createdAt"),
+        @Index(name = "idx_incident_reports_line", columnList = "line_id"),
+        @Index(name = "idx_incident_reports_station", columnList = "station_id"),
+        @Index(name = "idx_incident_reports_vehicle", columnList = "vehicle_id")
+})
 public class ProblemReport {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "report_id")
     private Long id;
 
-    @Column(name = "reporter_user_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long reporterUserId;
 
-    @Column(name = "line_code", length = 40)
-    private String lineCode;
+    @Column(name = "line_id")
+    private Long lineId;
 
     @Column(name = "vehicle_id")
     private Long vehicleId;
@@ -44,8 +52,8 @@ public class ProblemReport {
     @Column(name = "vehicle_type", length = 30)
     private String vehicleType;
 
-    @Column(name = "station_code", length = 60)
-    private String stationCode;
+    @Column(name = "station_id")
+    private Long stationId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
@@ -55,7 +63,7 @@ public class ProblemReport {
     private String description;
 
     @ElementCollection
-    @CollectionTable(name = "problem_report_photos", joinColumns = @JoinColumn(name = "problem_report_id"))
+    @CollectionTable(name = "incident_report_photos", joinColumns = @JoinColumn(name = "incident_report_id"))
     @Column(name = "photo_url", length = 500)
     private List<String> photoUrls = new ArrayList<>();
 
@@ -97,12 +105,12 @@ public class ProblemReport {
         this.reporterUserId = reporterUserId;
     }
 
-    public String getLineCode() {
-        return lineCode;
+    public Long getLineId() {
+        return lineId;
     }
 
-    public void setLineCode(String lineCode) {
-        this.lineCode = lineCode;
+    public void setLineId(Long lineId) {
+        this.lineId = lineId;
     }
 
     public Long getVehicleId() {
@@ -137,12 +145,12 @@ public class ProblemReport {
         this.vehicleType = vehicleType;
     }
 
-    public String getStationCode() {
-        return stationCode;
+    public Long getStationId() {
+        return stationId;
     }
 
-    public void setStationCode(String stationCode) {
-        this.stationCode = stationCode;
+    public void setStationId(Long stationId) {
+        this.stationId = stationId;
     }
 
     public ProblemCategory getCategory() {

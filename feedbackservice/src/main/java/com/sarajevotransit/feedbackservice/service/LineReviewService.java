@@ -36,7 +36,7 @@ public class LineReviewService {
 
         LineReview entity = new LineReview();
         entity.setReviewerUserId(request.getReviewerUserId());
-        entity.setLineCode(request.getLineCode().trim());
+        entity.setLineId(request.getLineId());
         entity.setRating(request.getRating());
         entity.setReviewText(trimToNull(request.getReviewText()));
         entity.setRideDate(request.getRideDate());
@@ -46,12 +46,12 @@ public class LineReviewService {
         return toResponse(saved);
     }
 
-    public List<LineReviewResponse> getReviewsByLine(String lineCode, boolean includeHidden) {
+    public List<LineReviewResponse> getReviewsByLine(Long lineId, boolean includeHidden) {
         List<LineReview> reviews;
         if (includeHidden) {
-            reviews = lineReviewRepository.findByLineCodeOrderByCreatedAtDesc(lineCode);
+            reviews = lineReviewRepository.findByLineIdOrderByCreatedAtDesc(lineId);
         } else {
-            reviews = lineReviewRepository.findByLineCodeAndModerationStatusOrderByCreatedAtDesc(lineCode,
+            reviews = lineReviewRepository.findByLineIdAndModerationStatusOrderByCreatedAtDesc(lineId,
                     ModerationStatus.VISIBLE);
         }
         return reviews.stream().map(this::toResponse).toList();
@@ -69,18 +69,18 @@ public class LineReviewService {
         return lineReviewRepository.fetchVisibleLineRatingSummaries();
     }
 
-    public LineRatingSummaryResponse getVisibleSummaryByLineCode(String lineCode) {
-        return lineReviewRepository.fetchVisibleSummaryByLineCode(lineCode)
+    public LineRatingSummaryResponse getVisibleSummaryByLineId(Long lineId) {
+        return lineReviewRepository.fetchVisibleSummaryByLineId(lineId)
                 .stream()
                 .findFirst()
-                .orElse(new LineRatingSummaryResponse(lineCode, 0.0, 0L));
+                .orElse(new LineRatingSummaryResponse(lineId, 0.0, 0L));
     }
 
     private LineReviewResponse toResponse(LineReview entity) {
         LineReviewResponse response = new LineReviewResponse();
         response.setId(entity.getId());
         response.setReviewerUserId(entity.getReviewerUserId());
-        response.setLineCode(entity.getLineCode());
+        response.setLineId(entity.getLineId());
         response.setRating(entity.getRating());
         response.setReviewText(entity.getReviewText());
         response.setRideDate(entity.getRideDate());

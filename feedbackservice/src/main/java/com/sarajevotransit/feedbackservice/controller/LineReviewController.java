@@ -6,6 +6,7 @@ import com.sarajevotransit.feedbackservice.dto.LineReviewResponse;
 import com.sarajevotransit.feedbackservice.dto.ReviewModerationRequest;
 import com.sarajevotransit.feedbackservice.service.LineReviewService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -37,9 +38,9 @@ public class LineReviewController {
 
     @GetMapping
     public List<LineReviewResponse> getReviews(
-            @RequestParam String lineCode,
+            @RequestParam @Positive Long lineId,
             @RequestParam(defaultValue = "false") boolean includeHidden) {
-        return lineReviewService.getReviewsByLine(lineCode, includeHidden);
+        return lineReviewService.getReviewsByLine(lineId, includeHidden);
     }
 
     @PatchMapping("/{id}/moderation-status")
@@ -54,8 +55,8 @@ public class LineReviewController {
         return lineReviewService.getAllVisibleSummaries();
     }
 
-    @GetMapping("/summary/{lineCode}")
-    public LineRatingSummaryResponse getVisibleSummaryByLine(@PathVariable String lineCode) {
-        return lineReviewService.getVisibleSummaryByLineCode(lineCode);
+    @GetMapping("/summary/{lineId}")
+    public LineRatingSummaryResponse getVisibleSummaryByLine(@PathVariable @Positive Long lineId) {
+        return lineReviewService.getVisibleSummaryByLineId(lineId);
     }
 }

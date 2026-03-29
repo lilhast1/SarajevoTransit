@@ -24,7 +24,7 @@ public class DataInitializer {
             if (problemReportRepository.count() == 0) {
                 ProblemReport report1 = new ProblemReport();
                 report1.setReporterUserId(1001L);
-                report1.setLineCode("TRAM-3");
+                report1.setLineId(3L);
                 report1.setVehicleId(304L);
                 report1.setVehicleRegistrationNumber("A12-E-345");
                 report1.setVehicleInternalId("304");
@@ -36,8 +36,8 @@ public class DataInitializer {
 
                 ProblemReport report2 = new ProblemReport();
                 report2.setReporterUserId(1002L);
-                report2.setLineCode("BUS-31E");
-                report2.setStationCode("SKENDERIJA");
+                report2.setLineId(31L);
+                report2.setStationId(10L);
                 report2.setCategory(ProblemCategory.HYGIENE);
                 report2.setDescription("Bus stop area was unclean and had overflowing trash bins.");
                 report2.setStatus(ReportStatus.IN_PROGRESS);
@@ -48,7 +48,7 @@ public class DataInitializer {
             if (lineReviewRepository.count() == 0) {
                 LineReview review1 = new LineReview();
                 review1.setReviewerUserId(2001L);
-                review1.setLineCode("TRAM-3");
+                review1.setLineId(3L);
                 review1.setRating(5);
                 review1.setReviewText("Very reliable line and good frequency in peak hours.");
                 review1.setRideDate(LocalDate.now().minusDays(3));
@@ -56,7 +56,7 @@ public class DataInitializer {
 
                 LineReview review2 = new LineReview();
                 review2.setReviewerUserId(2002L);
-                review2.setLineCode("BUS-31E");
+                review2.setLineId(31L);
                 review2.setRating(3);
                 review2.setReviewText("Service was acceptable, but delay was around 10 minutes.");
                 review2.setRideDate(LocalDate.now().minusDays(7));

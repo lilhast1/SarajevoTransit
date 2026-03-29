@@ -9,7 +9,7 @@ public class LineReviewResponse {
 
     private Long id;
     private Long reviewerUserId;
-    private String lineCode;
+    private Long lineId;
     private Integer rating;
     private String reviewText;
     private LocalDate rideDate;
@@ -33,12 +33,12 @@ public class LineReviewResponse {
         this.reviewerUserId = reviewerUserId;
     }
 
-    public String getLineCode() {
-        return lineCode;
+    public Long getLineId() {
+        return lineId;
     }
 
-    public void setLineCode(String lineCode) {
-        this.lineCode = lineCode;
+    public void setLineId(Long lineId) {
+        this.lineId = lineId;
     }
 
     public Integer getRating() {

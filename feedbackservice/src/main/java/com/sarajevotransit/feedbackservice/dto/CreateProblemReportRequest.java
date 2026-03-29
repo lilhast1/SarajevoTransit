@@ -14,8 +14,8 @@ public class CreateProblemReportRequest {
     @NotNull
     private Long reporterUserId;
 
-    @Size(max = 40)
-    private String lineCode;
+    @Positive
+    private Long lineId;
 
     @Positive
     private Long vehicleId;
@@ -29,8 +29,8 @@ public class CreateProblemReportRequest {
     @Size(max = 30)
     private String vehicleType;
 
-    @Size(max = 60)
-    private String stationCode;
+    @Positive
+    private Long stationId;
 
     @NotNull
     private ProblemCategory category;
@@ -49,12 +49,12 @@ public class CreateProblemReportRequest {
         this.reporterUserId = reporterUserId;
     }
 
-    public String getLineCode() {
-        return lineCode;
+    public Long getLineId() {
+        return lineId;
     }
 
-    public void setLineCode(String lineCode) {
-        this.lineCode = lineCode;
+    public void setLineId(Long lineId) {
+        this.lineId = lineId;
     }
 
     public Long getVehicleId() {
@@ -89,12 +89,12 @@ public class CreateProblemReportRequest {
         this.vehicleType = vehicleType;
     }
 
-    public String getStationCode() {
-        return stationCode;
+    public Long getStationId() {
+        return stationId;
     }
 
-    public void setStationCode(String stationCode) {
-        this.stationCode = stationCode;
+    public void setStationId(Long stationId) {
+        this.stationId = stationId;
     }
 
     public ProblemCategory getCategory() {

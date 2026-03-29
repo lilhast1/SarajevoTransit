@@ -2,8 +2,8 @@ package com.sarajevotransit.feedbackservice.dto;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -13,9 +13,9 @@ public class CreateLineReviewRequest {
     @NotNull
     private Long reviewerUserId;
 
-    @NotBlank
-    @Size(max = 40)
-    private String lineCode;
+    @NotNull
+    @Positive
+    private Long lineId;
 
     @NotNull
     @Min(1)
@@ -36,12 +36,12 @@ public class CreateLineReviewRequest {
         this.reviewerUserId = reviewerUserId;
     }
 
-    public String getLineCode() {
-        return lineCode;
+    public Long getLineId() {
+        return lineId;
     }
 
-    public void setLineCode(String lineCode) {
-        this.lineCode = lineCode;
+    public void setLineId(Long lineId) {
+        this.lineId = lineId;
     }
 
     public Integer getRating() {

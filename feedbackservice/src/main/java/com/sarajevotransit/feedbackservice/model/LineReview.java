@@ -7,31 +7,39 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Check;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "line_reviews")
+@Table(name = "reviews", indexes = {
+        @Index(name = "idx_reviews_line_created", columnList = "line_id, createdAt"),
+        @Index(name = "idx_reviews_line_moderation_created", columnList = "line_id, moderation_status, createdAt"),
+        @Index(name = "idx_reviews_user_created", columnList = "user_id, createdAt")
+})
+@Check(constraints = "rating between 1 and 5")
 public class LineReview {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "review_id")
     private Long id;
 
-    @Column(name = "reviewer_user_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long reviewerUserId;
 
-    @Column(name = "line_code", nullable = false, length = 40)
-    private String lineCode;
+    @Column(name = "line_id", nullable = false)
+    private Long lineId;
 
     @Column(nullable = false)
     private Integer rating;
 
-    @Column(name = "review_text", length = 1500)
+    @Column(name = "comment", length = 1500)
     private String reviewText;
 
     @Column(name = "ride_date", nullable = false)
@@ -75,12 +83,12 @@ public class LineReview {
         this.reviewerUserId = reviewerUserId;
     }
 
-    public String getLineCode() {
-        return lineCode;
+    public Long getLineId() {
+        return lineId;
     }
 
-    public void setLineCode(String lineCode) {
-        this.lineCode = lineCode;
+    public void setLineId(Long lineId) {
+        this.lineId = lineId;
     }
 
     public Integer getRating() {

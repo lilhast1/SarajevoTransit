@@ -2,25 +2,25 @@ package com.sarajevotransit.feedbackservice.dto;
 
 public class LineRatingSummaryResponse {
 
-    private String lineCode;
+    private Long lineId;
     private Double averageRating;
     private Long totalReviews;
 
     public LineRatingSummaryResponse() {
     }
 
-    public LineRatingSummaryResponse(String lineCode, Double averageRating, Long totalReviews) {
-        this.lineCode = lineCode;
+    public LineRatingSummaryResponse(Long lineId, Double averageRating, Long totalReviews) {
+        this.lineId = lineId;
         this.averageRating = averageRating;
         this.totalReviews = totalReviews;
     }
 
-    public String getLineCode() {
-        return lineCode;
+    public Long getLineId() {
+        return lineId;
     }
 
-    public void setLineCode(String lineCode) {
-        this.lineCode = lineCode;
+    public void setLineId(Long lineId) {
+        this.lineId = lineId;
     }
 
     public Double getAverageRating() {

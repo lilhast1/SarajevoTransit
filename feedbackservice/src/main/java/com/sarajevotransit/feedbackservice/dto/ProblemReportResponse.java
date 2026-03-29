@@ -10,12 +10,12 @@ public class ProblemReportResponse {
 
     private Long id;
     private Long reporterUserId;
-    private String lineCode;
+    private Long lineId;
     private Long vehicleId;
     private String vehicleRegistrationNumber;
     private String vehicleInternalId;
     private String vehicleType;
-    private String stationCode;
+    private Long stationId;
     private ProblemCategory category;
     private String description;
     private List<String> photoUrls;
@@ -39,12 +39,12 @@ public class ProblemReportResponse {
         this.reporterUserId = reporterUserId;
     }
 
-    public String getLineCode() {
-        return lineCode;
+    public Long getLineId() {
+        return lineId;
     }
 
-    public void setLineCode(String lineCode) {
-        this.lineCode = lineCode;
+    public void setLineId(Long lineId) {
+        this.lineId = lineId;
     }
 
     public Long getVehicleId() {
@@ -79,12 +79,12 @@ public class ProblemReportResponse {
         this.vehicleType = vehicleType;
     }
 
-    public String getStationCode() {
-        return stationCode;
+    public Long getStationId() {
+        return stationId;
     }
 
-    public void setStationCode(String stationCode) {
-        this.stationCode = stationCode;
+    public void setStationId(Long stationId) {
+        this.stationId = stationId;
     }
 
     public ProblemCategory getCategory() {

@@ -11,34 +11,34 @@ import java.util.List;
 
 public interface LineReviewRepository extends JpaRepository<LineReview, Long> {
 
-    List<LineReview> findByLineCodeOrderByCreatedAtDesc(String lineCode);
+    List<LineReview> findByLineIdOrderByCreatedAtDesc(Long lineId);
 
-    List<LineReview> findByLineCodeAndModerationStatusOrderByCreatedAtDesc(String lineCode,
+    List<LineReview> findByLineIdAndModerationStatusOrderByCreatedAtDesc(Long lineId,
             ModerationStatus moderationStatus);
 
     @Query("""
             select new com.sarajevotransit.feedbackservice.dto.LineRatingSummaryResponse(
-                lr.lineCode,
+                lr.lineId,
                 avg(lr.rating),
                 count(lr.id)
             )
             from LineReview lr
             where lr.moderationStatus = com.sarajevotransit.feedbackservice.model.ModerationStatus.VISIBLE
-            group by lr.lineCode
-            order by lr.lineCode
+            group by lr.lineId
+            order by lr.lineId
             """)
     List<LineRatingSummaryResponse> fetchVisibleLineRatingSummaries();
 
     @Query("""
             select new com.sarajevotransit.feedbackservice.dto.LineRatingSummaryResponse(
-                lr.lineCode,
+                                lr.lineId,
                 avg(lr.rating),
                 count(lr.id)
             )
             from LineReview lr
-            where lr.lineCode = :lineCode
+                        where lr.lineId = :lineId
               and lr.moderationStatus = com.sarajevotransit.feedbackservice.model.ModerationStatus.VISIBLE
-            group by lr.lineCode
+                        group by lr.lineId
             """)
-    List<LineRatingSummaryResponse> fetchVisibleSummaryByLineCode(@Param("lineCode") String lineCode);
+    List<LineRatingSummaryResponse> fetchVisibleSummaryByLineId(@Param("lineId") Long lineId);
 }
