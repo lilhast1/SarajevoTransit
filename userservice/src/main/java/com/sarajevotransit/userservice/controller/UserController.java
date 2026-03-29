@@ -1,10 +1,8 @@
 package com.sarajevotransit.userservice.controller;
 
-import com.sarajevotransit.userservice.dto.AddLineReviewRequest;
 import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
-import com.sarajevotransit.userservice.dto.LineReviewResponse;
 import com.sarajevotransit.userservice.dto.TicketPurchaseResponse;
 import com.sarajevotransit.userservice.dto.TravelHistoryResponse;
 import com.sarajevotransit.userservice.dto.UpdatePasswordRequest;
@@ -88,13 +86,6 @@ public class UserController {
             @PathVariable Long userId,
             @Valid @RequestBody AddTicketPurchaseRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.addTicketPurchase(userId, request));
-    }
-
-    @PostMapping("/{userId}/reviews")
-    public ResponseEntity<LineReviewResponse> addReview(
-            @PathVariable Long userId,
-            @Valid @RequestBody AddLineReviewRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.addReview(userId, request));
     }
 
     @GetMapping("/{userId}/summary")

@@ -1,9 +1,7 @@
 package com.sarajevotransit.userservice.service;
 
-import com.sarajevotransit.userservice.dto.AddLineReviewRequest;
 import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
-import com.sarajevotransit.userservice.dto.LineReviewResponse;
 import com.sarajevotransit.userservice.dto.LoyaltyTransactionResponse;
 import com.sarajevotransit.userservice.dto.TicketPurchaseResponse;
 import com.sarajevotransit.userservice.dto.TravelHistoryResponse;
@@ -16,8 +14,6 @@ import com.sarajevotransit.userservice.dto.UserSummaryResponse;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.exception.DuplicateResourceException;
 import com.sarajevotransit.userservice.exception.ResourceNotFoundException;
-import com.sarajevotransit.userservice.model.LineReview;
-import com.sarajevotransit.userservice.model.ModerationStatus;
 import com.sarajevotransit.userservice.model.LoyaltyTransaction;
 import com.sarajevotransit.userservice.model.NotificationChannel;
 import com.sarajevotransit.userservice.model.ThemeMode;
@@ -26,7 +22,6 @@ import com.sarajevotransit.userservice.model.TicketPurchaseHistoryEntry;
 import com.sarajevotransit.userservice.model.TravelHistoryEntry;
 import com.sarajevotransit.userservice.model.UserPreference;
 import com.sarajevotransit.userservice.model.UserProfile;
-import com.sarajevotransit.userservice.repository.LineReviewRepository;
 import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
 import com.sarajevotransit.userservice.repository.TicketPurchaseHistoryRepository;
 import com.sarajevotransit.userservice.repository.TravelHistoryRepository;
@@ -37,7 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HexFormat;
@@ -48,24 +42,19 @@ import java.util.Map;
 @Service
 public class UserService {
 
-    private static final int REVIEW_WINDOW_DAYS = 30;
-
     private final UserProfileRepository userProfileRepository;
     private final TravelHistoryRepository travelHistoryRepository;
     private final TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository;
-    private final LineReviewRepository lineReviewRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
 
     public UserService(
             UserProfileRepository userProfileRepository,
             TravelHistoryRepository travelHistoryRepository,
             TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository,
-            LineReviewRepository lineReviewRepository,
             LoyaltyTransactionRepository loyaltyTransactionRepository) {
         this.userProfileRepository = userProfileRepository;
         this.travelHistoryRepository = travelHistoryRepository;
         this.ticketPurchaseHistoryRepository = ticketPurchaseHistoryRepository;
-        this.lineReviewRepository = lineReviewRepository;
         this.loyaltyTransactionRepository = loyaltyTransactionRepository;
     }
 
@@ -184,30 +173,6 @@ public class UserService {
         return toTicketPurchaseResponse(entry);
     }
 
-    @Transactional
-    public LineReviewResponse addReview(Long userId, AddLineReviewRequest request) {
-        UserProfile user = findUserById(userId);
-
-        LocalDate today = LocalDate.now();
-        if (request.rideDate().isAfter(today)) {
-            throw new IllegalArgumentException("rideDate cannot be in the future.");
-        }
-        if (request.rideDate().isBefore(today.minusDays(REVIEW_WINDOW_DAYS))) {
-            throw new IllegalArgumentException("Review is allowed only for rides within the last 30 days.");
-        }
-
-        LineReview review = new LineReview();
-        review.setLineCode(request.lineCode().trim());
-        review.setRating(request.rating());
-        review.setReviewText(trimToNull(request.reviewText()));
-        review.setRideDate(request.rideDate());
-        review.setModerationStatus(ModerationStatus.VISIBLE);
-
-        user.addReview(review);
-        lineReviewRepository.save(review);
-        return toLineReviewResponse(review);
-    }
-
     @Transactional(readOnly = true)
     public List<String> getPersonalizedLineSuggestions(Long userId, int limit) {
         findUserById(userId);
@@ -218,12 +183,6 @@ public class UserService {
         travelHistoryRepository.findLineUsageStats(userId)
                 .forEach(stat -> scoreByLine.merge(stat.getLineCode(), stat.getUsageCount().intValue() * 2,
                         Integer::sum));
-
-        lineReviewRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .filter(review -> review.getModerationStatus() == ModerationStatus.VISIBLE)
-                .filter(review -> review.getRating() >= 4)
-                .forEach(review -> scoreByLine.merge(review.getLineCode(), review.getRating(), Integer::sum));
 
         if (scoreByLine.isEmpty()) {
             return travelHistoryRepository.findByUserIdOrderByTraveledAtDesc(userId)
@@ -257,11 +216,6 @@ public class UserService {
                 .map(this::toTicketPurchaseResponse)
                 .toList();
 
-        List<LineReviewResponse> reviews = lineReviewRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(this::toLineReviewResponse)
-                .toList();
-
         List<LoyaltyTransactionResponse> transactions = loyaltyTransactionRepository
                 .findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
@@ -274,7 +228,6 @@ public class UserService {
                 toUserProfileResponse(user),
                 travelHistory,
                 purchases,
-                reviews,
                 transactions,
                 suggestions);
     }
@@ -340,26 +293,6 @@ public class UserService {
                 entry.getExternalTransactionId(),
                 entry.getLineCode(),
                 entry.getPurchasedAt());
-    }
-
-    public LineReviewResponse toLineReviewResponse(LineReview review) {
-        return new LineReviewResponse(
-                review.getId(),
-                review.getUser() == null ? null : review.getUser().getId(),
-                review.getLineCode(),
-                review.getRating(),
-                review.getReviewText(),
-                review.getRideDate(),
-                review.getModerationStatus(),
-                review.getCreatedAt(),
-                review.getUpdatedAt());
-    }
-
-    private String trimToNull(String value) {
-        if (value == null || value.trim().isEmpty()) {
-            return null;
-        }
-        return value.trim();
     }
 
     public LoyaltyTransactionResponse toLoyaltyTransactionResponse(LoyaltyTransaction transaction) {

@@ -53,9 +53,6 @@ public class UserProfile {
     private List<TicketPurchaseHistoryEntry> ticketPurchases = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<LineReview> reviews = new ArrayList<>();
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LoyaltyTransaction> loyaltyTransactions = new ArrayList<>();
 
     @PrePersist
@@ -88,11 +85,6 @@ public class UserProfile {
     public void addTicketPurchase(TicketPurchaseHistoryEntry entry) {
         ticketPurchases.add(entry);
         entry.setUser(this);
-    }
-
-    public void addReview(LineReview review) {
-        reviews.add(review);
-        review.setUser(this);
     }
 
     public void addLoyaltyTransaction(LoyaltyTransaction transaction) {
@@ -174,14 +166,6 @@ public class UserProfile {
 
     public void setTicketPurchases(List<TicketPurchaseHistoryEntry> ticketPurchases) {
         this.ticketPurchases = ticketPurchases;
-    }
-
-    public List<LineReview> getReviews() {
-        return reviews;
-    }
-
-    public void setReviews(List<LineReview> reviews) {
-        this.reviews = reviews;
     }
 
     public List<LoyaltyTransaction> getLoyaltyTransactions() {

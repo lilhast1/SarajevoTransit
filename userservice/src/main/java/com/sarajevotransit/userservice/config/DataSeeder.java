@@ -1,6 +1,5 @@
 package com.sarajevotransit.userservice.config;
 
-import com.sarajevotransit.userservice.dto.AddLineReviewRequest;
 import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
@@ -18,7 +17,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Configuration
@@ -64,12 +62,6 @@ public class DataSeeder {
                                         "TRAM-3",
                                         LocalDateTime.now().minusDays(5)));
 
-                        userService.addReview(amina.id(), new AddLineReviewRequest(
-                                        "TRAM-3",
-                                        5,
-                                        "Linija je redovna i vozila su uredna.",
-                                        LocalDate.now().minusDays(3)));
-
                         loyaltyService.earnPoints(amina.id(), new LoyaltyEarnRequest(
                                         120,
                                         "Monthly ticket purchase",
@@ -102,12 +94,6 @@ public class DataSeeder {
                                         "TXN-TARIK-0001",
                                         "TROL-103",
                                         LocalDateTime.now().minusDays(4)));
-
-                        userService.addReview(tar.id(), new AddLineReviewRequest(
-                                        "TROL-103",
-                                        4,
-                                        "Solidna tacnost, povremene guzve u spicu.",
-                                        LocalDate.now().minusDays(2)));
 
                         loyaltyService.earnPoints(tar.id(), new LoyaltyEarnRequest(
                                         45,
