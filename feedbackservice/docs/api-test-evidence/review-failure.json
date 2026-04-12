@@ -1,0 +1,22 @@
+{
+    "name":  "review-failure",
+    "method":  "POST",
+    "path":  "/api/v1/reviews",
+    "status":  400,
+    "requestBody":  {
+                    "reviewerUserId": 5201,
+                    "lineId": 6,
+                    "rating": 7,
+                    "rideDate": null
+                    },
+    "responseBody":  {
+                    "timestamp": "2026-04-12T15:24:14.0511708Z",
+                    "status": 400,
+                    "error": "Bad Request",
+                    "message": "Validation failed",
+                    "fieldErrors": {
+                        "rating": "must be less than or equal to 5",
+                        "rideDate": "must not be null"
+                    }
+                }
+}

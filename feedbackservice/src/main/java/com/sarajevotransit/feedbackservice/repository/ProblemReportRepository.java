@@ -14,5 +14,7 @@ public interface ProblemReportRepository extends JpaRepository<ProblemReport, Lo
 
     List<ProblemReport> findByReporterUserIdOrderByCreatedAtDesc(Long reporterUserId);
 
+    List<ProblemReport> findByLineIdOrderByCreatedAtDesc(Long lineId);
+
     List<ProblemReport> findByStatusAndReporterUserIdOrderByCreatedAtDesc(ReportStatus status, Long reporterUserId);
 }

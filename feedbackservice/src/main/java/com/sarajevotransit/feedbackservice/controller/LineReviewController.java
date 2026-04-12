@@ -43,6 +43,16 @@ public class LineReviewController {
         return lineReviewService.getReviewsByLine(lineId, includeHidden);
     }
 
+    @GetMapping("/{id}")
+    public LineReviewResponse getReview(@PathVariable @Positive Long id) {
+        return lineReviewService.getReview(id);
+    }
+
+    @GetMapping("/reviewer/{reviewerUserId}")
+    public List<LineReviewResponse> getReviewsByReviewer(@PathVariable @Positive Long reviewerUserId) {
+        return lineReviewService.getReviewsByReviewer(reviewerUserId);
+    }
+
     @PatchMapping("/{id}/moderation-status")
     public LineReviewResponse updateModerationStatus(
             @PathVariable Long id,

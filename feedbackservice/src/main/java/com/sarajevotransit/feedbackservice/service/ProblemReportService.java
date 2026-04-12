@@ -4,10 +4,12 @@ import com.sarajevotransit.feedbackservice.dto.CreateProblemReportRequest;
 import com.sarajevotransit.feedbackservice.dto.ProblemReportResponse;
 import com.sarajevotransit.feedbackservice.exception.BadRequestException;
 import com.sarajevotransit.feedbackservice.exception.NotFoundException;
+import com.sarajevotransit.feedbackservice.mapper.ProblemReportMapper;
 import com.sarajevotransit.feedbackservice.model.ProblemReport;
 import com.sarajevotransit.feedbackservice.model.ReportStatus;
 import com.sarajevotransit.feedbackservice.repository.ProblemReportRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -17,11 +19,15 @@ import java.util.Locale;
 public class ProblemReportService {
 
     private final ProblemReportRepository problemReportRepository;
+    private final ProblemReportMapper problemReportMapper;
 
-    public ProblemReportService(ProblemReportRepository problemReportRepository) {
+    public ProblemReportService(ProblemReportRepository problemReportRepository,
+            ProblemReportMapper problemReportMapper) {
         this.problemReportRepository = problemReportRepository;
+        this.problemReportMapper = problemReportMapper;
     }
 
+    @Transactional
     public ProblemReportResponse createReport(CreateProblemReportRequest request) {
         boolean hasVehicleReference = request.getVehicleId() != null
                 || StringUtils.hasText(request.getVehicleRegistrationNumber())
@@ -31,23 +37,19 @@ public class ProblemReportService {
                     "At least one of vehicleId/vehicleRegistrationNumber/vehicleInternalId or stationId must be provided.");
         }
 
-        ProblemReport entity = new ProblemReport();
-        entity.setReporterUserId(request.getReporterUserId());
-        entity.setLineId(request.getLineId());
-        entity.setVehicleId(request.getVehicleId());
-        entity.setVehicleRegistrationNumber(trimToNull(request.getVehicleRegistrationNumber()));
-        entity.setVehicleInternalId(trimToNull(request.getVehicleInternalId()));
-        entity.setVehicleType(normalizeVehicleType(request.getVehicleType()));
-        entity.setStationId(request.getStationId());
-        entity.setCategory(request.getCategory());
+        ProblemReport entity = problemReportMapper.toEntity(request);
+        entity.setVehicleRegistrationNumber(trimToNull(entity.getVehicleRegistrationNumber()));
+        entity.setVehicleInternalId(trimToNull(entity.getVehicleInternalId()));
+        entity.setVehicleType(normalizeVehicleType(entity.getVehicleType()));
         entity.setDescription(request.getDescription().trim());
         entity.setPhotoUrls(request.getPhotoUrls());
         entity.setStatus(ReportStatus.RECEIVED);
 
         ProblemReport saved = problemReportRepository.save(entity);
-        return toResponse(saved);
+        return problemReportMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     public List<ProblemReportResponse> getReports(ReportStatus status, Long reporterUserId) {
         List<ProblemReport> reports;
         if (status != null && reporterUserId != null) {
@@ -59,40 +61,31 @@ public class ProblemReportService {
         } else {
             reports = problemReportRepository.findAllByOrderByCreatedAtDesc();
         }
-        return reports.stream().map(this::toResponse).toList();
+        return reports.stream().map(problemReportMapper::toResponse).toList();
     }
 
+    @Transactional(readOnly = true)
     public ProblemReportResponse getReport(Long id) {
         ProblemReport report = problemReportRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Problem report not found: id=" + id));
-        return toResponse(report);
+        return problemReportMapper.toResponse(report);
     }
 
+    @Transactional(readOnly = true)
+    public List<ProblemReportResponse> getReportsByLineId(Long lineId) {
+        return problemReportRepository.findByLineIdOrderByCreatedAtDesc(lineId)
+                .stream()
+                .map(problemReportMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional
     public ProblemReportResponse updateStatus(Long id, ReportStatus status) {
         ProblemReport report = problemReportRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Problem report not found: id=" + id));
         report.setStatus(status);
         ProblemReport saved = problemReportRepository.save(report);
-        return toResponse(saved);
-    }
-
-    private ProblemReportResponse toResponse(ProblemReport entity) {
-        ProblemReportResponse response = new ProblemReportResponse();
-        response.setId(entity.getId());
-        response.setReporterUserId(entity.getReporterUserId());
-        response.setLineId(entity.getLineId());
-        response.setVehicleId(entity.getVehicleId());
-        response.setVehicleRegistrationNumber(entity.getVehicleRegistrationNumber());
-        response.setVehicleInternalId(entity.getVehicleInternalId());
-        response.setVehicleType(entity.getVehicleType());
-        response.setStationId(entity.getStationId());
-        response.setCategory(entity.getCategory());
-        response.setDescription(entity.getDescription());
-        response.setPhotoUrls(entity.getPhotoUrls());
-        response.setStatus(entity.getStatus());
-        response.setCreatedAt(entity.getCreatedAt());
-        response.setUpdatedAt(entity.getUpdatedAt());
-        return response;
+        return problemReportMapper.toResponse(saved);
     }
 
     private String trimToNull(String value) {

@@ -6,6 +6,7 @@ import com.sarajevotransit.feedbackservice.dto.ReportStatusUpdateRequest;
 import com.sarajevotransit.feedbackservice.model.ReportStatus;
 import com.sarajevotransit.feedbackservice.service.ProblemReportService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -45,6 +46,11 @@ public class ProblemReportController {
     @GetMapping("/{id}")
     public ProblemReportResponse getReport(@PathVariable Long id) {
         return problemReportService.getReport(id);
+    }
+
+    @GetMapping("/line/{lineId}")
+    public List<ProblemReportResponse> getReportsByLineId(@PathVariable @Positive Long lineId) {
+        return problemReportService.getReportsByLineId(lineId);
     }
 
     @PatchMapping("/{id}/status")

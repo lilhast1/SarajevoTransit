@@ -11,6 +11,7 @@ import java.time.LocalDate;
 public class CreateLineReviewRequest {
 
     @NotNull
+    @Positive
     private Long reviewerUserId;
 
     @NotNull

@@ -12,6 +12,7 @@ import java.util.List;
 public class CreateProblemReportRequest {
 
     @NotNull
+    @Positive
     private Long reporterUserId;
 
     @Positive
