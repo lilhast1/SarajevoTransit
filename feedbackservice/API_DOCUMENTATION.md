@@ -1,28 +1,44 @@
 # Feedback Service API Documentation
 
-This document follows the required API-call template format:
+This documentation uses the requested API-call template format for each endpoint.
 
-- Title
-- URL
-- Method
-- URL Params
-- Data Params
-- Success Response
-- Error Response
-- Sample Call
-- Notes
+Base URL: http://localhost:8080
+Content-Type: application/json
 
-Base API path used in examples: `/api/v1`
+Common error envelope:
 
-## 1) Create One Problem Report
+```json
+{
+  "timestamp": "2026-04-11T18:33:56.7114836Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "fieldErrors": {
+    "category": "must not be null"
+  }
+}
+```
 
-- Title: Create One Problem Report
-- URL: `/api/v1/reports`
-- Method: `POST`
-- URL Params:
-  - Required: none
-  - Optional: none
-- Data Params:
+## 1) Create Problem Report
+
+Title
+
+- Create Problem Report
+
+URL
+
+- /api/v1/reports
+
+Method
+
+- POST
+
+URL Params
+
+- Required: none
+- Optional: none
+
+Data Params
 
 ```json
 {
@@ -31,125 +47,249 @@ Base API path used in examples: `/api/v1`
   "vehicleId": "[integer, optional, > 0]",
   "vehicleRegistrationNumber": "[string, optional, max 60]",
   "vehicleInternalId": "[string, optional, max 60]",
-  "vehicleType": "[string, optional, BUS|TRAM|TROLLEY|MINIBUS]",
+  "vehicleType": "[string, optional, BUS|TRAM|TROLLEY|MINIBUS, max 30]",
   "stationId": "[integer, optional, > 0]",
   "category": "[enum, required, BREAKDOWN|CROWDING|HYGIENE|AGGRESSIVE_BEHAVIOR|DELAY|OTHER]",
   "description": "[string, required, not blank, max 1000]",
-  "photoUrls": "[array of strings, optional, each max 500]"
+  "photoUrls": ["[string, optional, each max 500]"]
 }
 ```
 
-- Success Response:
-  - Code: `201 CREATED`
-  - Content: `{ "id": 501, "status": "RECEIVED" }`
-- Error Response:
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "Validation failed" }`
-  - OR
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "At least one of vehicleId/vehicleRegistrationNumber/vehicleInternalId or stationId must be provided." }`
-- Sample Call:
+Example:
 
-```bash
-curl --request POST "http://localhost:8080/api/v1/reports" \
-  --header "Content-Type: application/json" \
-  --data "{\"reporterUserId\":5101,\"lineId\":6,\"stationId\":18,\"category\":\"DELAY\",\"description\":\"Delay around 8 minutes at evening peak.\"}"
+```json
+{
+  "reporterUserId": 5101,
+  "lineId": 6,
+  "stationId": 18,
+  "category": "DELAY",
+  "description": "Delay around 8 minutes at evening peak.",
+  "photoUrls": ["https://example.com/evidence/report-ok.png"]
+}
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): New reports are always created with status `RECEIVED`.
+Success Response
 
-## 2) Show Problem Reports
-
-- Title: Show Problem Reports
-- URL: `/api/v1/reports?status=:status&reporterUserId=:reporterUserId`
-- Method: `GET`
-- URL Params:
-  - Required: none
-  - Optional:
-    - `status=[enum: RECEIVED|IN_PROGRESS|RESOLVED]`
-      - Example: `status=IN_PROGRESS`
-    - `reporterUserId=[integer]`
-      - Example: `reporterUserId=5101`
-- Data Params: none
-- Success Response:
-  - Code: `200 OK`
-  - Content: `[ { "id": 501, "status": "RECEIVED" } ]`
-- Error Response:
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "Validation failed" }`
-- Sample Call:
-
-```bash
-curl --request GET "http://localhost:8080/api/v1/reports?status=RECEIVED"
+```text
+Code: 201 Created
+Content: {
+  "id": 101,
+  "reporterUserId": 5101,
+  "lineId": 6,
+  "category": "DELAY",
+  "status": "RECEIVED"
+}
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): Supports combined filtering by `status` and `reporterUserId`.
+Error Response
+
+```text
+Code: 400 Bad Request
+Content: { "message": "Validation failed", "fieldErrors": { ... } }
+```
+
+OR
+
+```text
+Code: 400 Bad Request
+Content: { "message": "At least one of vehicleId/vehicleRegistrationNumber/vehicleInternalId or stationId must be provided." }
+```
+
+Sample Call
+
+```bash
+curl -X POST "http://localhost:8080/api/v1/reports" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reporterUserId": 5101,
+    "lineId": 6,
+    "stationId": 18,
+    "category": "DELAY",
+    "description": "Delay around 8 minutes at evening peak.",
+    "photoUrls": ["https://example.com/evidence/report-ok.png"]
+  }'
+```
+
+Notes
+
+- 2026-04-12 (Copilot): At least one vehicle reference field or stationId must be provided.
+
+## 2) Show All Problem Reports
+
+Title
+
+- Show All Problem Reports
+
+URL
+
+- /api/v1/reports
+
+Method
+
+- GET
+
+URL Params
+
+- Required: none
+- Optional:
+  - status=[enum: RECEIVED|IN_PROGRESS|RESOLVED]
+  - reporterUserId=[integer]
+
+Data Params
+
+- none
+
+Success Response
+
+```text
+Code: 200 OK
+Content: [ { "id": 101, "reporterUserId": 5101, "status": "RECEIVED" } ]
+```
+
+Error Response
+
+```text
+Code: 400 Bad Request
+Content: { "message": "Malformed or invalid query parameter." }
+```
+
+Sample Call
+
+```bash
+curl "http://localhost:8080/api/v1/reports?status=RECEIVED&reporterUserId=5101"
+```
+
+Notes
+
+- 2026-04-12 (Copilot): Results are sorted by createdAt descending.
 
 ## 3) Show One Problem Report
 
-- Title: Show One Problem Report
-- URL: `/api/v1/reports/:id`
-- Method: `GET`
-- URL Params:
-  - Required:
-    - `id=[integer]`
-      - Example: `id=501`
-  - Optional: none
-- Data Params: none
-- Success Response:
-  - Code: `200 OK`
-  - Content: `{ "id": 501, "status": "RECEIVED" }`
-- Error Response:
-  - Code: `404 NOT FOUND`
-  - Content: `{ "message": "Problem report not found: id=501" }`
-- Sample Call:
+Title
 
-```bash
-curl --request GET "http://localhost:8080/api/v1/reports/501"
+- Show One Problem Report
+
+URL
+
+- /api/v1/reports/:id
+
+Method
+
+- GET
+
+URL Params
+
+- Required:
+  - id=[integer]
+  - example: id=101
+- Optional: none
+
+Data Params
+
+- none
+
+Success Response
+
+```text
+Code: 200 OK
+Content: { "id": 101, "reporterUserId": 5101, "status": "RECEIVED" }
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): Returns one `ProblemReportResponse` object.
+Error Response
 
-## 4) Show Problem Reports By Line
-
-- Title: Show Problem Reports By Line
-- URL: `/api/v1/reports/line/:lineId`
-- Method: `GET`
-- URL Params:
-  - Required:
-    - `lineId=[integer > 0]`
-      - Example: `lineId=6`
-  - Optional: none
-- Data Params: none
-- Success Response:
-  - Code: `200 OK`
-  - Content: `[ { "id": 501, "lineId": 6 } ]`
-- Error Response:
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "Validation failed" }`
-- Sample Call:
-
-```bash
-curl --request GET "http://localhost:8080/api/v1/reports/line/6"
+```text
+Code: 404 Not Found
+Content: { "message": "Problem report not found: id=101" }
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): `lineId` must be strictly positive.
+OR
 
-## 5) Update One Problem Report Status
+```text
+Code: 400 Bad Request
+Content: { "message": "Validation failed" }
+```
 
-- Title: Update One Problem Report Status
-- URL: `/api/v1/reports/:id/status`
-- Method: `PATCH`
-- URL Params:
-  - Required:
-    - `id=[integer]`
-      - Example: `id=501`
-  - Optional: none
-- Data Params:
+Sample Call
+
+```bash
+curl "http://localhost:8080/api/v1/reports/101"
+```
+
+Notes
+
+- 2026-04-12 (Copilot): id must be a positive existing report id.
+
+## 4) Show Problem Reports by Line
+
+Title
+
+- Show Problem Reports by Line
+
+URL
+
+- /api/v1/reports/line/:lineId
+
+Method
+
+- GET
+
+URL Params
+
+- Required:
+  - lineId=[integer, > 0]
+  - example: lineId=33
+- Optional: none
+
+Data Params
+
+- none
+
+Success Response
+
+```text
+Code: 200 OK
+Content: [ { "id": 120, "lineId": 33, "category": "CROWDING" } ]
+```
+
+Error Response
+
+```text
+Code: 400 Bad Request
+Content: { "message": "Validation failed" }
+```
+
+Sample Call
+
+```bash
+curl "http://localhost:8080/api/v1/reports/line/33"
+```
+
+Notes
+
+- 2026-04-12 (Copilot): Useful for line-focused operations and moderation views.
+
+## 5) Update Problem Report Status
+
+Title
+
+- Update Problem Report Status
+
+URL
+
+- /api/v1/reports/:id/status
+
+Method
+
+- PATCH
+
+URL Params
+
+- Required:
+  - id=[integer]
+  - example: id=101
+- Optional: none
+
+Data Params
 
 ```json
 {
@@ -157,35 +297,67 @@ curl --request GET "http://localhost:8080/api/v1/reports/line/6"
 }
 ```
 
-- Success Response:
-  - Code: `200 OK`
-  - Content: `{ "id": 501, "status": "IN_PROGRESS" }`
-- Error Response:
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "Validation failed" }`
-  - OR
-  - Code: `404 NOT FOUND`
-  - Content: `{ "message": "Problem report not found: id=501" }`
-- Sample Call:
+Example:
 
-```bash
-curl --request PATCH "http://localhost:8080/api/v1/reports/501/status" \
-  --header "Content-Type: application/json" \
-  --data "{\"status\":\"IN_PROGRESS\"}"
+```json
+{
+  "status": "IN_PROGRESS"
+}
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): Uses partial update semantics (`PATCH`).
+Success Response
 
-## 6) Create One Line Review
+```text
+Code: 200 OK
+Content: { "id": 101, "status": "IN_PROGRESS" }
+```
 
-- Title: Create One Line Review
-- URL: `/api/v1/reviews`
-- Method: `POST`
-- URL Params:
-  - Required: none
-  - Optional: none
-- Data Params:
+Error Response
+
+```text
+Code: 400 Bad Request
+Content: { "message": "Malformed JSON request" }
+```
+
+OR
+
+```text
+Code: 404 Not Found
+Content: { "message": "Problem report not found: id=101" }
+```
+
+Sample Call
+
+```bash
+curl -X PATCH "http://localhost:8080/api/v1/reports/101/status" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"IN_PROGRESS"}'
+```
+
+Notes
+
+- 2026-04-12 (Copilot): This endpoint updates only lifecycle status.
+
+## 6) Create Line Review
+
+Title
+
+- Create Line Review
+
+URL
+
+- /api/v1/reviews
+
+Method
+
+- POST
+
+URL Params
+
+- Required: none
+- Optional: none
+
+Data Params
 
 ```json
 {
@@ -193,124 +365,238 @@ curl --request PATCH "http://localhost:8080/api/v1/reports/501/status" \
   "lineId": "[integer, required, > 0]",
   "rating": "[integer, required, 1..5]",
   "reviewText": "[string, optional, max 1500]",
-  "rideDate": "[date, required, not in future, within last 30 days]"
+  "rideDate": "[date, required, yyyy-MM-dd]"
 }
 ```
 
-- Success Response:
-  - Code: `201 CREATED`
-  - Content: `{ "id": 801, "moderationStatus": "VISIBLE" }`
-- Error Response:
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "Validation failed" }`
-  - OR
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "rideDate cannot be in the future." }`
-- Sample Call:
+Example:
 
-```bash
-curl --request POST "http://localhost:8080/api/v1/reviews" \
-  --header "Content-Type: application/json" \
-  --data "{\"reviewerUserId\":5201,\"lineId\":6,\"rating\":4,\"reviewText\":\"Ride was stable with medium crowd.\",\"rideDate\":\"2026-04-10\"}"
+```json
+{
+  "reviewerUserId": 5201,
+  "lineId": 6,
+  "rating": 4,
+  "reviewText": "Ride was stable with medium crowd.",
+  "rideDate": "2026-04-10"
+}
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): New reviews start with moderation status `VISIBLE`.
+Success Response
 
-## 7) Show Line Reviews By Line
-
-- Title: Show Line Reviews By Line
-- URL: `/api/v1/reviews?lineId=:lineId&includeHidden=:includeHidden`
-- Method: `GET`
-- URL Params:
-  - Required:
-    - `lineId=[integer > 0]`
-      - Example: `lineId=6`
-  - Optional:
-    - `includeHidden=[boolean, default false]`
-      - Example: `includeHidden=true`
-- Data Params: none
-- Success Response:
-  - Code: `200 OK`
-  - Content: `[ { "id": 801, "lineId": 6, "rating": 4 } ]`
-- Error Response:
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "Validation failed" }`
-- Sample Call:
-
-```bash
-curl --request GET "http://localhost:8080/api/v1/reviews?lineId=6&includeHidden=false"
+```text
+Code: 201 Created
+Content: { "id": 201, "reviewerUserId": 5201, "lineId": 6, "rating": 4, "moderationStatus": "VISIBLE" }
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): Hidden reviews are excluded unless `includeHidden=true`.
+Error Response
+
+```text
+Code: 400 Bad Request
+Content: { "message": "Validation failed", "fieldErrors": { ... } }
+```
+
+OR
+
+```text
+Code: 400 Bad Request
+Content: { "message": "rideDate cannot be in the future." }
+```
+
+Sample Call
+
+```bash
+curl -X POST "http://localhost:8080/api/v1/reviews" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reviewerUserId": 5201,
+    "lineId": 6,
+    "rating": 4,
+    "reviewText": "Ride was stable with medium crowd.",
+    "rideDate": "2026-04-10"
+  }'
+```
+
+Notes
+
+- 2026-04-12 (Copilot): rideDate cannot be future and must be within last 30 days.
+
+## 7) Show Line Reviews by Line
+
+Title
+
+- Show Line Reviews by Line
+
+URL
+
+- /api/v1/reviews
+
+Method
+
+- GET
+
+URL Params
+
+- Required:
+  - lineId=[integer, > 0]
+  - example: lineId=6
+- Optional:
+  - includeHidden=[boolean, default false]
+
+Data Params
+
+- none
+
+Success Response
+
+```text
+Code: 200 OK
+Content: [ { "id": 201, "lineId": 6, "rating": 4, "moderationStatus": "VISIBLE" } ]
+```
+
+Error Response
+
+```text
+Code: 400 Bad Request
+Content: { "message": "Validation failed" }
+```
+
+Sample Call
+
+```bash
+curl "http://localhost:8080/api/v1/reviews?lineId=6&includeHidden=false"
+```
+
+Notes
+
+- 2026-04-12 (Copilot): includeHidden=false returns only VISIBLE reviews.
 
 ## 8) Show One Line Review
 
-- Title: Show One Line Review
-- URL: `/api/v1/reviews/:id`
-- Method: `GET`
-- URL Params:
-  - Required:
-    - `id=[integer > 0]`
-      - Example: `id=801`
-  - Optional: none
-- Data Params: none
-- Success Response:
-  - Code: `200 OK`
-  - Content: `{ "id": 801, "lineId": 6, "rating": 4 }`
-- Error Response:
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "Validation failed" }`
-  - OR
-  - Code: `404 NOT FOUND`
-  - Content: `{ "message": "Line review not found: id=801" }`
-- Sample Call:
+Title
 
-```bash
-curl --request GET "http://localhost:8080/api/v1/reviews/801"
+- Show One Line Review
+
+URL
+
+- /api/v1/reviews/:id
+
+Method
+
+- GET
+
+URL Params
+
+- Required:
+  - id=[integer, > 0]
+  - example: id=201
+- Optional: none
+
+Data Params
+
+- none
+
+Success Response
+
+```text
+Code: 200 OK
+Content: { "id": 201, "reviewerUserId": 5201, "lineId": 6, "rating": 4, "moderationStatus": "VISIBLE" }
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): Path parameter `id` is validated as positive.
+Error Response
 
-## 9) Show Line Reviews By Reviewer
-
-- Title: Show Line Reviews By Reviewer
-- URL: `/api/v1/reviews/reviewer/:reviewerUserId`
-- Method: `GET`
-- URL Params:
-  - Required:
-    - `reviewerUserId=[integer > 0]`
-      - Example: `reviewerUserId=5201`
-  - Optional: none
-- Data Params: none
-- Success Response:
-  - Code: `200 OK`
-  - Content: `[ { "id": 801, "reviewerUserId": 5201 } ]`
-- Error Response:
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "Validation failed" }`
-- Sample Call:
-
-```bash
-curl --request GET "http://localhost:8080/api/v1/reviews/reviewer/5201"
+```text
+Code: 404 Not Found
+Content: { "message": "Line review not found: id=201" }
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): Sorted by `createdAt` descending.
+OR
 
-## 10) Update One Review Moderation Status
+```text
+Code: 400 Bad Request
+Content: { "message": "Validation failed" }
+```
 
-- Title: Update One Review Moderation Status
-- URL: `/api/v1/reviews/:id/moderation-status`
-- Method: `PATCH`
-- URL Params:
-  - Required:
-    - `id=[integer]`
-      - Example: `id=801`
-  - Optional: none
-- Data Params:
+Sample Call
+
+```bash
+curl "http://localhost:8080/api/v1/reviews/201"
+```
+
+Notes
+
+- 2026-04-12 (Copilot): id must be positive and existing.
+
+## 9) Show Line Reviews by Reviewer
+
+Title
+
+- Show Line Reviews by Reviewer
+
+URL
+
+- /api/v1/reviews/reviewer/:reviewerUserId
+
+Method
+
+- GET
+
+URL Params
+
+- Required:
+  - reviewerUserId=[integer, > 0]
+  - example: reviewerUserId=5201
+- Optional: none
+
+Data Params
+
+- none
+
+Success Response
+
+```text
+Code: 200 OK
+Content: [ { "id": 201, "reviewerUserId": 5201, "lineId": 6 } ]
+```
+
+Error Response
+
+```text
+Code: 400 Bad Request
+Content: { "message": "Validation failed" }
+```
+
+Sample Call
+
+```bash
+curl "http://localhost:8080/api/v1/reviews/reviewer/5201"
+```
+
+Notes
+
+- 2026-04-12 (Copilot): Sorted by createdAt descending.
+
+## 10) Update Review Moderation Status
+
+Title
+
+- Update Review Moderation Status
+
+URL
+
+- /api/v1/reviews/:id/moderation-status
+
+Method
+
+- PATCH
+
+URL Params
+
+- Required:
+  - id=[integer]
+  - example: id=201
+- Optional: none
+
+Data Params
 
 ```json
 {
@@ -318,84 +604,151 @@ curl --request GET "http://localhost:8080/api/v1/reviews/reviewer/5201"
 }
 ```
 
-- Success Response:
-  - Code: `200 OK`
-  - Content: `{ "id": 801, "moderationStatus": "HIDDEN" }`
-- Error Response:
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "Validation failed" }`
-  - OR
-  - Code: `404 NOT FOUND`
-  - Content: `{ "message": "Line review not found: id=801" }`
-- Sample Call:
+Example:
 
-```bash
-curl --request PATCH "http://localhost:8080/api/v1/reviews/801/moderation-status" \
-  --header "Content-Type: application/json" \
-  --data "{\"moderationStatus\":\"HIDDEN\"}"
+```json
+{
+  "moderationStatus": "HIDDEN"
+}
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): Uses partial update semantics (`PATCH`).
+Success Response
 
-## 11) Show Rating Summary For All Lines
-
-- Title: Show Rating Summary For All Lines
-- URL: `/api/v1/reviews/summary`
-- Method: `GET`
-- URL Params:
-  - Required: none
-  - Optional: none
-- Data Params: none
-- Success Response:
-  - Code: `200 OK`
-  - Content: `[ { "lineId": 6, "averageRating": 4.25, "totalReviews": 12 } ]`
-- Error Response:
-  - Code: `500 INTERNAL SERVER ERROR`
-  - Content: `{ "message": "Unexpected server error" }`
-- Sample Call:
-
-```bash
-curl --request GET "http://localhost:8080/api/v1/reviews/summary"
+```text
+Code: 200 OK
+Content: { "id": 201, "moderationStatus": "HIDDEN" }
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): Includes only visible reviews.
+Error Response
 
-## 12) Show Rating Summary For One Line
-
-- Title: Show Rating Summary For One Line
-- URL: `/api/v1/reviews/summary/:lineId`
-- Method: `GET`
-- URL Params:
-  - Required:
-    - `lineId=[integer > 0]`
-      - Example: `lineId=6`
-  - Optional: none
-- Data Params: none
-- Success Response:
-  - Code: `200 OK`
-  - Content: `{ "lineId": 6, "averageRating": 4.25, "totalReviews": 12 }`
-- Error Response:
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "Validation failed" }`
-- Sample Call:
-
-```bash
-curl --request GET "http://localhost:8080/api/v1/reviews/summary/6"
+```text
+Code: 400 Bad Request
+Content: { "message": "Malformed JSON request" }
 ```
 
-- Notes:
-  - 2026-04-12 (Copilot): If no reviews exist, service returns `{ lineId, averageRating: 0.0, totalReviews: 0 }`.
+OR
 
-## Documentation Artifacts
+```text
+Code: 404 Not Found
+Content: { "message": "Line review not found: id=201" }
+```
 
-- API test evidence:
-  - `docs/api-test-evidence/report-success.json`
-  - `docs/api-test-evidence/report-failure.json`
-  - `docs/api-test-evidence/review-success.json`
-  - `docs/api-test-evidence/review-failure.json`
+Sample Call
+
+```bash
+curl -X PATCH "http://localhost:8080/api/v1/reviews/201/moderation-status" \
+  -H "Content-Type: application/json" \
+  -d '{"moderationStatus":"HIDDEN"}'
+```
+
+Notes
+
+- 2026-04-12 (Copilot): This endpoint changes only moderation visibility.
+
+## 11) Show Line Rating Summary for All Lines
+
+Title
+
+- Show Line Rating Summary for All Lines
+
+URL
+
+- /api/v1/reviews/summary
+
+Method
+
+- GET
+
+URL Params
+
+- Required: none
+- Optional: none
+
+Data Params
+
+- none
+
+Success Response
+
+```text
+Code: 200 OK
+Content: [ { "lineId": 6, "averageRating": 4.5, "totalReviews": 10 } ]
+```
+
+Error Response
+
+```text
+Code: 500 Internal Server Error
+Content: { "message": "Unexpected error" }
+```
+
+Sample Call
+
+```bash
+curl "http://localhost:8080/api/v1/reviews/summary"
+```
+
+Notes
+
+- 2026-04-12 (Copilot): Summaries are calculated from VISIBLE reviews.
+
+## 12) Show Line Rating Summary for One Line
+
+Title
+
+- Show Line Rating Summary for One Line
+
+URL
+
+- /api/v1/reviews/summary/:lineId
+
+Method
+
+- GET
+
+URL Params
+
+- Required:
+  - lineId=[integer, > 0]
+  - example: lineId=6
+- Optional: none
+
+Data Params
+
+- none
+
+Success Response
+
+```text
+Code: 200 OK
+Content: { "lineId": 6, "averageRating": 4.5, "totalReviews": 10 }
+```
+
+Error Response
+
+```text
+Code: 400 Bad Request
+Content: { "message": "Validation failed" }
+```
+
+Sample Call
+
+```bash
+curl "http://localhost:8080/api/v1/reviews/summary/6"
+```
+
+Notes
+
+- 2026-04-12 (Copilot): If no visible reviews exist, returns averageRating=0.0 and totalReviews=0.
+
+## Assignment artifacts
+
+- Evidence JSON files:
+  - docs/api-test-evidence/report-success.json
+  - docs/api-test-evidence/report-failure.json
+  - docs/api-test-evidence/review-success.json
+  - docs/api-test-evidence/review-failure.json
 - Postman collection:
-  - `docs/postman/feedbackservice.postman_collection.json`
-- Screenshot folder:
-  - `docs/postman-screenshots/`
+  - docs/postman/feedbackservice.postman_collection.json
+- Screenshot markdown:
+  - docs/postman-screenshots/README.md
