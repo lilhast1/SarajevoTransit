@@ -1,0 +1,15 @@
+{
+  "testCase": "LS-S-01 loyalty earn success",
+  "method": "POST",
+  "path": "/api/v1/users/101/loyalty/earn",
+  "requestBody": {
+    "points": 50,
+    "description": "Ticket purchase bonus",
+    "referenceType": "ticket_purchase"
+  },
+  "responseStatus": 200,
+  "responseBody": {
+    "userId": 101,
+    "currentBalance": 50
+  }
+}

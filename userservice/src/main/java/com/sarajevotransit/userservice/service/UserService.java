@@ -102,6 +102,30 @@ public class UserService {
         return toUserProfileResponse(user);
     }
 
+    @Transactional(readOnly = true)
+    public UserPreferenceResponse getPreference(Long userId) {
+        UserProfile user = findUserById(userId);
+        return toUserPreferenceResponse(user.getPreference());
+    }
+
+    @Transactional(readOnly = true)
+    public List<TravelHistoryResponse> getTravelHistory(Long userId) {
+        findUserById(userId);
+        return travelHistoryRepository.findByUserIdOrderByTraveledAtDesc(userId)
+                .stream()
+                .map(this::toTravelHistoryResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TicketPurchaseResponse> getTicketPurchases(Long userId) {
+        findUserById(userId);
+        return ticketPurchaseHistoryRepository.findByUserIdOrderByPurchasedAtDesc(userId)
+                .stream()
+                .map(this::toTicketPurchaseResponse)
+                .toList();
+    }
+
     @Transactional
     public UserProfileResponse updateUserProfile(Long userId, UpdateUserProfileRequest request) {
         UserProfile user = findUserById(userId);

@@ -13,8 +13,12 @@ import com.sarajevotransit.userservice.dto.UserProfileResponse;
 import com.sarajevotransit.userservice.dto.UserSummaryResponse;
 import com.sarajevotransit.userservice.service.UserService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,7 +32,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users")
+@Validated
+@RequestMapping({ "/api/users", "/api/v1/users" })
 public class UserController {
 
     private final UserService userService;
@@ -48,13 +53,28 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public UserProfileResponse getUser(@PathVariable Long userId) {
+    public UserProfileResponse getUser(@PathVariable @Positive Long userId) {
         return userService.getUser(userId);
+    }
+
+    @GetMapping("/{userId}/preferences")
+    public UserPreferenceResponse getPreference(@PathVariable @Positive Long userId) {
+        return userService.getPreference(userId);
+    }
+
+    @GetMapping("/{userId}/travel-history")
+    public List<TravelHistoryResponse> getTravelHistory(@PathVariable @Positive Long userId) {
+        return userService.getTravelHistory(userId);
+    }
+
+    @GetMapping("/{userId}/ticket-purchases")
+    public List<TicketPurchaseResponse> getTicketPurchases(@PathVariable @Positive Long userId) {
+        return userService.getTicketPurchases(userId);
     }
 
     @PutMapping("/{userId}")
     public UserProfileResponse updateUserProfile(
-            @PathVariable Long userId,
+            @PathVariable @Positive Long userId,
             @Valid @RequestBody UpdateUserProfileRequest request) {
         return userService.updateUserProfile(userId, request);
     }
@@ -62,41 +82,41 @@ public class UserController {
     @PutMapping("/{userId}/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updatePassword(
-            @PathVariable Long userId,
+            @PathVariable @Positive Long userId,
             @Valid @RequestBody UpdatePasswordRequest request) {
         userService.updatePassword(userId, request);
     }
 
     @PutMapping("/{userId}/preferences")
     public UserPreferenceResponse updatePreference(
-            @PathVariable Long userId,
+            @PathVariable @Positive Long userId,
             @Valid @RequestBody UpdateUserPreferenceRequest request) {
         return userService.updatePreference(userId, request);
     }
 
     @PostMapping("/{userId}/travel-history")
     public ResponseEntity<TravelHistoryResponse> addTravelHistory(
-            @PathVariable Long userId,
+            @PathVariable @Positive Long userId,
             @Valid @RequestBody AddTravelHistoryRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.addTravelHistory(userId, request));
     }
 
     @PostMapping("/{userId}/ticket-purchases")
     public ResponseEntity<TicketPurchaseResponse> addTicketPurchase(
-            @PathVariable Long userId,
+            @PathVariable @Positive Long userId,
             @Valid @RequestBody AddTicketPurchaseRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.addTicketPurchase(userId, request));
     }
 
     @GetMapping("/{userId}/summary")
-    public UserSummaryResponse getSummary(@PathVariable Long userId) {
+    public UserSummaryResponse getSummary(@PathVariable @Positive Long userId) {
         return userService.getUserSummary(userId);
     }
 
     @GetMapping("/{userId}/suggestions")
     public List<String> getSuggestions(
-            @PathVariable Long userId,
-            @RequestParam(defaultValue = "3") int limit) {
+            @PathVariable @Positive Long userId,
+            @RequestParam(defaultValue = "3") @Min(1) @Max(10) int limit) {
         return userService.getPersonalizedLineSuggestions(userId, limit);
     }
 }

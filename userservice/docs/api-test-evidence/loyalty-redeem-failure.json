@@ -1,0 +1,19 @@
+{
+  "testCase": "LS-F-01 loyalty redeem failure - insufficient points",
+  "method": "POST",
+  "path": "/api/v1/users/101/loyalty/redeem",
+  "requestBody": {
+    "points": 80,
+    "description": "Ride discount",
+    "referenceType": "discount"
+  },
+  "responseStatus": 400,
+  "responseBody": {
+    "timestamp": "2026-04-12T21:58:47.661",
+    "status": 400,
+    "error": "Bad Request",
+    "message": "User does not have enough loyalty points for redemption.",
+    "path": "/api/v1/users/101/loyalty/redeem",
+    "validationErrors": []
+  }
+}
