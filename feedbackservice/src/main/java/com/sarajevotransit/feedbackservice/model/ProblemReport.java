@@ -14,6 +14,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -34,46 +38,60 @@ public class ProblemReport {
     @Column(name = "report_id")
     private Long id;
 
+    @NotNull
+    @Positive
     @Column(name = "user_id", nullable = false)
     private Long reporterUserId;
 
+    @Positive
     @Column(name = "line_id")
     private Long lineId;
 
+    @Positive
     @Column(name = "vehicle_id")
     private Long vehicleId;
 
+    @Size(max = 60)
     @Column(name = "vehicle_registration_number", length = 60)
     private String vehicleRegistrationNumber;
 
+    @Size(max = 60)
     @Column(name = "vehicle_internal_id", length = 60)
     private String vehicleInternalId;
 
+    @Size(max = 30)
     @Column(name = "vehicle_type", length = 30)
     private String vehicleType;
 
+    @Positive
     @Column(name = "station_id")
     private Long stationId;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private ProblemCategory category;
 
+    @NotBlank
+    @Size(max = 1000)
     @Column(nullable = false, length = 1000)
     private String description;
 
     @ElementCollection
     @CollectionTable(name = "incident_report_photos", joinColumns = @JoinColumn(name = "incident_report_id"))
     @Column(name = "photo_url", length = 500)
-    private List<String> photoUrls = new ArrayList<>();
+    private List<@Size(max = 500) String> photoUrls = new ArrayList<>();
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private ReportStatus status = ReportStatus.RECEIVED;
 
+    @NotNull
     @Column(nullable = false)
     private OffsetDateTime createdAt;
 
+    @NotNull
     @Column(nullable = false)
     private OffsetDateTime updatedAt;
 
