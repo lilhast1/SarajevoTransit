@@ -3,6 +3,8 @@ package ba.unsa.etf.pnwt.routingservice.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
@@ -22,7 +24,11 @@ import java.time.OffsetDateTime;
 public class Direction {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
+
+    @Column(name = "external_id", unique = true)
+    private Integer externalId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "line_id", nullable = false)
@@ -78,6 +84,14 @@ public class Direction {
 
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public Integer getExternalId() {
+        return externalId;
+    }
+
+    public void setExternalId(Integer externalId) {
+        this.externalId = externalId;
     }
 
     public Line getLine() {

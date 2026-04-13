@@ -11,11 +11,17 @@ import java.util.Collection;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TimetableRepository extends JpaRepository<Timetable, Integer> {
+    List<Timetable> findByIsActiveTrueOrderByDepartureTimeAsc();
     List<Timetable> findByLine_IdAndIsActiveTrueOrderByDepartureTimeAsc(Integer lineId);
     List<Timetable> findByDirection_IdAndIsActiveTrueOrderByDepartureTimeAsc(Integer directionId);
+    Optional<Timetable> findByExternalId(Integer externalId);
+    List<Timetable> findByExternalIdIn(List<Integer> externalIds);
+    boolean existsByExternalId(Integer externalId);
+    boolean existsByExternalIdAndIdNot(Integer externalId, Integer id);
     List<Timetable> findByDepartureTimeBetweenAndIsActiveTrueOrderByDepartureTimeAsc(LocalTime from, LocalTime to);
     List<Timetable> findByValidFromLessThanEqualAndValidToGreaterThanEqualAndIsActiveTrue(LocalDate date1, LocalDate date2);
     void deleteByLine_Id(Integer lineId);
