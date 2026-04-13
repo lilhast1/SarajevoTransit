@@ -1,61 +1,24 @@
-package ba.unsa.etf.pnwt.notificationservice.model;
+package ba.unsa.etf.pnwt.notificationservice.dto;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "subscriptions")
-public class Subscription {
+public class SubscriptionResponse {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false, columnDefinition = "BINARY(16)")
     private UUID id;
-
-    @NotNull
-    @Column(name = "user_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID userId;
-
-    @Column(name = "user_full_name", length = 255)
     private String userFullName;
-
-    @Column(name = "user_email", length = 255)
     private String userEmail;
-
-    @NotNull
-    @Column(name = "line_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID lineId;
-
-    @Column(name = "line_code", length = 20)
     private String lineCode;
-
-    @Column(name = "line_name", length = 200)
     private String lineName;
-
-    @Column(name = "start_interval")
     private LocalTime startInterval;
-
-    @Column(name = "end_interval")
     private LocalTime endInterval;
-
-    @Column(name = "days_of_week", length = 50)
     private String daysOfWeek;
-
-    @Column(name = "is_active")
-    private Boolean isActive = true;
-
-    @Column(name = "created_at")
+    private Boolean isActive;
     private LocalDateTime createdAt;
 
-    @PrePersist
-    public void prePersist() {
-        createdAt = LocalDateTime.now();
-    }
-
-    // Getteri i setteri
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 

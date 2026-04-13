@@ -1,63 +1,36 @@
-package ba.unsa.etf.pnwt.notificationservice.model;
+package ba.unsa.etf.pnwt.notificationservice.dto;
 
-import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "subscriptions")
-public class Subscription {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false, columnDefinition = "BINARY(16)")
-    private UUID id;
+public class CreateSubscriptionRequest {
 
     @NotNull
-    @Column(name = "user_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID userId;
 
-    @Column(name = "user_full_name", length = 255)
+    @Size(max = 255)
     private String userFullName;
 
-    @Column(name = "user_email", length = 255)
+    @Size(max = 255)
     private String userEmail;
 
     @NotNull
-    @Column(name = "line_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID lineId;
 
-    @Column(name = "line_code", length = 20)
+    @Size(max = 20)
     private String lineCode;
 
-    @Column(name = "line_name", length = 200)
+    @Size(max = 200)
     private String lineName;
 
-    @Column(name = "start_interval")
     private LocalTime startInterval;
-
-    @Column(name = "end_interval")
     private LocalTime endInterval;
 
-    @Column(name = "days_of_week", length = 50)
+    @Size(max = 50)
     private String daysOfWeek;
-
-    @Column(name = "is_active")
-    private Boolean isActive = true;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    public void prePersist() {
-        createdAt = LocalDateTime.now();
-    }
-
-    // Getteri i setteri
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
 
     public UUID getUserId() { return userId; }
     public void setUserId(UUID userId) { this.userId = userId; }
@@ -85,10 +58,4 @@ public class Subscription {
 
     public String getDaysOfWeek() { return daysOfWeek; }
     public void setDaysOfWeek(String daysOfWeek) { this.daysOfWeek = daysOfWeek; }
-
-    public Boolean getIsActive() { return isActive; }
-    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
