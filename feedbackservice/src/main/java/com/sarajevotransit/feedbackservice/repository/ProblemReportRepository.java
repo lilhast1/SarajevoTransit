@@ -2,12 +2,30 @@ package com.sarajevotransit.feedbackservice.repository;
 
 import com.sarajevotransit.feedbackservice.model.ProblemReport;
 import com.sarajevotransit.feedbackservice.model.ReportStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
 public interface ProblemReportRepository extends JpaRepository<ProblemReport, Long> {
+
+    @Override
+    @EntityGraph(attributePaths = "photoUrls")
+    Page<ProblemReport> findAll(Pageable pageable);
+
+    @EntityGraph(attributePaths = "photoUrls")
+    Page<ProblemReport> findByStatus(ReportStatus status, Pageable pageable);
+
+    @EntityGraph(attributePaths = "photoUrls")
+    Page<ProblemReport> findByReporterUserId(Long reporterUserId, Pageable pageable);
+
+    @EntityGraph(attributePaths = "photoUrls")
+    Page<ProblemReport> findByLineId(Long lineId, Pageable pageable);
+
+    @EntityGraph(attributePaths = "photoUrls")
+    Page<ProblemReport> findByStatusAndReporterUserId(ReportStatus status, Long reporterUserId, Pageable pageable);
 
     @EntityGraph(attributePaths = "photoUrls")
     List<ProblemReport> findAllByOrderByCreatedAtDesc();

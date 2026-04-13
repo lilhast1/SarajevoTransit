@@ -16,9 +16,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -44,12 +47,20 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<UserProfileResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(request));
+        UserProfileResponse created = userService.createUser(request);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{userId}")
+                .buildAndExpand(created.id())
+                .toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @GetMapping
-    public List<UserProfileResponse> getAllUsers() {
-        return userService.getAllUsers();
+    public Page<UserProfileResponse> getAllUsers(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+        return userService.getAllUsers(page, size, sort);
     }
 
     @GetMapping("/{userId}")
@@ -63,13 +74,21 @@ public class UserController {
     }
 
     @GetMapping("/{userId}/travel-history")
-    public List<TravelHistoryResponse> getTravelHistory(@PathVariable @Positive Long userId) {
-        return userService.getTravelHistory(userId);
+    public Page<TravelHistoryResponse> getTravelHistory(
+            @PathVariable @Positive Long userId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            @RequestParam(defaultValue = "traveledAt,desc") String sort) {
+        return userService.getTravelHistory(userId, page, size, sort);
     }
 
     @GetMapping("/{userId}/ticket-purchases")
-    public List<TicketPurchaseResponse> getTicketPurchases(@PathVariable @Positive Long userId) {
-        return userService.getTicketPurchases(userId);
+    public Page<TicketPurchaseResponse> getTicketPurchases(
+            @PathVariable @Positive Long userId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            @RequestParam(defaultValue = "purchasedAt,desc") String sort) {
+        return userService.getTicketPurchases(userId, page, size, sort);
     }
 
     @PutMapping("/{userId}")
@@ -98,14 +117,24 @@ public class UserController {
     public ResponseEntity<TravelHistoryResponse> addTravelHistory(
             @PathVariable @Positive Long userId,
             @Valid @RequestBody AddTravelHistoryRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.addTravelHistory(userId, request));
+        TravelHistoryResponse created = userService.addTravelHistory(userId, request);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{entryId}")
+                .buildAndExpand(created.id())
+                .toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @PostMapping("/{userId}/ticket-purchases")
     public ResponseEntity<TicketPurchaseResponse> addTicketPurchase(
             @PathVariable @Positive Long userId,
             @Valid @RequestBody AddTicketPurchaseRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.addTicketPurchase(userId, request));
+        TicketPurchaseResponse created = userService.addTicketPurchase(userId, request);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{purchaseId}")
+                .buildAndExpand(created.id())
+                .toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @GetMapping("/{userId}/summary")

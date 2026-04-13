@@ -27,6 +27,9 @@ import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
 import com.sarajevotransit.userservice.repository.TicketPurchaseHistoryRepository;
 import com.sarajevotransit.userservice.repository.TravelHistoryRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +42,7 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class UserService {
@@ -97,6 +101,20 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public Page<UserProfileResponse> getAllUsers(int page, int size, String sort) {
+        Pageable pageable = PaginationUtils.buildPageable(
+                page,
+                size,
+                sort,
+                "createdAt",
+                Sort.Direction.DESC,
+                Set.of("id", "firstName", "lastName", "email", "createdAt", "updatedAt"));
+
+        return userProfileRepository.findAllWithWalletAndPreference(pageable)
+                .map(this::toUserProfileResponse);
+    }
+
+    @Transactional(readOnly = true)
     public UserProfileResponse getUser(Long userId) {
         UserProfile user = findUserById(userId);
         return toUserProfileResponse(user);
@@ -118,12 +136,43 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public Page<TravelHistoryResponse> getTravelHistory(Long userId, int page, int size, String sort) {
+        findUserById(userId);
+        Pageable pageable = PaginationUtils.buildPageable(
+                page,
+                size,
+                sort,
+                "traveledAt",
+                Sort.Direction.DESC,
+                Set.of("id", "lineCode", "fromStop", "toStop", "traveledAt", "durationMinutes"));
+
+        return travelHistoryRepository.findByUserId(userId, pageable)
+                .map(this::toTravelHistoryResponse);
+    }
+
+    @Transactional(readOnly = true)
     public List<TicketPurchaseResponse> getTicketPurchases(Long userId) {
         findUserById(userId);
         return ticketPurchaseHistoryRepository.findByUserIdOrderByPurchasedAtDesc(userId)
                 .stream()
                 .map(this::toTicketPurchaseResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TicketPurchaseResponse> getTicketPurchases(Long userId, int page, int size, String sort) {
+        findUserById(userId);
+        Pageable pageable = PaginationUtils.buildPageable(
+                page,
+                size,
+                sort,
+                "purchasedAt",
+                Sort.Direction.DESC,
+                Set.of("id", "ticketType", "amount", "paymentMethod", "externalTransactionId", "lineCode",
+                        "purchasedAt"));
+
+        return ticketPurchaseHistoryRepository.findByUserId(userId, pageable)
+                .map(this::toTicketPurchaseResponse);
     }
 
     @Transactional

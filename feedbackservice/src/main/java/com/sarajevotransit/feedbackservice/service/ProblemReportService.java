@@ -8,11 +8,12 @@ import com.sarajevotransit.feedbackservice.mapper.ProblemReportMapper;
 import com.sarajevotransit.feedbackservice.model.ProblemReport;
 import com.sarajevotransit.feedbackservice.model.ReportStatus;
 import com.sarajevotransit.feedbackservice.repository.ProblemReportRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
 import java.util.Locale;
 
 @Service
@@ -50,18 +51,18 @@ public class ProblemReportService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProblemReportResponse> getReports(ReportStatus status, Long reporterUserId) {
-        List<ProblemReport> reports;
+    public Page<ProblemReportResponse> getReports(ReportStatus status, Long reporterUserId, Pageable pageable) {
+        Page<ProblemReport> reports;
         if (status != null && reporterUserId != null) {
-            reports = problemReportRepository.findByStatusAndReporterUserIdOrderByCreatedAtDesc(status, reporterUserId);
+            reports = problemReportRepository.findByStatusAndReporterUserId(status, reporterUserId, pageable);
         } else if (status != null) {
-            reports = problemReportRepository.findByStatusOrderByCreatedAtDesc(status);
+            reports = problemReportRepository.findByStatus(status, pageable);
         } else if (reporterUserId != null) {
-            reports = problemReportRepository.findByReporterUserIdOrderByCreatedAtDesc(reporterUserId);
+            reports = problemReportRepository.findByReporterUserId(reporterUserId, pageable);
         } else {
-            reports = problemReportRepository.findAllByOrderByCreatedAtDesc();
+            reports = problemReportRepository.findAll(pageable);
         }
-        return reports.stream().map(problemReportMapper::toResponse).toList();
+        return reports.map(problemReportMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -72,11 +73,9 @@ public class ProblemReportService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProblemReportResponse> getReportsByLineId(Long lineId) {
-        return problemReportRepository.findByLineIdOrderByCreatedAtDesc(lineId)
-                .stream()
-                .map(problemReportMapper::toResponse)
-                .toList();
+    public Page<ProblemReportResponse> getReportsByLineId(Long lineId, Pageable pageable) {
+        return problemReportRepository.findByLineId(lineId, pageable)
+                .map(problemReportMapper::toResponse);
     }
 
     @Transactional

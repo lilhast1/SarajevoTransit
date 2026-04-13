@@ -28,89 +28,121 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class UserControllerIntegrationTests {
 
-    private MockMvc mockMvc;
+        private MockMvc mockMvc;
 
-    @Autowired
-    private WebApplicationContext webApplicationContext;
+        @Autowired
+        private WebApplicationContext webApplicationContext;
 
-    @Autowired
-    private UserProfileRepository userProfileRepository;
+        @Autowired
+        private UserProfileRepository userProfileRepository;
 
-    @Autowired
-    private UserService userService;
+        @Autowired
+        private UserService userService;
 
-    @BeforeEach
-    void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-        userProfileRepository.deleteAll();
-    }
+        @BeforeEach
+        void setUp() {
+                mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+                userProfileRepository.deleteAll();
+        }
 
-    @Test
-    void createUser_shouldReturnCreated() throws Exception {
-        String payload = """
-                {
-                  "fullName": "Lejla Music",
-                  "email": "LEJLA.MUSIC@SARAJEVOTRANSIT.BA",
-                  "password": "StrongPass123",
-                  "languageCode": "BS",
-                  "themeMode": "SYSTEM",
-                  "notificationChannel": "PUSH"
-                }
-                """;
+        @Test
+        void createUser_shouldReturnCreated() throws Exception {
+                String payload = """
+                                {
+                                  "fullName": "Lejla Music",
+                                  "email": "LEJLA.MUSIC@SARAJEVOTRANSIT.BA",
+                                  "password": "StrongPass123",
+                                  "languageCode": "BS",
+                                  "themeMode": "SYSTEM",
+                                  "notificationChannel": "PUSH"
+                                }
+                                """;
 
-        mockMvc.perform(post("/api/v1/users")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.fullName").value("Lejla Music"))
-                .andExpect(jsonPath("$.email").value("lejla.music@sarajevotransit.ba"));
-    }
+                mockMvc.perform(post("/api/v1/users")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.id").isNumber())
+                                .andExpect(jsonPath("$.fullName").value("Lejla Music"))
+                                .andExpect(jsonPath("$.email").value("lejla.music@sarajevotransit.ba"));
+        }
 
-    @Test
-    void getTravelHistory_shouldReturnStoredEntries() throws Exception {
-        var user = userService.createUser(new CreateUserRequest(
-                "Ahmed Becic",
-                "ahmed.becic@sarajevotransit.ba",
-                "AhmedPass123",
-                LanguageCode.BS,
-                ThemeMode.DARK,
-                NotificationChannel.EMAIL));
+        @Test
+        void getTravelHistory_shouldReturnStoredEntries() throws Exception {
+                var user = userService.createUser(new CreateUserRequest(
+                                "Ahmed Becic",
+                                "ahmed.becic@sarajevotransit.ba",
+                                "AhmedPass123",
+                                LanguageCode.BS,
+                                ThemeMode.DARK,
+                                NotificationChannel.EMAIL));
 
-        userService.addTravelHistory(user.id(), new AddTravelHistoryRequest(
-                "TRAM-1",
-                "Skenderija",
-                "Marijin Dvor",
-                LocalDateTime.now().minusHours(2),
-                12));
+                userService.addTravelHistory(user.id(), new AddTravelHistoryRequest(
+                                "TRAM-1",
+                                "Skenderija",
+                                "Marijin Dvor",
+                                LocalDateTime.now().minusHours(2),
+                                12));
 
-        mockMvc.perform(get("/api/v1/users/{userId}/travel-history", user.id()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].lineCode").value("TRAM-1"))
-                .andExpect(jsonPath("$[0].fromStop").value("Skenderija"));
-    }
+                mockMvc.perform(get("/api/v1/users/{userId}/travel-history", user.id())
+                                .queryParam("page", "0")
+                                .queryParam("size", "10")
+                                .queryParam("sort", "traveledAt,desc"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content[0].lineCode").value("TRAM-1"))
+                                .andExpect(jsonPath("$.content[0].fromStop").value("Skenderija"))
+                                .andExpect(jsonPath("$.number").value(0));
+        }
 
-    @Test
-    void getSuggestions_withInvalidLimit_shouldReturnBadRequest() throws Exception {
-        var user = userService.createUser(new CreateUserRequest(
-                "Aida Kovac",
-                "aida.kovac@sarajevotransit.ba",
-                "AidaPass123",
-                LanguageCode.BS,
-                ThemeMode.LIGHT,
-                NotificationChannel.PUSH));
+        @Test
+        void getAllUsers_shouldReturnPaginatedContent() throws Exception {
+                userService.createUser(new CreateUserRequest(
+                                "Amina Hadzic",
+                                "amina.hadzic@sarajevotransit.ba",
+                                "AminaPass123",
+                                LanguageCode.BS,
+                                ThemeMode.SYSTEM,
+                                NotificationChannel.PUSH));
 
-        mockMvc.perform(get("/api/v1/users/{userId}/suggestions", user.id())
-                .queryParam("limit", "0"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Validation failed"))
-                .andExpect(jsonPath("$.validationErrors").isArray());
-    }
+                userService.createUser(new CreateUserRequest(
+                                "Tarik Kovac",
+                                "tarik.kovac@sarajevotransit.ba",
+                                "TarikPass123",
+                                LanguageCode.EN,
+                                ThemeMode.DARK,
+                                NotificationChannel.EMAIL));
 
-    @Test
-    void getUser_withInvalidPathVariable_shouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/api/v1/users/0"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Validation failed"));
-    }
+                mockMvc.perform(get("/api/v1/users")
+                                .queryParam("page", "0")
+                                .queryParam("size", "1")
+                                .queryParam("sort", "createdAt,desc"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content.length()").value(1))
+                                .andExpect(jsonPath("$.size").value(1))
+                                .andExpect(jsonPath("$.totalElements").value(2));
+        }
+
+        @Test
+        void getSuggestions_withInvalidLimit_shouldReturnBadRequest() throws Exception {
+                var user = userService.createUser(new CreateUserRequest(
+                                "Aida Kovac",
+                                "aida.kovac@sarajevotransit.ba",
+                                "AidaPass123",
+                                LanguageCode.BS,
+                                ThemeMode.LIGHT,
+                                NotificationChannel.PUSH));
+
+                mockMvc.perform(get("/api/v1/users/{userId}/suggestions", user.id())
+                                .queryParam("limit", "0"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message").value("Validation failed"))
+                                .andExpect(jsonPath("$.validationErrors").isArray());
+        }
+
+        @Test
+        void getUser_withInvalidPathVariable_shouldReturnBadRequest() throws Exception {
+                mockMvc.perform(get("/api/v1/users/0"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message").value("Validation failed"));
+        }
 }

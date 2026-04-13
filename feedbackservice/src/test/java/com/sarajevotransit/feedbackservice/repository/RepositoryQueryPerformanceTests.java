@@ -16,6 +16,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
@@ -60,10 +63,13 @@ class RepositoryQueryPerformanceTests {
     void getReports_shouldNotHaveNPlusOneOnPhotoUrls() {
         statistics.clear();
 
-        List<ProblemReportResponse> reports = problemReportService.getReports(null, null);
+        Page<ProblemReportResponse> reports = problemReportService.getReports(
+                null,
+                null,
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt")));
 
-        assertThat(reports).hasSize(3);
-        assertThat(reports).allSatisfy(report -> assertThat(report.getPhotoUrls()).isNotNull());
+        assertThat(reports.getContent()).hasSize(3);
+        assertThat(reports.getContent()).allSatisfy(report -> assertThat(report.getPhotoUrls()).isNotNull());
         assertThat(statistics.getPrepareStatementCount())
                 .as("Expected single select with fetch graph (or at most one extra statement)")
                 .isLessThanOrEqualTo(2);
@@ -73,9 +79,12 @@ class RepositoryQueryPerformanceTests {
     void getReviewsByLine_shouldNotHaveNPlusOne() {
         statistics.clear();
 
-        List<LineReviewResponse> reviews = lineReviewService.getReviewsByLine(33L, false);
+        Page<LineReviewResponse> reviews = lineReviewService.getReviewsByLine(
+                33L,
+                false,
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt")));
 
-        assertThat(reviews).hasSize(2);
+        assertThat(reviews.getContent()).hasSize(2);
         assertThat(statistics.getPrepareStatementCount())
                 .as("Line reviews query should be resolved in a single statement")
                 .isLessThanOrEqualTo(1);

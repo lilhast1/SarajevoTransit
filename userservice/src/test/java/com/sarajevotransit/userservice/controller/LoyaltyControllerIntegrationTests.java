@@ -25,106 +25,145 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class LoyaltyControllerIntegrationTests {
 
-    private MockMvc mockMvc;
+        private MockMvc mockMvc;
 
-    @Autowired
-    private WebApplicationContext webApplicationContext;
+        @Autowired
+        private WebApplicationContext webApplicationContext;
 
-    @Autowired
-    private UserProfileRepository userProfileRepository;
+        @Autowired
+        private UserProfileRepository userProfileRepository;
 
-    @Autowired
-    private UserService userService;
+        @Autowired
+        private UserService userService;
 
-    @BeforeEach
-    void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-        userProfileRepository.deleteAll();
-    }
+        @BeforeEach
+        void setUp() {
+                mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+                userProfileRepository.deleteAll();
+        }
 
-    @Test
-    void earnPoints_thenBalanceShouldReflectChange() throws Exception {
-        var user = userService.createUser(new CreateUserRequest(
-                "Tarik Husic",
-                "tarik.husic@sarajevotransit.ba",
-                "TarikPass123",
-                LanguageCode.EN,
-                ThemeMode.SYSTEM,
-                NotificationChannel.EMAIL));
+        @Test
+        void earnPoints_thenBalanceShouldReflectChange() throws Exception {
+                var user = userService.createUser(new CreateUserRequest(
+                                "Tarik Husic",
+                                "tarik.husic@sarajevotransit.ba",
+                                "TarikPass123",
+                                LanguageCode.EN,
+                                ThemeMode.SYSTEM,
+                                NotificationChannel.EMAIL));
 
-        String payload = """
-                {
-                  "points": 50,
-                  "description": "Ticket purchase bonus",
-                  "referenceType": "ticket_purchase"
-                }
-                """;
+                String payload = """
+                                {
+                                  "points": 50,
+                                  "description": "Ticket purchase bonus",
+                                  "referenceType": "ticket_purchase"
+                                }
+                                """;
 
-        mockMvc.perform(post("/api/v1/users/{userId}/loyalty/earn", user.id())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value(user.id()))
-                .andExpect(jsonPath("$.currentBalance").value(50));
+                mockMvc.perform(post("/api/v1/users/{userId}/loyalty/earn", user.id())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.userId").value(user.id()))
+                                .andExpect(jsonPath("$.currentBalance").value(50));
 
-        mockMvc.perform(get("/api/v1/users/{userId}/loyalty/balance", user.id()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currentBalance").value(50));
-    }
+                mockMvc.perform(get("/api/v1/users/{userId}/loyalty/balance", user.id()))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.currentBalance").value(50));
+        }
 
-    @Test
-    void redeemPoints_withoutEnoughBalance_shouldReturnBadRequest() throws Exception {
-        var user = userService.createUser(new CreateUserRequest(
-                "Mina Alic",
-                "mina.alic@sarajevotransit.ba",
-                "MinaPass123",
-                LanguageCode.BS,
-                ThemeMode.DARK,
-                NotificationChannel.PUSH));
+        @Test
+        void redeemPoints_withoutEnoughBalance_shouldReturnBadRequest() throws Exception {
+                var user = userService.createUser(new CreateUserRequest(
+                                "Mina Alic",
+                                "mina.alic@sarajevotransit.ba",
+                                "MinaPass123",
+                                LanguageCode.BS,
+                                ThemeMode.DARK,
+                                NotificationChannel.PUSH));
 
-        String payload = """
-                {
-                  "points": 10,
-                  "description": "Discount",
-                  "referenceType": "discount"
-                }
-                """;
+                String payload = """
+                                {
+                                  "points": 10,
+                                  "description": "Discount",
+                                  "referenceType": "discount"
+                                }
+                                """;
 
-        mockMvc.perform(post("/api/v1/users/{userId}/loyalty/redeem", user.id())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("User does not have enough loyalty points for redemption."));
-    }
+                mockMvc.perform(post("/api/v1/users/{userId}/loyalty/redeem", user.id())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message")
+                                                .value("User does not have enough loyalty points for redemption."));
+        }
 
-    @Test
-    void earnPoints_withMalformedJson_shouldReturnBadRequest() throws Exception {
-        var user = userService.createUser(new CreateUserRequest(
-                "Nedim Hasic",
-                "nedim.hasic@sarajevotransit.ba",
-                "NedimPass123",
-                LanguageCode.BS,
-                ThemeMode.LIGHT,
-                NotificationChannel.PUSH));
+        @Test
+        void earnPoints_withMalformedJson_shouldReturnBadRequest() throws Exception {
+                var user = userService.createUser(new CreateUserRequest(
+                                "Nedim Hasic",
+                                "nedim.hasic@sarajevotransit.ba",
+                                "NedimPass123",
+                                LanguageCode.BS,
+                                ThemeMode.LIGHT,
+                                NotificationChannel.PUSH));
 
-        String payload = """
-                {
-                  "points": 10,
-                  "description": "Broken",
-                  "referenceType": "ticket_purchase"
-                """;
+                String payload = """
+                                {
+                                  "points": 10,
+                                  "description": "Broken",
+                                  "referenceType": "ticket_purchase"
+                                """;
 
-        mockMvc.perform(post("/api/v1/users/{userId}/loyalty/earn", user.id())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Malformed JSON request"));
-    }
+                mockMvc.perform(post("/api/v1/users/{userId}/loyalty/earn", user.id())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message").value("Malformed JSON request"));
+        }
 
-    @Test
-    void getBalance_withInvalidPathVariable_shouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/api/v1/users/0/loyalty/balance"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Validation failed"));
-    }
+        @Test
+        void getBalance_withInvalidPathVariable_shouldReturnBadRequest() throws Exception {
+                mockMvc.perform(get("/api/v1/users/0/loyalty/balance"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message").value("Validation failed"));
+        }
+
+        @Test
+        void getTransactions_shouldReturnPaginatedContent() throws Exception {
+                var user = userService.createUser(new CreateUserRequest(
+                                "Lejla Music",
+                                "lejla.music@sarajevotransit.ba",
+                                "LejlaPass123",
+                                LanguageCode.BS,
+                                ThemeMode.SYSTEM,
+                                NotificationChannel.PUSH));
+
+                String payload = """
+                                {
+                                  "points": 10,
+                                  "description": "Ride bonus",
+                                  "referenceType": "ticket_purchase"
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/users/{userId}/loyalty/earn", user.id())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isCreated());
+
+                mockMvc.perform(post("/api/v1/users/{userId}/loyalty/earn", user.id())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isCreated());
+
+                mockMvc.perform(get("/api/v1/users/{userId}/loyalty/transactions", user.id())
+                                .queryParam("page", "0")
+                                .queryParam("size", "1")
+                                .queryParam("sort", "createdAt,desc"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content.length()").value(1))
+                                .andExpect(jsonPath("$.size").value(1))
+                                .andExpect(jsonPath("$.totalElements").value(2));
+        }
 }

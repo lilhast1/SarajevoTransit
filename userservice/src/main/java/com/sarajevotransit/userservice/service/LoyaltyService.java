@@ -11,10 +11,14 @@ import com.sarajevotransit.userservice.model.LoyaltyTransactionType;
 import com.sarajevotransit.userservice.model.UserProfile;
 import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class LoyaltyService {
@@ -82,6 +86,22 @@ public class LoyaltyService {
                 .stream()
                 .map(userService::toLoyaltyTransactionResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<LoyaltyTransactionResponse> getTransactions(Long userId, int page, int size, String sort) {
+        userService.findUserById(userId);
+        Pageable pageable = PaginationUtils.buildPageable(
+                page,
+                size,
+                sort,
+                "createdAt",
+                Sort.Direction.DESC,
+                Set.of("id", "transactionType", "pointsEarned", "pointsSpent", "description", "referenceType",
+                        "createdAt", "expiryDate"));
+
+        return loyaltyTransactionRepository.findByUserId(userId, pageable)
+                .map(userService::toLoyaltyTransactionResponse);
     }
 
     private void createTransaction(UserProfile user, LoyaltyTransactionType type, int points, String description,

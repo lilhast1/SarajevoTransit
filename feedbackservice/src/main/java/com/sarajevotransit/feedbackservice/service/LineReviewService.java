@@ -9,6 +9,8 @@ import com.sarajevotransit.feedbackservice.mapper.LineReviewMapper;
 import com.sarajevotransit.feedbackservice.model.LineReview;
 import com.sarajevotransit.feedbackservice.model.ModerationStatus;
 import com.sarajevotransit.feedbackservice.repository.LineReviewRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -48,15 +50,16 @@ public class LineReviewService {
     }
 
     @Transactional(readOnly = true)
-    public List<LineReviewResponse> getReviewsByLine(Long lineId, boolean includeHidden) {
-        List<LineReview> reviews;
+    public Page<LineReviewResponse> getReviewsByLine(Long lineId, boolean includeHidden, Pageable pageable) {
+        Page<LineReview> reviews;
         if (includeHidden) {
-            reviews = lineReviewRepository.findByLineIdOrderByCreatedAtDesc(lineId);
+            reviews = lineReviewRepository.findByLineId(lineId, pageable);
         } else {
-            reviews = lineReviewRepository.findByLineIdAndModerationStatusOrderByCreatedAtDesc(lineId,
-                    ModerationStatus.VISIBLE);
+            reviews = lineReviewRepository.findByLineIdAndModerationStatus(lineId,
+                    ModerationStatus.VISIBLE,
+                    pageable);
         }
-        return reviews.stream().map(lineReviewMapper::toResponse).toList();
+        return reviews.map(lineReviewMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -67,11 +70,9 @@ public class LineReviewService {
     }
 
     @Transactional(readOnly = true)
-    public List<LineReviewResponse> getReviewsByReviewer(Long reviewerUserId) {
-        return lineReviewRepository.findByReviewerUserIdOrderByCreatedAtDesc(reviewerUserId)
-                .stream()
-                .map(lineReviewMapper::toResponse)
-                .toList();
+    public Page<LineReviewResponse> getReviewsByReviewer(Long reviewerUserId, Pageable pageable) {
+        return lineReviewRepository.findByReviewerUserId(reviewerUserId, pageable)
+                .map(lineReviewMapper::toResponse);
     }
 
     @Transactional

@@ -15,6 +15,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +25,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -133,13 +137,19 @@ class ProblemReportServiceTest {
         ProblemReportResponse response = new ProblemReportResponse();
         response.setReporterUserId(44L);
 
-        when(problemReportRepository.findByStatusAndReporterUserIdOrderByCreatedAtDesc(ReportStatus.RECEIVED, 44L))
-                .thenReturn(List.of(entity));
+        when(problemReportRepository.findByStatusAndReporterUserId(
+                eq(ReportStatus.RECEIVED),
+                eq(44L),
+                any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(entity)));
         when(problemReportMapper.toResponse(entity)).thenReturn(response);
 
-        List<ProblemReportResponse> result = problemReportService.getReports(ReportStatus.RECEIVED, 44L);
+        Page<ProblemReportResponse> result = problemReportService.getReports(
+                ReportStatus.RECEIVED,
+                44L,
+                PageRequest.of(0, 10));
 
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getReporterUserId()).isEqualTo(44L);
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().getFirst().getReporterUserId()).isEqualTo(44L);
     }
 }
