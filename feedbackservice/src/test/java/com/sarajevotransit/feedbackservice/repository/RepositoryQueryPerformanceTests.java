@@ -71,8 +71,8 @@ class RepositoryQueryPerformanceTests {
         assertThat(reports.getContent()).hasSize(3);
         assertThat(reports.getContent()).allSatisfy(report -> assertThat(report.getPhotoUrls()).isNotNull());
         assertThat(statistics.getPrepareStatementCount())
-                .as("Expected single select with fetch graph (or at most one extra statement)")
-                .isLessThanOrEqualTo(2);
+                .as("Expected exactly one SQL statement for paged reports retrieval")
+                .isEqualTo(1);
     }
 
     @Test
@@ -86,8 +86,8 @@ class RepositoryQueryPerformanceTests {
 
         assertThat(reviews.getContent()).hasSize(2);
         assertThat(statistics.getPrepareStatementCount())
-                .as("Line reviews query should be resolved in a single statement")
-                .isLessThanOrEqualTo(1);
+                .as("Expected exactly one SQL statement for paged line reviews retrieval")
+                .isEqualTo(1);
     }
 
     private void seedReports() {
