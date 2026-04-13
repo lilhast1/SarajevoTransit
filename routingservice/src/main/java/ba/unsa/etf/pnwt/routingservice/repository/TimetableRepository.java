@@ -1,6 +1,7 @@
 package ba.unsa.etf.pnwt.routingservice.repository;
 
 import ba.unsa.etf.pnwt.routingservice.model.Timetable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,9 +16,15 @@ import java.util.Optional;
 
 @Repository
 public interface TimetableRepository extends JpaRepository<Timetable, Integer> {
+    @EntityGraph(attributePaths = {"line", "direction"})
     List<Timetable> findByIsActiveTrueOrderByDepartureTimeAsc();
+
+    @EntityGraph(attributePaths = {"line", "direction"})
     List<Timetable> findByLine_IdAndIsActiveTrueOrderByDepartureTimeAsc(Integer lineId);
+
+    @EntityGraph(attributePaths = {"line", "direction"})
     List<Timetable> findByDirection_IdAndIsActiveTrueOrderByDepartureTimeAsc(Integer directionId);
+
     Optional<Timetable> findByExternalId(Integer externalId);
     List<Timetable> findByExternalIdIn(List<Integer> externalIds);
     boolean existsByExternalId(Integer externalId);
