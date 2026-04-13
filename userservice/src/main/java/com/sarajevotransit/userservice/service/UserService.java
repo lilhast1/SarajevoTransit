@@ -90,7 +90,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<UserProfileResponse> getAllUsers() {
-        return userProfileRepository.findAll()
+        return userProfileRepository.findAllWithWalletAndPreference()
                 .stream()
                 .map(this::toUserProfileResponse)
                 .toList();
