@@ -62,6 +62,12 @@ public class NotificationService {
         return modelMapper.map(notificationRepository.save(notification), NotificationResponse.class);
     }
 
+    public void markAllAsRead(UUID userId) {
+        List<Notification> unread = notificationRepository.findByUserIdAndIsRead(userId, false);
+        unread.forEach(n -> n.setIsRead(true));
+        notificationRepository.saveAll(unread);
+    }
+
     public void delete(UUID id) {
         if (!notificationRepository.existsById(id)) {
             throw new NoSuchElementException("Notification not found: " + id);

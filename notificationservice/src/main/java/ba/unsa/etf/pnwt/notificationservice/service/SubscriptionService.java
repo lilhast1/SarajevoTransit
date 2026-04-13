@@ -2,6 +2,7 @@ package ba.unsa.etf.pnwt.notificationservice.service;
 
 import ba.unsa.etf.pnwt.notificationservice.dto.CreateSubscriptionRequest;
 import ba.unsa.etf.pnwt.notificationservice.dto.SubscriptionResponse;
+import ba.unsa.etf.pnwt.notificationservice.dto.UpdateSubscriptionRequest;
 import ba.unsa.etf.pnwt.notificationservice.model.Subscription;
 import ba.unsa.etf.pnwt.notificationservice.repository.SubscriptionRepository;
 import org.modelmapper.ModelMapper;
@@ -75,6 +76,25 @@ public class SubscriptionService {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Subscription not found: " + id));
         subscription.setIsActive(false);
+        return modelMapper.map(subscriptionRepository.save(subscription), SubscriptionResponse.class);
+    }
+
+    public SubscriptionResponse activate(UUID id) {
+        Subscription subscription = subscriptionRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Subscription not found: " + id));
+        subscription.setIsActive(true);
+        return modelMapper.map(subscriptionRepository.save(subscription), SubscriptionResponse.class);
+    }
+
+    public SubscriptionResponse update(UUID id, UpdateSubscriptionRequest request) {
+        Subscription subscription = subscriptionRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Subscription not found: " + id));
+        if (request.getLineId() != null) subscription.setLineId(request.getLineId());
+        if (request.getLineCode() != null) subscription.setLineCode(request.getLineCode());
+        if (request.getLineName() != null) subscription.setLineName(request.getLineName());
+        if (request.getStartInterval() != null) subscription.setStartInterval(request.getStartInterval());
+        if (request.getEndInterval() != null) subscription.setEndInterval(request.getEndInterval());
+        if (request.getDaysOfWeek() != null) subscription.setDaysOfWeek(request.getDaysOfWeek());
         return modelMapper.map(subscriptionRepository.save(subscription), SubscriptionResponse.class);
     }
 

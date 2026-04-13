@@ -2,6 +2,7 @@ package ba.unsa.etf.pnwt.notificationservice.controller;
 
 import ba.unsa.etf.pnwt.notificationservice.dto.CreateSubscriptionRequest;
 import ba.unsa.etf.pnwt.notificationservice.dto.SubscriptionResponse;
+import ba.unsa.etf.pnwt.notificationservice.dto.UpdateSubscriptionRequest;
 import ba.unsa.etf.pnwt.notificationservice.service.SubscriptionService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -67,6 +68,17 @@ public class SubscriptionController {
     @PatchMapping("/{id}/deactivate")
     public ResponseEntity<SubscriptionResponse> deactivate(@PathVariable UUID id) {
         return ResponseEntity.ok(subscriptionService.deactivate(id));
+    }
+
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<SubscriptionResponse> activate(@PathVariable UUID id) {
+        return ResponseEntity.ok(subscriptionService.activate(id));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<SubscriptionResponse> update(@PathVariable UUID id,
+                                                       @Valid @RequestBody UpdateSubscriptionRequest request) {
+        return ResponseEntity.ok(subscriptionService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
