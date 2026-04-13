@@ -8,8 +8,9 @@ import ba.unsa.etf.pnwt.notificationservice.repository.SubscriptionRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
+
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Service
@@ -31,7 +32,7 @@ public class SubscriptionService {
 
     public SubscriptionResponse getById(UUID id) {
         Subscription subscription = subscriptionRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Subscription not found: " + id));
+                .orElseThrow(() -> new NotFoundException("Subscription not found: " + id));
         return modelMapper.map(subscription, SubscriptionResponse.class);
     }
 
@@ -74,21 +75,21 @@ public class SubscriptionService {
 
     public SubscriptionResponse deactivate(UUID id) {
         Subscription subscription = subscriptionRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Subscription not found: " + id));
+                .orElseThrow(() -> new NotFoundException("Subscription not found: " + id));
         subscription.setIsActive(false);
         return modelMapper.map(subscriptionRepository.save(subscription), SubscriptionResponse.class);
     }
 
     public SubscriptionResponse activate(UUID id) {
         Subscription subscription = subscriptionRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Subscription not found: " + id));
+                .orElseThrow(() -> new NotFoundException("Subscription not found: " + id));
         subscription.setIsActive(true);
         return modelMapper.map(subscriptionRepository.save(subscription), SubscriptionResponse.class);
     }
 
     public SubscriptionResponse update(UUID id, UpdateSubscriptionRequest request) {
         Subscription subscription = subscriptionRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Subscription not found: " + id));
+                .orElseThrow(() -> new NotFoundException("Subscription not found: " + id));
         if (request.getLineId() != null) subscription.setLineId(request.getLineId());
         if (request.getLineCode() != null) subscription.setLineCode(request.getLineCode());
         if (request.getLineName() != null) subscription.setLineName(request.getLineName());
@@ -100,7 +101,7 @@ public class SubscriptionService {
 
     public void delete(UUID id) {
         if (!subscriptionRepository.existsById(id)) {
-            throw new NoSuchElementException("Subscription not found: " + id);
+            throw new NotFoundException("Subscription not found: " + id);
         }
         subscriptionRepository.deleteById(id);
     }

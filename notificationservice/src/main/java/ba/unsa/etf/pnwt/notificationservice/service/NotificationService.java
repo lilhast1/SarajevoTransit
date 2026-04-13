@@ -7,9 +7,10 @@ import ba.unsa.etf.pnwt.notificationservice.repository.NotificationRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
+
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Service
@@ -31,7 +32,7 @@ public class NotificationService {
 
     public NotificationResponse getById(UUID id) {
         Notification notification = notificationRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Notification not found: " + id));
+                .orElseThrow(() -> new NotFoundException("Notification not found: " + id));
         return modelMapper.map(notification, NotificationResponse.class);
     }
 
@@ -57,7 +58,7 @@ public class NotificationService {
 
     public NotificationResponse markAsRead(UUID id) {
         Notification notification = notificationRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Notification not found: " + id));
+                .orElseThrow(() -> new NotFoundException("Notification not found: " + id));
         notification.setIsRead(true);
         return modelMapper.map(notificationRepository.save(notification), NotificationResponse.class);
     }
@@ -70,7 +71,7 @@ public class NotificationService {
 
     public void delete(UUID id) {
         if (!notificationRepository.existsById(id)) {
-            throw new NoSuchElementException("Notification not found: " + id);
+            throw new NotFoundException("Notification not found: " + id);
         }
         notificationRepository.deleteById(id);
     }
