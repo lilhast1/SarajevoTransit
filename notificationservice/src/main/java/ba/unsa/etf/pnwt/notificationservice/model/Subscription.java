@@ -1,6 +1,7 @@
 package ba.unsa.etf.pnwt.notificationservice.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -22,6 +23,7 @@ public class Subscription {
     @Column(name = "user_full_name", length = 255)
     private String userFullName;
 
+    @Email
     @Column(name = "user_email", length = 255)
     private String userEmail;
 

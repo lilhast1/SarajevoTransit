@@ -1,6 +1,8 @@
 package ba.unsa.etf.pnwt.notificationservice.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -21,6 +23,7 @@ public class Notification {
     @Column(name = "user_full_name", length = 255)
     private String userFullName;
 
+    @Email
     @Column(name = "user_email", length = 255)
     private String userEmail;
 
@@ -32,13 +35,14 @@ public class Notification {
 
     @Column(name = "line_name", length = 200)
     private String lineName;
+    
 
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private NotificationType type;
 
-    @NotNull
+    @NotBlank
     @Column(nullable = false, length = 255)
     private String title;
 

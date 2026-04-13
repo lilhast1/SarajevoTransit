@@ -1,5 +1,6 @@
 package ba.unsa.etf.pnwt.notificationservice.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -14,6 +15,7 @@ public class CreateSubscriptionRequest {
     @Size(max = 255)
     private String userFullName;
 
+    @Email
     @Size(max = 255)
     private String userEmail;
 
@@ -26,7 +28,10 @@ public class CreateSubscriptionRequest {
     @Size(max = 200)
     private String lineName;
 
+    @NotNull
     private LocalTime startInterval;
+
+    @NotNull
     private LocalTime endInterval;
 
     @Size(max = 50)
