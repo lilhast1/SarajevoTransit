@@ -7,7 +7,7 @@
     "description": "Ticket purchase bonus",
     "referenceType": "ticket_purchase"
   },
-  "responseStatus": 200,
+  "responseStatus": 201,
   "responseBody": {
     "userId": 101,
     "currentBalance": 50

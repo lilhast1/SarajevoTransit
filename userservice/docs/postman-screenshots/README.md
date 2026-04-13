@@ -8,7 +8,7 @@ Failed create user request-response with invalid payload (HTTP 400).
 
 ![User create failure case](./user-create-failure.png)
 
-Successful loyalty earn request-response (HTTP 200).
+Successful loyalty earn request-response (HTTP 201).
 
 ![Loyalty earn success case](./loyalty-earn-success.png)
 

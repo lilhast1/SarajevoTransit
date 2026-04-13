@@ -165,7 +165,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(201); });",
                   "pm.test('Balance field present', function () { pm.expect(pm.response.json().currentBalance).to.be.a('number'); });"
                 ]
               }

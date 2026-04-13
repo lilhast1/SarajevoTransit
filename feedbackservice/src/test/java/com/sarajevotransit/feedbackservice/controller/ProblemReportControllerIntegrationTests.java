@@ -16,6 +16,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.util.List;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -77,10 +79,12 @@ class ProblemReportControllerIntegrationTests {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(payload))
                                 .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("validation_error"))
                                 .andExpect(jsonPath("$.message").value("Validation failed"))
-                                .andExpect(jsonPath("$.fieldErrors.reporterUserId").exists())
-                                .andExpect(jsonPath("$.fieldErrors.description").exists())
-                                .andExpect(jsonPath("$.fieldErrors.category").exists());
+                                .andExpect(jsonPath("$.path").value("/api/v1/reports"))
+                                .andExpect(jsonPath("$.validationErrors", hasItem(startsWith("reporterUserId:"))))
+                                .andExpect(jsonPath("$.validationErrors", hasItem(startsWith("description:"))))
+                                .andExpect(jsonPath("$.validationErrors", hasItem(startsWith("category:"))));
         }
 
         @Test
@@ -117,6 +121,8 @@ class ProblemReportControllerIntegrationTests {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(payload))
                                 .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("malformed_json"))
+                                .andExpect(jsonPath("$.path").value("/api/v1/reports"))
                                 .andExpect(jsonPath("$.message").value("Malformed JSON request"));
         }
 

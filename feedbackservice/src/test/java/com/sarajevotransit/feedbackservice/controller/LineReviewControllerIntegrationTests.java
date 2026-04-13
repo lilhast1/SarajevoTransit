@@ -15,6 +15,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -77,9 +79,11 @@ class LineReviewControllerIntegrationTests {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(payload))
                                 .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("validation_error"))
                                 .andExpect(jsonPath("$.message").value("Validation failed"))
-                                .andExpect(jsonPath("$.fieldErrors.rating").exists())
-                                .andExpect(jsonPath("$.fieldErrors.rideDate").exists());
+                                .andExpect(jsonPath("$.path").value("/api/v1/reviews"))
+                                .andExpect(jsonPath("$.validationErrors", hasItem(startsWith("rating:"))))
+                                .andExpect(jsonPath("$.validationErrors", hasItem(startsWith("rideDate:"))));
         }
 
         @Test
@@ -96,6 +100,8 @@ class LineReviewControllerIntegrationTests {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(payload))
                                 .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("malformed_json"))
+                                .andExpect(jsonPath("$.path").value("/api/v1/reviews"))
                                 .andExpect(jsonPath("$.message").value("Malformed JSON request"));
         }
 
