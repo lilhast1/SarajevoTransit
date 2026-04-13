@@ -10,6 +10,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,27 +29,37 @@ public class LoyaltyTransaction {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @NotNull
     private UserProfile user;
 
     @Column(name = "transaction_id")
     private Long transactionId;
 
     @Column(name = "points_earned", nullable = false)
+    @NotNull
+    @Min(0)
     private Integer pointsEarned = 0;
 
     @Column(name = "points_spent", nullable = false)
+    @NotNull
+    @Min(0)
     private Integer pointsSpent = 0;
 
     @Column(name = "expiry_date")
     private LocalDate expiryDate;
 
     @Column(nullable = false)
+    @NotBlank
+    @Size(max = 500)
     private String description;
 
     @Column(name = "reference_type", nullable = false)
+    @NotBlank
+    @Size(max = 100)
     private String referenceType;
 
     @Column(name = "created_at", nullable = false)
+    @NotNull
     private LocalDateTime createdAt;
 
     @PrePersist

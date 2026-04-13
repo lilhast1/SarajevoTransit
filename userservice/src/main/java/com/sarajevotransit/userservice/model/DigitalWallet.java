@@ -11,6 +11,9 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -26,12 +29,17 @@ public class DigitalWallet {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @NotNull
     private UserProfile user;
 
     @Column(nullable = false, precision = 10, scale = 2)
+    @NotNull
+    @DecimalMin(value = "0.0")
     private BigDecimal balance = BigDecimal.ZERO;
 
     @Column(name = "loyalty_points_total", nullable = false)
+    @NotNull
+    @Min(0)
     private Integer loyaltyPointsTotal = 0;
 
     @Column(name = "updated_at", nullable = false)

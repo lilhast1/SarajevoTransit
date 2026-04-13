@@ -12,6 +12,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -26,25 +30,35 @@ public class TicketPurchaseHistoryEntry {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @NotNull
     private UserProfile user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @NotNull
     private TicketType ticketType;
 
     @Column(nullable = false, precision = 10, scale = 2)
+    @NotNull
+    @DecimalMin(value = "0.1")
     private BigDecimal amount;
 
     @Column(nullable = false)
+    @NotBlank
+    @Size(max = 60)
     private String paymentMethod;
 
     @Column(nullable = false)
+    @NotBlank
+    @Size(max = 120)
     private String externalTransactionId;
 
     @Column(name = "line_code", length = 40)
+    @Size(max = 40)
     private String lineCode;
 
     @Column(nullable = false)
+    @NotNull
     private LocalDateTime purchasedAt;
 
     @PrePersist

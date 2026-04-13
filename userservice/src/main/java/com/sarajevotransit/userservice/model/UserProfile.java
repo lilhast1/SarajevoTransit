@@ -14,6 +14,11 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -29,19 +34,29 @@ public class UserProfile {
     private Long id;
 
     @Column(name = "first_name", nullable = false)
+    @NotBlank
+    @Size(max = 120)
     private String firstName;
 
     @Column(name = "last_name", nullable = false)
+    @NotNull
+    @Size(max = 120)
     private String lastName;
 
     @Column(name = "email", nullable = false, unique = true)
+    @NotBlank
+    @Email
+    @Size(max = 254)
     private String email;
 
     @Column(name = "password_hash", nullable = false)
+    @NotBlank
+    @Size(max = 255)
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
+    @NotNull
     private UserRole role = UserRole.PASSENGER;
 
     @Column(name = "created_at", nullable = false)
@@ -51,9 +66,11 @@ public class UserProfile {
     private LocalDateTime updatedAt;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Valid
     private DigitalWallet wallet;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Valid
     private UserPreference preference;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -12,6 +12,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
 
@@ -25,27 +26,34 @@ public class UserPreference {
     @MapsId
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @NotNull
     private UserProfile user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @NotNull
     private LanguageCode languageCode = LanguageCode.BS;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @NotNull
     private ThemeMode themeMode = ThemeMode.SYSTEM;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @NotNull
     private NotificationChannel notificationChannel = NotificationChannel.PUSH;
 
     @Column(nullable = false)
+    @NotNull
     private Boolean highContrastEnabled = false;
 
     @Column(nullable = false)
+    @NotNull
     private Boolean largeTextEnabled = false;
 
     @Column(nullable = false)
+    @NotNull
     private Boolean screenReaderEnabled = false;
 
     @Column(nullable = false)

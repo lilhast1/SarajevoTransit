@@ -10,6 +10,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 
@@ -23,21 +27,31 @@ public class TravelHistoryEntry {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @NotNull
     private UserProfile user;
 
     @Column(name = "line_code", nullable = false, length = 40)
+    @NotBlank
+    @Size(max = 40)
     private String lineCode;
 
     @Column(nullable = false)
+    @NotBlank
+    @Size(max = 120)
     private String fromStop;
 
     @Column(nullable = false)
+    @NotBlank
+    @Size(max = 120)
     private String toStop;
 
     @Column(nullable = false)
+    @NotNull
     private LocalDateTime traveledAt;
 
     @Column(nullable = false)
+    @NotNull
+    @Min(1)
     private Integer durationMinutes;
 
     @PrePersist
