@@ -22,6 +22,8 @@ Vraća pretplatu po ID-u.
 |-----------|-----|------|
 | `id` | Long | ID pretplate |
 
+![Get Subscription By ID - Error](screenshots/subscriptions/get-subscription-error.png)
+
 ---
 
 ### GET `/subscriptions/user/{userId}`

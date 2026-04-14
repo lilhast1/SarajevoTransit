@@ -26,6 +26,8 @@ Vraća jednu notifikaciju po ID-u.
 
 ![Get Notification By ID - Success](screenshots/notifications/get-notificationbyid-success.png)
 
+![Get Notification By ID - Error](screenshots/notifications/get-notificationbyid-error.png)
+
 ---
 
 ### GET `/notifications/user/{userId}`
@@ -90,6 +92,10 @@ Označava notifikaciju kao pročitanu.
 | Parametar | Tip | Opis |
 |-----------|-----|------|
 | `id` | Long | ID notifikacije |
+
+![Patch Mark As Read - Success](screenshots/notifications/path-success.png)
+
+![Patch Mark As Read - Error](screenshots/notifications/patch-error.png)
 
 ---
 
