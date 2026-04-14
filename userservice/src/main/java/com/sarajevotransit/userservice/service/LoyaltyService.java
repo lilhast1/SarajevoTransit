@@ -5,6 +5,7 @@ import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyRedeemRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyTransactionResponse;
 import com.sarajevotransit.userservice.exception.InsufficientLoyaltyPointsException;
+import com.sarajevotransit.userservice.mapper.LoyaltyTransactionMapper;
 import com.sarajevotransit.userservice.model.DigitalWallet;
 import com.sarajevotransit.userservice.model.LoyaltyTransaction;
 import com.sarajevotransit.userservice.model.LoyaltyTransactionType;
@@ -26,14 +27,17 @@ public class LoyaltyService {
     private final UserProfileRepository userProfileRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
     private final UserService userService;
+    private final LoyaltyTransactionMapper loyaltyTransactionMapper;
 
     public LoyaltyService(
             UserProfileRepository userProfileRepository,
             LoyaltyTransactionRepository loyaltyTransactionRepository,
-            UserService userService) {
+            UserService userService,
+            LoyaltyTransactionMapper loyaltyTransactionMapper) {
         this.userProfileRepository = userProfileRepository;
         this.loyaltyTransactionRepository = loyaltyTransactionRepository;
         this.userService = userService;
+        this.loyaltyTransactionMapper = loyaltyTransactionMapper;
     }
 
     @Transactional
@@ -84,7 +88,7 @@ public class LoyaltyService {
         userService.findUserById(userId);
         return loyaltyTransactionRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(userService::toLoyaltyTransactionResponse)
+                .map(loyaltyTransactionMapper::toResponse)
                 .toList();
     }
 
@@ -101,7 +105,7 @@ public class LoyaltyService {
                         "createdAt", "expiryDate"));
 
         return loyaltyTransactionRepository.findByUserId(userId, pageable)
-                .map(userService::toLoyaltyTransactionResponse);
+                .map(loyaltyTransactionMapper::toResponse);
     }
 
     private void createTransaction(UserProfile user, LoyaltyTransactionType type, int points, String description,

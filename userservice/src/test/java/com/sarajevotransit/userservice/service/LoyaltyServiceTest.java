@@ -5,6 +5,7 @@ import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyRedeemRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyTransactionResponse;
 import com.sarajevotransit.userservice.exception.InsufficientLoyaltyPointsException;
+import com.sarajevotransit.userservice.mapper.LoyaltyTransactionMapper;
 import com.sarajevotransit.userservice.model.DigitalWallet;
 import com.sarajevotransit.userservice.model.LoyaltyTransaction;
 import com.sarajevotransit.userservice.model.LoyaltyTransactionType;
@@ -39,6 +40,9 @@ class LoyaltyServiceTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private LoyaltyTransactionMapper loyaltyTransactionMapper;
 
     @InjectMocks
     private LoyaltyService loyaltyService;
@@ -147,7 +151,7 @@ class LoyaltyServiceTest {
 
         when(userService.findUserById(5L)).thenReturn(user);
         when(loyaltyTransactionRepository.findByUserIdOrderByCreatedAtDesc(5L)).thenReturn(List.of(transaction));
-        when(userService.toLoyaltyTransactionResponse(transaction)).thenReturn(response);
+        when(loyaltyTransactionMapper.toResponse(transaction)).thenReturn(response);
 
         List<LoyaltyTransactionResponse> responses = loyaltyService.getTransactions(5L);
 

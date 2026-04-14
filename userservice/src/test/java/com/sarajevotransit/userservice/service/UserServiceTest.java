@@ -2,8 +2,14 @@ package com.sarajevotransit.userservice.service;
 
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.dto.UserProfileResponse;
+import com.sarajevotransit.userservice.config.ModelMapperConfig;
 import com.sarajevotransit.userservice.exception.DuplicateResourceException;
 import com.sarajevotransit.userservice.exception.ResourceNotFoundException;
+import com.sarajevotransit.userservice.mapper.LoyaltyTransactionMapper;
+import com.sarajevotransit.userservice.mapper.TicketPurchaseMapper;
+import com.sarajevotransit.userservice.mapper.TravelHistoryMapper;
+import com.sarajevotransit.userservice.mapper.UserPreferenceMapper;
+import com.sarajevotransit.userservice.mapper.UserProfileMapper;
 import com.sarajevotransit.userservice.model.DigitalWallet;
 import com.sarajevotransit.userservice.model.LanguageCode;
 import com.sarajevotransit.userservice.model.NotificationChannel;
@@ -16,10 +22,12 @@ import com.sarajevotransit.userservice.repository.TicketPurchaseHistoryRepositor
 import com.sarajevotransit.userservice.repository.TravelHistoryRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
 import org.junit.jupiter.api.Test;
+import org.modelmapper.ModelMapper;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -35,6 +43,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
+    private final ModelMapper modelMapper = new ModelMapperConfig().modelMapper();
+
     @Mock
     private UserProfileRepository userProfileRepository;
 
@@ -46,6 +56,21 @@ class UserServiceTest {
 
     @Mock
     private LoyaltyTransactionRepository loyaltyTransactionRepository;
+
+    @Spy
+    private UserPreferenceMapper userPreferenceMapper = new UserPreferenceMapper(modelMapper);
+
+    @Spy
+    private UserProfileMapper userProfileMapper = new UserProfileMapper(modelMapper);
+
+    @Spy
+    private TravelHistoryMapper travelHistoryMapper = new TravelHistoryMapper(modelMapper);
+
+    @Spy
+    private TicketPurchaseMapper ticketPurchaseMapper = new TicketPurchaseMapper(modelMapper);
+
+    @Spy
+    private LoyaltyTransactionMapper loyaltyTransactionMapper = new LoyaltyTransactionMapper(modelMapper);
 
     @InjectMocks
     private UserService userService;

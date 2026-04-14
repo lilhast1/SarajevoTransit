@@ -14,6 +14,11 @@ import com.sarajevotransit.userservice.dto.UserSummaryResponse;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.exception.DuplicateResourceException;
 import com.sarajevotransit.userservice.exception.ResourceNotFoundException;
+import com.sarajevotransit.userservice.mapper.LoyaltyTransactionMapper;
+import com.sarajevotransit.userservice.mapper.TicketPurchaseMapper;
+import com.sarajevotransit.userservice.mapper.TravelHistoryMapper;
+import com.sarajevotransit.userservice.mapper.UserPreferenceMapper;
+import com.sarajevotransit.userservice.mapper.UserProfileMapper;
 import com.sarajevotransit.userservice.model.LoyaltyTransaction;
 import com.sarajevotransit.userservice.model.NotificationChannel;
 import com.sarajevotransit.userservice.model.ThemeMode;
@@ -51,16 +56,31 @@ public class UserService {
     private final TravelHistoryRepository travelHistoryRepository;
     private final TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
+    private final UserProfileMapper userProfileMapper;
+    private final UserPreferenceMapper userPreferenceMapper;
+    private final TravelHistoryMapper travelHistoryMapper;
+    private final TicketPurchaseMapper ticketPurchaseMapper;
+    private final LoyaltyTransactionMapper loyaltyTransactionMapper;
 
     public UserService(
             UserProfileRepository userProfileRepository,
             TravelHistoryRepository travelHistoryRepository,
             TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository,
-            LoyaltyTransactionRepository loyaltyTransactionRepository) {
+            LoyaltyTransactionRepository loyaltyTransactionRepository,
+            UserProfileMapper userProfileMapper,
+            UserPreferenceMapper userPreferenceMapper,
+            TravelHistoryMapper travelHistoryMapper,
+            TicketPurchaseMapper ticketPurchaseMapper,
+            LoyaltyTransactionMapper loyaltyTransactionMapper) {
         this.userProfileRepository = userProfileRepository;
         this.travelHistoryRepository = travelHistoryRepository;
         this.ticketPurchaseHistoryRepository = ticketPurchaseHistoryRepository;
         this.loyaltyTransactionRepository = loyaltyTransactionRepository;
+        this.userProfileMapper = userProfileMapper;
+        this.userPreferenceMapper = userPreferenceMapper;
+        this.travelHistoryMapper = travelHistoryMapper;
+        this.ticketPurchaseMapper = ticketPurchaseMapper;
+        this.loyaltyTransactionMapper = loyaltyTransactionMapper;
     }
 
     @Transactional
@@ -89,14 +109,14 @@ public class UserService {
         user.setPreference(preference);
 
         UserProfile saved = userProfileRepository.save(user);
-        return toUserProfileResponse(saved);
+        return userProfileMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public List<UserProfileResponse> getAllUsers() {
         return userProfileRepository.findAllWithWalletAndPreference()
                 .stream()
-                .map(this::toUserProfileResponse)
+                .map(userProfileMapper::toResponse)
                 .toList();
     }
 
@@ -111,19 +131,19 @@ public class UserService {
                 Set.of("id", "firstName", "lastName", "email", "createdAt", "updatedAt"));
 
         return userProfileRepository.findAllWithWalletAndPreference(pageable)
-                .map(this::toUserProfileResponse);
+                .map(userProfileMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
     public UserProfileResponse getUser(Long userId) {
         UserProfile user = findUserById(userId);
-        return toUserProfileResponse(user);
+        return userProfileMapper.toResponse(user);
     }
 
     @Transactional(readOnly = true)
     public UserPreferenceResponse getPreference(Long userId) {
         UserProfile user = findUserById(userId);
-        return toUserPreferenceResponse(user.getPreference());
+        return userPreferenceMapper.toResponse(user.getPreference());
     }
 
     @Transactional(readOnly = true)
@@ -131,7 +151,7 @@ public class UserService {
         findUserById(userId);
         return travelHistoryRepository.findByUserIdOrderByTraveledAtDesc(userId)
                 .stream()
-                .map(this::toTravelHistoryResponse)
+                .map(travelHistoryMapper::toResponse)
                 .toList();
     }
 
@@ -147,7 +167,7 @@ public class UserService {
                 Set.of("id", "lineCode", "fromStop", "toStop", "traveledAt", "durationMinutes"));
 
         return travelHistoryRepository.findByUserId(userId, pageable)
-                .map(this::toTravelHistoryResponse);
+                .map(travelHistoryMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -155,7 +175,7 @@ public class UserService {
         findUserById(userId);
         return ticketPurchaseHistoryRepository.findByUserIdOrderByPurchasedAtDesc(userId)
                 .stream()
-                .map(this::toTicketPurchaseResponse)
+                .map(ticketPurchaseMapper::toResponse)
                 .toList();
     }
 
@@ -172,7 +192,7 @@ public class UserService {
                         "purchasedAt"));
 
         return ticketPurchaseHistoryRepository.findByUserId(userId, pageable)
-                .map(this::toTicketPurchaseResponse);
+                .map(ticketPurchaseMapper::toResponse);
     }
 
     @Transactional
@@ -186,7 +206,7 @@ public class UserService {
 
         user.setFullName(request.fullName().trim());
         user.setEmail(normalizedEmail);
-        return toUserProfileResponse(userProfileRepository.save(user));
+        return userProfileMapper.toResponse(userProfileRepository.save(user));
     }
 
     @Transactional
@@ -213,7 +233,7 @@ public class UserService {
         preference.setScreenReaderEnabled(request.screenReaderEnabled());
 
         userProfileRepository.save(user);
-        return toUserPreferenceResponse(preference);
+        return userPreferenceMapper.toResponse(preference);
     }
 
     @Transactional
@@ -229,7 +249,7 @@ public class UserService {
 
         user.addTravelHistoryEntry(entry);
         travelHistoryRepository.save(entry);
-        return toTravelHistoryResponse(entry);
+        return travelHistoryMapper.toResponse(entry);
     }
 
     @Transactional
@@ -246,7 +266,7 @@ public class UserService {
 
         user.addTicketPurchase(entry);
         ticketPurchaseHistoryRepository.save(entry);
-        return toTicketPurchaseResponse(entry);
+        return ticketPurchaseMapper.toResponse(entry);
     }
 
     @Transactional(readOnly = true)
@@ -283,25 +303,25 @@ public class UserService {
 
         List<TravelHistoryResponse> travelHistory = travelHistoryRepository.findByUserIdOrderByTraveledAtDesc(userId)
                 .stream()
-                .map(this::toTravelHistoryResponse)
+                .map(travelHistoryMapper::toResponse)
                 .toList();
 
         List<TicketPurchaseResponse> purchases = ticketPurchaseHistoryRepository
                 .findByUserIdOrderByPurchasedAtDesc(userId)
                 .stream()
-                .map(this::toTicketPurchaseResponse)
+                .map(ticketPurchaseMapper::toResponse)
                 .toList();
 
         List<LoyaltyTransactionResponse> transactions = loyaltyTransactionRepository
                 .findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(this::toLoyaltyTransactionResponse)
+                .map(loyaltyTransactionMapper::toResponse)
                 .toList();
 
         List<String> suggestions = getPersonalizedLineSuggestions(userId, 3);
 
         return new UserSummaryResponse(
-                toUserProfileResponse(user),
+                userProfileMapper.toResponse(user),
                 travelHistory,
                 purchases,
                 transactions,
@@ -322,66 +342,5 @@ public class UserService {
         } catch (NoSuchAlgorithmException ex) {
             throw new IllegalStateException("Password hashing algorithm is not available.", ex);
         }
-    }
-
-    public UserProfileResponse toUserProfileResponse(UserProfile user) {
-        return new UserProfileResponse(
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getLoyaltyPointsBalance(),
-                toUserPreferenceResponse(user.getPreference()),
-                user.getCreatedAt(),
-                user.getUpdatedAt());
-    }
-
-    public UserPreferenceResponse toUserPreferenceResponse(UserPreference preference) {
-        if (preference == null) {
-            return null;
-        }
-
-        return new UserPreferenceResponse(
-                preference.getLanguageCode(),
-                preference.getThemeMode(),
-                preference.getNotificationChannel(),
-                Boolean.TRUE.equals(preference.getHighContrastEnabled()),
-                Boolean.TRUE.equals(preference.getLargeTextEnabled()),
-                Boolean.TRUE.equals(preference.getScreenReaderEnabled()),
-                preference.getUpdatedAt());
-    }
-
-    public TravelHistoryResponse toTravelHistoryResponse(TravelHistoryEntry entry) {
-        return new TravelHistoryResponse(
-                entry.getId(),
-                entry.getLineCode(),
-                entry.getFromStop(),
-                entry.getToStop(),
-                entry.getTraveledAt(),
-                entry.getDurationMinutes());
-    }
-
-    public TicketPurchaseResponse toTicketPurchaseResponse(TicketPurchaseHistoryEntry entry) {
-        return new TicketPurchaseResponse(
-                entry.getId(),
-                entry.getTicketType(),
-                entry.getAmount(),
-                entry.getPaymentMethod(),
-                entry.getExternalTransactionId(),
-                entry.getLineCode(),
-                entry.getPurchasedAt());
-    }
-
-    public LoyaltyTransactionResponse toLoyaltyTransactionResponse(LoyaltyTransaction transaction) {
-        return new LoyaltyTransactionResponse(
-                transaction.getId(),
-                transaction.getTransactionType(),
-                transaction.getPoints(),
-                transaction.getPointsEarned() == null ? 0 : transaction.getPointsEarned(),
-                transaction.getPointsSpent() == null ? 0 : transaction.getPointsSpent(),
-                transaction.getDescription(),
-                transaction.getReferenceType(),
-                transaction.getTransactionId(),
-                transaction.getExpiryDate(),
-                transaction.getCreatedAt());
     }
 }
