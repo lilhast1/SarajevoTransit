@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.UUID;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -27,13 +26,13 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
-        // Fixed seed UUIDs — represent external user and line identities
-        UUID userA = UUID.fromString("00000000-0000-0000-0000-000000000001"); // Ana Aganović
-        UUID userB = UUID.fromString("00000000-0000-0000-0000-000000000002"); // Mirza Hodžić
-        UUID userC = UUID.fromString("00000000-0000-0000-0000-000000000003"); // Kenan Begović
-        UUID line3  = UUID.fromString("00000000-0000-0000-0000-000000000101"); // code "3",  Ilidža - Baščaršija
-        UUID line1  = UUID.fromString("00000000-0000-0000-0000-000000000102"); // code "1",  Ilidža - Centar
-        UUID line31 = UUID.fromString("00000000-0000-0000-0000-000000000103"); // code "31", Skenderija - Dobrinja
+        // Fixed seed IDs — represent external user and line identities
+        Long userA = 1L; // Ana Aganović
+        Long userB = 2L; // Mirza Hodžić
+        Long userC = 3L; // Kenan Begović
+        Long line3  = 101L; // code "3",  Ilidža - Baščaršija
+        Long line1  = 102L; // code "1",  Ilidža - Centar
+        Long line31 = 103L; // code "31", Skenderija - Dobrinja
 
         // Seed subscriptions
         if (subscriptionRepository.count() == 0) {

@@ -3,11 +3,10 @@ package ba.unsa.etf.pnwt.notificationservice.dto;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalTime;
-import java.util.UUID;
 
 public class UpdateSubscriptionRequest {
 
-    private UUID lineId;
+    private Long lineId;
 
     @Size(max = 20)
     private String lineCode;
@@ -22,8 +21,8 @@ public class UpdateSubscriptionRequest {
     @Size(max = 50)
     private String daysOfWeek;
 
-    public UUID getLineId() { return lineId; }
-    public void setLineId(UUID lineId) { this.lineId = lineId; }
+    public Long getLineId() { return lineId; }
+    public void setLineId(Long lineId) { this.lineId = lineId; }
 
     public String getLineCode() { return lineCode; }
     public void setLineCode(String lineCode) { this.lineCode = lineCode; }

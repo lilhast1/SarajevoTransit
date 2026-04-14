@@ -18,11 +18,11 @@ Vraća listu svih notifikacija u sistemu.
 ---
 
 ### GET `/notifications/{id}`
-Vraća jednu notifikaciju po UUID-u.
+Vraća jednu notifikaciju po ID-u.
 
 | Parametar | Tip | Opis |
 |-----------|-----|------|
-| `id` | UUID | ID notifikacije |
+| `id` | Long | ID notifikacije |
 
 ![Get Notification By ID - Success](screenshots/notifications/get-notificationbyid-success.png)
 
@@ -33,7 +33,7 @@ Vraća sve notifikacije za određenog korisnika.
 
 | Parametar | Tip | Opis |
 |-----------|-----|------|
-| `userId` | UUID | ID korisnika |
+| `userId` | Long | ID korisnika |
 
 ---
 
@@ -42,7 +42,7 @@ Vraća nepročitane notifikacije za određenog korisnika.
 
 | Parametar | Tip | Opis |
 |-----------|-----|------|
-| `userId` | UUID | ID korisnika |
+| `userId` | Long | ID korisnika |
 
 ---
 
@@ -52,8 +52,8 @@ Kreira novu notifikaciju.
 **Request body:**
 ```json
 {
-  "userId": "00000000-0000-0000-0000-000000000003",
-  "lineId": "00000000-0000-0000-0000-000000000101",
+  "userId": 3,
+  "lineId": 101,
   "lineCode": "3",
   "lineName": "Ilidža - Baščaršija",
   "type": "DELAY",
@@ -74,7 +74,7 @@ Poslan request bez obaveznih polja (`type`, `title`, `content`):
 
 ```json
 {
-  "userId": "00000000-0000-0000-0000-000000000003"
+  "userId": 3
 }
 ```
 
@@ -89,15 +89,15 @@ Označava notifikaciju kao pročitanu.
 
 | Parametar | Tip | Opis |
 |-----------|-----|------|
-| `id` | UUID | ID notifikacije |
+| `id` | Long | ID notifikacije |
 
 ---
 
 ### DELETE `/notifications/{id}`
-Briše notifikaciju po UUID-u.
+Briše notifikaciju po ID-u.
 
 | Parametar | Tip | Opis |
 |-----------|-----|------|
-| `id` | UUID | ID notifikacije |
+| `id` | Long | ID notifikacije |
 
 ![Delete Notification - Success](screenshots/notifications/delete-success.png)

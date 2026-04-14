@@ -5,20 +5,19 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "notifications")
 public class Notification {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false, columnDefinition = "BINARY(16)")
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", updatable = false, nullable = false)
+    private Long id;
 
     @NotNull
-    @Column(name = "user_id", nullable = false, columnDefinition = "BINARY(16)")
-    private UUID userId;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @Column(name = "user_full_name", length = 255)
     private String userFullName;
@@ -27,15 +26,15 @@ public class Notification {
     @Column(name = "user_email", length = 255)
     private String userEmail;
 
-    @Column(name = "line_id", columnDefinition = "BINARY(16)")
-    private UUID lineId;
+    @Column(name = "line_id")
+    private Long lineId;
 
     @Column(name = "line_code", length = 20)
     private String lineCode;
 
     @Column(name = "line_name", length = 200)
     private String lineName;
-    
+
 
     @NotNull
     @Enumerated(EnumType.STRING)
@@ -56,11 +55,11 @@ public class Notification {
     private LocalDateTime sentAt;
 
     // Getteri i setteri
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
     public String getUserFullName() { return userFullName; }
     public void setUserFullName(String userFullName) { this.userFullName = userFullName; }
@@ -68,8 +67,8 @@ public class Notification {
     public String getUserEmail() { return userEmail; }
     public void setUserEmail(String userEmail) { this.userEmail = userEmail; }
 
-    public UUID getLineId() { return lineId; }
-    public void setLineId(UUID lineId) { this.lineId = lineId; }
+    public Long getLineId() { return lineId; }
+    public void setLineId(Long lineId) { this.lineId = lineId; }
 
     public String getLineCode() { return lineCode; }
     public void setLineCode(String lineCode) { this.lineCode = lineCode; }

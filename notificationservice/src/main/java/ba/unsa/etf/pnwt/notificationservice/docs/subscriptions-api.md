@@ -16,11 +16,11 @@ Vraća listu svih pretplata u sistemu.
 ---
 
 ### GET `/subscriptions/{id}`
-Vraća pretplatu po UUID-u.
+Vraća pretplatu po ID-u.
 
 | Parametar | Tip | Opis |
 |-----------|-----|------|
-| `id` | UUID | ID pretplate |
+| `id` | Long | ID pretplate |
 
 ---
 
@@ -29,7 +29,7 @@ Vraća sve pretplate određenog korisnika.
 
 | Parametar | Tip | Opis |
 |-----------|-----|------|
-| `userId` | UUID | ID korisnika |
+| `userId` | Long | ID korisnika |
 
 ---
 
@@ -38,7 +38,7 @@ Vraća samo aktivne pretplate određenog korisnika.
 
 | Parametar | Tip | Opis |
 |-----------|-----|------|
-| `userId` | UUID | ID korisnika |
+| `userId` | Long | ID korisnika |
 
 ---
 
@@ -47,7 +47,7 @@ Vraća sve pretplate na određenu liniju.
 
 | Parametar | Tip | Opis |
 |-----------|-----|------|
-| `lineId` | UUID | ID linije |
+| `lineId` | Long | ID linije |
 
 ---
 
@@ -72,10 +72,10 @@ Kreira novu pretplatu.
 **Request body:**
 ```json
 {
-  "userId": "00000000-0000-0000-0000-000000000002",
+  "userId": 2,
   "userFullName": "Mirza Hodžić",
   "userEmail": "mirza.hodzic@example.com",
-  "lineId": "00000000-0000-0000-0000-000000000103",
+  "lineId": 103,
   "lineCode": "31",
   "lineName": "Skenderija - Dobrinja",
   "startInterval": "08:00:00",
@@ -96,7 +96,7 @@ Poslan request bez obaveznih polja (`lineId`, `lineName`, itd.):
 
 ```json
 {
-  "userId": "00000000-0000-0000-0000-000000000002",
+  "userId": 2,
   "userFullName": "Mirza Hodžić",
   "userEmail": "mirza.hodzic@example.com"
 }
@@ -109,17 +109,17 @@ Poslan request bez obaveznih polja (`lineId`, `lineName`, itd.):
 ---
 
 ### PATCH `/subscriptions/{id}/deactivate`
-Deaktivira pretplatu po UUID-u.
+Deaktivira pretplatu po ID-u.
 
 | Parametar | Tip | Opis |
 |-----------|-----|------|
-| `id` | UUID | ID pretplate |
+| `id` | Long | ID pretplate |
 
 ---
 
 ### DELETE `/subscriptions/{id}`
-Briše pretplatu po UUID-u.
+Briše pretplatu po ID-u.
 
 | Parametar | Tip | Opis |
 |-----------|-----|------|
-| `id` | UUID | ID pretplate |
+| `id` | Long | ID pretplate |

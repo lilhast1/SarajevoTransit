@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/notifications")
@@ -27,17 +26,17 @@ public class NotificationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<NotificationResponse> getById(@PathVariable UUID id) {
+    public ResponseEntity<NotificationResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(notificationService.getById(id));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<NotificationResponse>> getByUserId(@PathVariable UUID userId) {
+    public ResponseEntity<List<NotificationResponse>> getByUserId(@PathVariable Long userId) {
         return ResponseEntity.ok(notificationService.getByUserId(userId));
     }
 
     @GetMapping("/user/{userId}/unread")
-    public ResponseEntity<List<NotificationResponse>> getUnread(@PathVariable UUID userId) {
+    public ResponseEntity<List<NotificationResponse>> getUnread(@PathVariable Long userId) {
         return ResponseEntity.ok(notificationService.getUnreadByUserId(userId));
     }
 
@@ -47,18 +46,18 @@ public class NotificationController {
     }
 
     @PatchMapping("/{id}/read")
-    public ResponseEntity<NotificationResponse> markAsRead(@PathVariable UUID id) {
+    public ResponseEntity<NotificationResponse> markAsRead(@PathVariable Long id) {
         return ResponseEntity.ok(notificationService.markAsRead(id));
     }
 
     @PatchMapping("/user/{userId}/read-all")
-    public ResponseEntity<Void> markAllAsRead(@PathVariable UUID userId) {
+    public ResponseEntity<Void> markAllAsRead(@PathVariable Long userId) {
         notificationService.markAllAsRead(userId);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         notificationService.delete(id);
         return ResponseEntity.noContent().build();
     }

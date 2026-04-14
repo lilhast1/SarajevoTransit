@@ -11,7 +11,6 @@ import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class NotificationService {
@@ -30,19 +29,19 @@ public class NotificationService {
                 .toList();
     }
 
-    public NotificationResponse getById(UUID id) {
+    public NotificationResponse getById(Long id) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Notification not found: " + id));
         return modelMapper.map(notification, NotificationResponse.class);
     }
 
-    public List<NotificationResponse> getByUserId(UUID userId) {
+    public List<NotificationResponse> getByUserId(Long userId) {
         return notificationRepository.findByUserId(userId).stream()
                 .map(n -> modelMapper.map(n, NotificationResponse.class))
                 .toList();
     }
 
-    public List<NotificationResponse> getUnreadByUserId(UUID userId) {
+    public List<NotificationResponse> getUnreadByUserId(Long userId) {
         return notificationRepository.findByUserIdAndIsRead(userId, false).stream()
                 .map(n -> modelMapper.map(n, NotificationResponse.class))
                 .toList();
@@ -56,20 +55,20 @@ public class NotificationService {
         return modelMapper.map(saved, NotificationResponse.class);
     }
 
-    public NotificationResponse markAsRead(UUID id) {
+    public NotificationResponse markAsRead(Long id) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Notification not found: " + id));
         notification.setIsRead(true);
         return modelMapper.map(notificationRepository.save(notification), NotificationResponse.class);
     }
 
-    public void markAllAsRead(UUID userId) {
+    public void markAllAsRead(Long userId) {
         List<Notification> unread = notificationRepository.findByUserIdAndIsRead(userId, false);
         unread.forEach(n -> n.setIsRead(true));
         notificationRepository.saveAll(unread);
     }
 
-    public void delete(UUID id) {
+    public void delete(Long id) {
         if (!notificationRepository.existsById(id)) {
             throw new NotFoundException("Notification not found: " + id);
         }

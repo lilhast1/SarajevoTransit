@@ -2,15 +2,14 @@ package ba.unsa.etf.pnwt.notificationservice.dto;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.UUID;
 
 public class SubscriptionResponse {
 
-    private UUID id;
-    private UUID userId;
+    private Long id;
+    private Long userId;
     private String userFullName;
     private String userEmail;
-    private UUID lineId;
+    private Long lineId;
     private String lineCode;
     private String lineName;
     private LocalTime startInterval;
@@ -19,11 +18,11 @@ public class SubscriptionResponse {
     private Boolean isActive;
     private LocalDateTime createdAt;
 
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
     public String getUserFullName() { return userFullName; }
     public void setUserFullName(String userFullName) { this.userFullName = userFullName; }
@@ -31,8 +30,8 @@ public class SubscriptionResponse {
     public String getUserEmail() { return userEmail; }
     public void setUserEmail(String userEmail) { this.userEmail = userEmail; }
 
-    public UUID getLineId() { return lineId; }
-    public void setLineId(UUID lineId) { this.lineId = lineId; }
+    public Long getLineId() { return lineId; }
+    public void setLineId(Long lineId) { this.lineId = lineId; }
 
     public String getLineCode() { return lineCode; }
     public void setLineCode(String lineCode) { this.lineCode = lineCode; }

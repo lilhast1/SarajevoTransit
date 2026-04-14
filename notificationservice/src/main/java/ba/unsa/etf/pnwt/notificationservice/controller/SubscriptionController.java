@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/subscriptions")
@@ -28,22 +27,22 @@ public class SubscriptionController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SubscriptionResponse> getById(@PathVariable UUID id) {
+    public ResponseEntity<SubscriptionResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(subscriptionService.getById(id));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<SubscriptionResponse>> getByUserId(@PathVariable UUID userId) {
+    public ResponseEntity<List<SubscriptionResponse>> getByUserId(@PathVariable Long userId) {
         return ResponseEntity.ok(subscriptionService.getByUserId(userId));
     }
 
     @GetMapping("/line/{lineId}")
-    public ResponseEntity<List<SubscriptionResponse>> getByLineId(@PathVariable UUID lineId) {
+    public ResponseEntity<List<SubscriptionResponse>> getByLineId(@PathVariable Long lineId) {
         return ResponseEntity.ok(subscriptionService.getByLineId(lineId));
     }
 
     @GetMapping("/user/{userId}/active")
-    public ResponseEntity<List<SubscriptionResponse>> getActive(@PathVariable UUID userId) {
+    public ResponseEntity<List<SubscriptionResponse>> getActive(@PathVariable Long userId) {
         return ResponseEntity.ok(subscriptionService.getActiveByUserId(userId));
     }
 
@@ -66,23 +65,23 @@ public class SubscriptionController {
     }
 
     @PatchMapping("/{id}/deactivate")
-    public ResponseEntity<SubscriptionResponse> deactivate(@PathVariable UUID id) {
+    public ResponseEntity<SubscriptionResponse> deactivate(@PathVariable Long id) {
         return ResponseEntity.ok(subscriptionService.deactivate(id));
     }
 
     @PatchMapping("/{id}/activate")
-    public ResponseEntity<SubscriptionResponse> activate(@PathVariable UUID id) {
+    public ResponseEntity<SubscriptionResponse> activate(@PathVariable Long id) {
         return ResponseEntity.ok(subscriptionService.activate(id));
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<SubscriptionResponse> update(@PathVariable UUID id,
+    public ResponseEntity<SubscriptionResponse> update(@PathVariable Long id,
                                                        @Valid @RequestBody UpdateSubscriptionRequest request) {
         return ResponseEntity.ok(subscriptionService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         subscriptionService.delete(id);
         return ResponseEntity.noContent().build();
     }

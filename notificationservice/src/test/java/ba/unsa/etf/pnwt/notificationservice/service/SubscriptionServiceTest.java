@@ -14,12 +14,12 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
+
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,8 +39,8 @@ class SubscriptionServiceTest {
 
     @Test
     void getAll_returnsAllSubscriptions() {
-        Subscription first = createSubscription(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), true);
-        Subscription second = createSubscription(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), true);
+        Subscription first = createSubscription(10L, 1L, 101L, true);
+        Subscription second = createSubscription(11L, 2L, 102L, true);
         when(subscriptionRepository.findAll()).thenReturn(List.of(first, second));
 
         List<SubscriptionResponse> result = subscriptionService.getAll();
@@ -53,8 +53,8 @@ class SubscriptionServiceTest {
 
     @Test
     void getById_existingId_returnsResponse() {
-        UUID id = UUID.randomUUID();
-        Subscription subscription = createSubscription(id, UUID.randomUUID(), UUID.randomUUID(), true);
+        Long id = 1L;
+        Subscription subscription = createSubscription(id, 2L, 101L, true);
         when(subscriptionRepository.findById(id)).thenReturn(Optional.of(subscription));
 
         SubscriptionResponse result = subscriptionService.getById(id);
@@ -66,10 +66,10 @@ class SubscriptionServiceTest {
 
     @Test
     void getById_nonExistingId_throwsException() {
-        UUID id = UUID.randomUUID();
+        Long id = 99L;
         when(subscriptionRepository.findById(id)).thenReturn(Optional.empty());
 
-        NoSuchElementException ex = assertThrows(NoSuchElementException.class, () -> subscriptionService.getById(id));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> subscriptionService.getById(id));
 
         assertTrue(ex.getMessage().contains(id.toString()));
         verify(subscriptionRepository).findById(id);
@@ -77,8 +77,8 @@ class SubscriptionServiceTest {
 
     @Test
     void getByUserId_returnsSubscriptions() {
-        UUID userId = UUID.randomUUID();
-        Subscription subscription = createSubscription(UUID.randomUUID(), userId, UUID.randomUUID(), true);
+        Long userId = 1L;
+        Subscription subscription = createSubscription(10L, userId, 101L, true);
         when(subscriptionRepository.findByUserId(userId)).thenReturn(List.of(subscription));
 
         List<SubscriptionResponse> result = subscriptionService.getByUserId(userId);
@@ -90,8 +90,8 @@ class SubscriptionServiceTest {
 
     @Test
     void getByLineId_returnsSubscriptions() {
-        UUID lineId = UUID.randomUUID();
-        Subscription subscription = createSubscription(UUID.randomUUID(), UUID.randomUUID(), lineId, true);
+        Long lineId = 101L;
+        Subscription subscription = createSubscription(10L, 1L, lineId, true);
         when(subscriptionRepository.findByLineId(lineId)).thenReturn(List.of(subscription));
 
         List<SubscriptionResponse> result = subscriptionService.getByLineId(lineId);
@@ -103,8 +103,8 @@ class SubscriptionServiceTest {
 
     @Test
     void getActiveByUserId_returnsOnlyActive() {
-        UUID userId = UUID.randomUUID();
-        Subscription activeSubscription = createSubscription(UUID.randomUUID(), userId, UUID.randomUUID(), true);
+        Long userId = 1L;
+        Subscription activeSubscription = createSubscription(10L, userId, 101L, true);
         when(subscriptionRepository.findByUserIdAndIsActive(userId, true)).thenReturn(List.of(activeSubscription));
 
         List<SubscriptionResponse> result = subscriptionService.getActiveByUserId(userId);
@@ -117,7 +117,7 @@ class SubscriptionServiceTest {
     @Test
     void searchByName_returnsMatches() {
         String name = "Ali";
-        Subscription subscription = createSubscription(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), true);
+        Subscription subscription = createSubscription(10L, 1L, 101L, true);
         subscription.setUserFullName("Ali Test");
         when(subscriptionRepository.findByUserFullNameContainingIgnoreCase(name)).thenReturn(List.of(subscription));
 
@@ -131,7 +131,7 @@ class SubscriptionServiceTest {
     @Test
     void searchByEmail_returnsMatches() {
         String email = "user@example.com";
-        Subscription subscription = createSubscription(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), true);
+        Subscription subscription = createSubscription(10L, 1L, 101L, true);
         subscription.setUserEmail(email);
         when(subscriptionRepository.findByUserEmailIgnoreCase(email)).thenReturn(List.of(subscription));
 
@@ -145,7 +145,7 @@ class SubscriptionServiceTest {
     @Test
     void create_savesSubscription_isActiveTrue() {
         CreateSubscriptionRequest request = createSubscriptionRequest();
-        UUID id = UUID.randomUUID();
+        Long id = 10L;
         when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> {
             Subscription entity = invocation.getArgument(0);
             entity.setId(id);
@@ -165,8 +165,8 @@ class SubscriptionServiceTest {
 
     @Test
     void deactivate_setsIsActiveFalse() {
-        UUID id = UUID.randomUUID();
-        Subscription existing = createSubscription(id, UUID.randomUUID(), UUID.randomUUID(), true);
+        Long id = 1L;
+        Subscription existing = createSubscription(id, 2L, 101L, true);
         when(subscriptionRepository.findById(id)).thenReturn(Optional.of(existing));
         when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -179,7 +179,7 @@ class SubscriptionServiceTest {
 
     @Test
     void delete_existingId_deletesSuccessfully() {
-        UUID id = UUID.randomUUID();
+        Long id = 1L;
         when(subscriptionRepository.existsById(id)).thenReturn(true);
 
         subscriptionService.delete(id);
@@ -190,17 +190,17 @@ class SubscriptionServiceTest {
 
     @Test
     void delete_nonExistingId_throwsException() {
-        UUID id = UUID.randomUUID();
+        Long id = 99L;
         when(subscriptionRepository.existsById(id)).thenReturn(false);
 
-        NoSuchElementException ex = assertThrows(NoSuchElementException.class, () -> subscriptionService.delete(id));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> subscriptionService.delete(id));
 
         assertTrue(ex.getMessage().contains(id.toString()));
         verify(subscriptionRepository).existsById(id);
         verify(subscriptionRepository, never()).deleteById(id);
     }
 
-    private static Subscription createSubscription(UUID id, UUID userId, UUID lineId, boolean isActive) {
+    private static Subscription createSubscription(Long id, Long userId, Long lineId, boolean isActive) {
         Subscription subscription = new Subscription();
         subscription.setId(id);
         subscription.setUserId(userId);
@@ -219,10 +219,10 @@ class SubscriptionServiceTest {
 
     private static CreateSubscriptionRequest createSubscriptionRequest() {
         CreateSubscriptionRequest request = new CreateSubscriptionRequest();
-        request.setUserId(UUID.randomUUID());
+        request.setUserId(1L);
         request.setUserFullName("Test User");
         request.setUserEmail("user@example.com");
-        request.setLineId(UUID.randomUUID());
+        request.setLineId(101L);
         request.setLineCode("L1");
         request.setLineName("Line 1");
         request.setStartInterval(LocalTime.of(8, 0));

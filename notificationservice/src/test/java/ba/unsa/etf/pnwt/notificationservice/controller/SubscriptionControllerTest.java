@@ -11,11 +11,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
+import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
+
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -38,51 +38,51 @@ class SubscriptionControllerTest {
 
     @Test
     void getAll_returns200() throws Exception {
-        SubscriptionResponse response = subscriptionResponse(UUID.randomUUID(), UUID.randomUUID(), true);
+        SubscriptionResponse response = subscriptionResponse(1L, 2L, true);
         when(subscriptionService.getAll()).thenReturn(List.of(response));
 
         mockMvc.perform(get("/subscriptions"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(response.getId().toString()));
+                .andExpect(jsonPath("$[0].id").value(response.getId()));
     }
 
     @Test
     void getById_existingId_returns200() throws Exception {
-        UUID id = UUID.randomUUID();
-        SubscriptionResponse response = subscriptionResponse(id, UUID.randomUUID(), true);
+        Long id = 1L;
+        SubscriptionResponse response = subscriptionResponse(id, 2L, true);
         when(subscriptionService.getById(id)).thenReturn(response);
 
         mockMvc.perform(get("/subscriptions/{id}", id))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(id.toString()));
+                .andExpect(jsonPath("$.id").value(id));
     }
 
     @Test
     void getById_notFound_returns404() throws Exception {
-        UUID id = UUID.randomUUID();
+        Long id = 99L;
         String message = "Subscription not found: " + id;
-        when(subscriptionService.getById(id)).thenThrow(new NoSuchElementException(message));
+        when(subscriptionService.getById(id)).thenThrow(new NotFoundException(message));
 
         mockMvc.perform(get("/subscriptions/{id}", id))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value(message));
+                .andExpect(jsonPath("$.message").value(message));
     }
 
     @Test
     void getByUserId_returns200() throws Exception {
-        UUID userId = UUID.randomUUID();
-        SubscriptionResponse response = subscriptionResponse(UUID.randomUUID(), userId, true);
+        Long userId = 1L;
+        SubscriptionResponse response = subscriptionResponse(10L, userId, true);
         when(subscriptionService.getByUserId(userId)).thenReturn(List.of(response));
 
         mockMvc.perform(get("/subscriptions/user/{userId}", userId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].userId").value(userId.toString()));
+                .andExpect(jsonPath("$[0].userId").value(userId));
     }
 
     @Test
     void getActive_returns200() throws Exception {
-        UUID userId = UUID.randomUUID();
-        SubscriptionResponse response = subscriptionResponse(UUID.randomUUID(), userId, true);
+        Long userId = 1L;
+        SubscriptionResponse response = subscriptionResponse(10L, userId, true);
         when(subscriptionService.getActiveByUserId(userId)).thenReturn(List.of(response));
 
         mockMvc.perform(get("/subscriptions/user/{userId}/active", userId))
@@ -92,20 +92,20 @@ class SubscriptionControllerTest {
 
     @Test
     void getByLineId_returns200() throws Exception {
-        UUID lineId = UUID.randomUUID();
-        SubscriptionResponse response = subscriptionResponse(UUID.randomUUID(), UUID.randomUUID(), true);
+        Long lineId = 101L;
+        SubscriptionResponse response = subscriptionResponse(10L, 1L, true);
         response.setLineId(lineId);
         when(subscriptionService.getByLineId(lineId)).thenReturn(List.of(response));
 
         mockMvc.perform(get("/subscriptions/line/{lineId}", lineId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].lineId").value(lineId.toString()));
+                .andExpect(jsonPath("$[0].lineId").value(lineId));
     }
 
     @Test
     void search_byEmail_returns200() throws Exception {
         String email = "user@example.com";
-        SubscriptionResponse response = subscriptionResponse(UUID.randomUUID(), UUID.randomUUID(), true);
+        SubscriptionResponse response = subscriptionResponse(10L, 1L, true);
         response.setUserEmail(email);
         when(subscriptionService.searchByEmail(email)).thenReturn(List.of(response));
 
@@ -117,14 +117,14 @@ class SubscriptionControllerTest {
     @Test
     void create_validRequest_returns201() throws Exception {
         CreateSubscriptionRequest request = validCreateRequest();
-        SubscriptionResponse response = subscriptionResponse(UUID.randomUUID(), request.getUserId(), true);
+        SubscriptionResponse response = subscriptionResponse(10L, request.getUserId(), true);
         when(subscriptionService.create(any(CreateSubscriptionRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/subscriptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(response.getId().toString()));
+                .andExpect(jsonPath("$.id").value(response.getId()));
     }
 
     @Test
@@ -136,7 +136,7 @@ class SubscriptionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.lineId").exists());
+                .andExpect(jsonPath("$.validationErrors.lineId").exists());
     }
 
     @Test
@@ -149,14 +149,14 @@ class SubscriptionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.startInterval").exists())
-                .andExpect(jsonPath("$.endInterval").exists());
+                .andExpect(jsonPath("$.validationErrors.startInterval").exists())
+                .andExpect(jsonPath("$.validationErrors.endInterval").exists());
     }
 
     @Test
     void deactivate_returns200() throws Exception {
-        UUID id = UUID.randomUUID();
-        SubscriptionResponse response = subscriptionResponse(id, UUID.randomUUID(), false);
+        Long id = 1L;
+        SubscriptionResponse response = subscriptionResponse(id, 2L, false);
         when(subscriptionService.deactivate(id)).thenReturn(response);
 
         mockMvc.perform(patch("/subscriptions/{id}/deactivate", id))
@@ -166,7 +166,7 @@ class SubscriptionControllerTest {
 
     @Test
     void delete_existingId_returns204() throws Exception {
-        UUID id = UUID.randomUUID();
+        Long id = 1L;
 
         mockMvc.perform(delete("/subscriptions/{id}", id))
                 .andExpect(status().isNoContent());
@@ -174,22 +174,22 @@ class SubscriptionControllerTest {
 
     @Test
     void delete_notFound_returns404() throws Exception {
-        UUID id = UUID.randomUUID();
+        Long id = 99L;
         String message = "Subscription not found: " + id;
-        doThrow(new NoSuchElementException(message)).when(subscriptionService).delete(id);
+        doThrow(new NotFoundException(message)).when(subscriptionService).delete(id);
 
         mockMvc.perform(delete("/subscriptions/{id}", id))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value(message));
+                .andExpect(jsonPath("$.message").value(message));
     }
 
-    private static SubscriptionResponse subscriptionResponse(UUID id, UUID userId, boolean isActive) {
+    private static SubscriptionResponse subscriptionResponse(Long id, Long userId, boolean isActive) {
         SubscriptionResponse response = new SubscriptionResponse();
         response.setId(id);
         response.setUserId(userId);
         response.setUserFullName("Test User");
         response.setUserEmail("user@example.com");
-        response.setLineId(UUID.randomUUID());
+        response.setLineId(101L);
         response.setLineCode("L1");
         response.setLineName("Line 1");
         response.setStartInterval(LocalTime.of(8, 0));
@@ -202,10 +202,10 @@ class SubscriptionControllerTest {
 
     private static CreateSubscriptionRequest validCreateRequest() {
         CreateSubscriptionRequest request = new CreateSubscriptionRequest();
-        request.setUserId(UUID.randomUUID());
+        request.setUserId(1L);
         request.setUserFullName("Test User");
         request.setUserEmail("user@example.com");
-        request.setLineId(UUID.randomUUID());
+        request.setLineId(101L);
         request.setLineCode("L1");
         request.setLineName("Line 1");
         request.setStartInterval(LocalTime.of(8, 0));

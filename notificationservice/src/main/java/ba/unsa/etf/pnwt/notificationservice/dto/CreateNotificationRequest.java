@@ -6,12 +6,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.util.UUID;
-
 public class CreateNotificationRequest {
 
     @NotNull
-    private UUID userId;
+    private Long userId;
 
     @Size(max = 255)
     private String userFullName;
@@ -20,7 +18,7 @@ public class CreateNotificationRequest {
     @Size(max = 255)
     private String userEmail;
 
-    private UUID lineId;
+    private Long lineId;
 
     @Size(max = 20)
     private String lineCode;
@@ -38,8 +36,8 @@ public class CreateNotificationRequest {
     @NotBlank
     private String content;
 
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
     public String getUserFullName() { return userFullName; }
     public void setUserFullName(String userFullName) { this.userFullName = userFullName; }
@@ -47,8 +45,8 @@ public class CreateNotificationRequest {
     public String getUserEmail() { return userEmail; }
     public void setUserEmail(String userEmail) { this.userEmail = userEmail; }
 
-    public UUID getLineId() { return lineId; }
-    public void setLineId(UUID lineId) { this.lineId = lineId; }
+    public Long getLineId() { return lineId; }
+    public void setLineId(Long lineId) { this.lineId = lineId; }
 
     public String getLineCode() { return lineCode; }
     public void setLineCode(String lineCode) { this.lineCode = lineCode; }

@@ -14,7 +14,6 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -59,7 +58,7 @@ class RepositoryNPlusOneStatisticsTest {
 
     @Test
     void notification_findByUserId_executesSingleSelect_withoutNPlusOne() {
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        Long userId = 1L;
         Statistics statistics = statistics();
         statistics.clear();
 
@@ -70,7 +69,7 @@ class RepositoryNPlusOneStatisticsTest {
 
     @Test
     void notification_findByUserIdAndIsRead_executesSingleSelect_withoutNPlusOne() {
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        Long userId = 1L;
         Statistics statistics = statistics();
         statistics.clear();
 
@@ -91,7 +90,7 @@ class RepositoryNPlusOneStatisticsTest {
 
     @Test
     void subscription_findByUserId_executesSingleSelect_withoutNPlusOne() {
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        Long userId = 1L;
         Statistics statistics = statistics();
         statistics.clear();
 
@@ -102,7 +101,7 @@ class RepositoryNPlusOneStatisticsTest {
 
     @Test
     void subscription_findByLineId_executesSingleSelect_withoutNPlusOne() {
-        UUID lineId = UUID.fromString("00000000-0000-0000-0000-000000000101");
+        Long lineId = 101L;
         Statistics statistics = statistics();
         statistics.clear();
 
@@ -113,7 +112,7 @@ class RepositoryNPlusOneStatisticsTest {
 
     @Test
     void subscription_findByUserIdAndIsActive_executesSingleSelect_withoutNPlusOne() {
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        Long userId = 1L;
         Statistics statistics = statistics();
         statistics.clear();
 
@@ -148,10 +147,10 @@ class RepositoryNPlusOneStatisticsTest {
 
     private void seedNotifications() {
         Notification n1 = new Notification();
-        n1.setUserId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        n1.setUserId(1L);
         n1.setUserFullName("Ana Aganovic");
         n1.setUserEmail("ana.aganovic@example.com");
-        n1.setLineId(UUID.fromString("00000000-0000-0000-0000-000000000101"));
+        n1.setLineId(101L);
         n1.setLineCode("3");
         n1.setLineName("Ilidza - Bascarsija");
         n1.setType(NotificationType.DELAY);
@@ -161,10 +160,10 @@ class RepositoryNPlusOneStatisticsTest {
         n1.setSentAt(LocalDateTime.now().minusMinutes(10));
 
         Notification n2 = new Notification();
-        n2.setUserId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        n2.setUserId(1L);
         n2.setUserFullName("Ana Aganovic");
         n2.setUserEmail("ana.aganovic@example.com");
-        n2.setLineId(UUID.fromString("00000000-0000-0000-0000-000000000103"));
+        n2.setLineId(103L);
         n2.setLineCode("31");
         n2.setLineName("Skenderija - Dobrinja");
         n2.setType(NotificationType.UPCOMING_DEPARTURE);
@@ -174,10 +173,10 @@ class RepositoryNPlusOneStatisticsTest {
         n2.setSentAt(LocalDateTime.now().minusMinutes(5));
 
         Notification n3 = new Notification();
-        n3.setUserId(UUID.fromString("00000000-0000-0000-0000-000000000002"));
+        n3.setUserId(2L);
         n3.setUserFullName("Mirza Hodzic");
         n3.setUserEmail("mirza.hodzic@example.com");
-        n3.setLineId(UUID.fromString("00000000-0000-0000-0000-000000000102"));
+        n3.setLineId(102L);
         n3.setLineCode("1");
         n3.setLineName("Ilidza - Centar");
         n3.setType(NotificationType.ROUTE_CHANGE);
@@ -193,10 +192,10 @@ class RepositoryNPlusOneStatisticsTest {
 
     private void seedSubscriptions() {
         Subscription s1 = new Subscription();
-        s1.setUserId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        s1.setUserId(1L);
         s1.setUserFullName("Ana Aganovic");
         s1.setUserEmail("ana.aganovic@example.com");
-        s1.setLineId(UUID.fromString("00000000-0000-0000-0000-000000000101"));
+        s1.setLineId(101L);
         s1.setLineCode("3");
         s1.setLineName("Ilidza - Bascarsija");
         s1.setStartInterval(LocalTime.of(7, 0));
@@ -205,10 +204,10 @@ class RepositoryNPlusOneStatisticsTest {
         s1.setIsActive(true);
 
         Subscription s2 = new Subscription();
-        s2.setUserId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        s2.setUserId(1L);
         s2.setUserFullName("Ana Aganovic");
         s2.setUserEmail("ana.aganovic@example.com");
-        s2.setLineId(UUID.fromString("00000000-0000-0000-0000-000000000103"));
+        s2.setLineId(103L);
         s2.setLineCode("31");
         s2.setLineName("Skenderija - Dobrinja");
         s2.setStartInterval(LocalTime.of(15, 0));
@@ -217,10 +216,10 @@ class RepositoryNPlusOneStatisticsTest {
         s2.setIsActive(false);
 
         Subscription s3 = new Subscription();
-        s3.setUserId(UUID.fromString("00000000-0000-0000-0000-000000000002"));
+        s3.setUserId(2L);
         s3.setUserFullName("Mirza Hodzic");
         s3.setUserEmail("mirza.hodzic@example.com");
-        s3.setLineId(UUID.fromString("00000000-0000-0000-0000-000000000102"));
+        s3.setLineId(102L);
         s3.setLineCode("1");
         s3.setLineName("Ilidza - Centar");
         s3.setStartInterval(LocalTime.of(8, 0));

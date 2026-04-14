@@ -12,10 +12,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
+import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
+
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -38,51 +38,51 @@ class NotificationControllerTest {
 
     @Test
     void getAll_returns200WithList() throws Exception {
-        NotificationResponse response = notificationResponse(UUID.randomUUID(), UUID.randomUUID(), false);
+        NotificationResponse response = notificationResponse(1L, 2L, false);
         when(notificationService.getAll()).thenReturn(List.of(response));
 
         mockMvc.perform(get("/notifications"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(response.getId().toString()));
+                .andExpect(jsonPath("$[0].id").value(response.getId()));
     }
 
     @Test
     void getById_existingId_returns200() throws Exception {
-        UUID id = UUID.randomUUID();
-        NotificationResponse response = notificationResponse(id, UUID.randomUUID(), false);
+        Long id = 1L;
+        NotificationResponse response = notificationResponse(id, 2L, false);
         when(notificationService.getById(id)).thenReturn(response);
 
         mockMvc.perform(get("/notifications/{id}", id))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(id.toString()));
+                .andExpect(jsonPath("$.id").value(id));
     }
 
     @Test
     void getById_notFound_returns404() throws Exception {
-        UUID id = UUID.randomUUID();
+        Long id = 99L;
         String message = "Notification not found: " + id;
-        when(notificationService.getById(id)).thenThrow(new NoSuchElementException(message));
+        when(notificationService.getById(id)).thenThrow(new NotFoundException(message));
 
         mockMvc.perform(get("/notifications/{id}", id))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value(message));
+                .andExpect(jsonPath("$.message").value(message));
     }
 
     @Test
     void getByUserId_returns200() throws Exception {
-        UUID userId = UUID.randomUUID();
-        NotificationResponse response = notificationResponse(UUID.randomUUID(), userId, false);
+        Long userId = 1L;
+        NotificationResponse response = notificationResponse(10L, userId, false);
         when(notificationService.getByUserId(userId)).thenReturn(List.of(response));
 
         mockMvc.perform(get("/notifications/user/{userId}", userId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].userId").value(userId.toString()));
+                .andExpect(jsonPath("$[0].userId").value(userId));
     }
 
     @Test
     void getUnread_returns200() throws Exception {
-        UUID userId = UUID.randomUUID();
-        NotificationResponse response = notificationResponse(UUID.randomUUID(), userId, false);
+        Long userId = 1L;
+        NotificationResponse response = notificationResponse(10L, userId, false);
         when(notificationService.getUnreadByUserId(userId)).thenReturn(List.of(response));
 
         mockMvc.perform(get("/notifications/user/{userId}/unread", userId))
@@ -93,14 +93,14 @@ class NotificationControllerTest {
     @Test
     void create_validRequest_returns201() throws Exception {
         CreateNotificationRequest request = validCreateRequest();
-        NotificationResponse response = notificationResponse(UUID.randomUUID(), request.getUserId(), false);
+        NotificationResponse response = notificationResponse(10L, request.getUserId(), false);
         when(notificationService.create(any(CreateNotificationRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/notifications")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(response.getId().toString()));
+                .andExpect(jsonPath("$.id").value(response.getId()));
     }
 
     @Test
@@ -111,10 +111,10 @@ class NotificationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.userId").exists())
-                .andExpect(jsonPath("$.type").exists())
-                .andExpect(jsonPath("$.title").exists())
-                .andExpect(jsonPath("$.content").exists());
+                .andExpect(jsonPath("$.validationErrors.userId").exists())
+                .andExpect(jsonPath("$.validationErrors.type").exists())
+                .andExpect(jsonPath("$.validationErrors.title").exists())
+                .andExpect(jsonPath("$.validationErrors.content").exists());
     }
 
     @Test
@@ -126,13 +126,13 @@ class NotificationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.userEmail").exists());
+                .andExpect(jsonPath("$.validationErrors.userEmail").exists());
     }
 
     @Test
     void markAsRead_returns200() throws Exception {
-        UUID id = UUID.randomUUID();
-        NotificationResponse response = notificationResponse(id, UUID.randomUUID(), true);
+        Long id = 1L;
+        NotificationResponse response = notificationResponse(id, 2L, true);
         when(notificationService.markAsRead(id)).thenReturn(response);
 
         mockMvc.perform(patch("/notifications/{id}/read", id))
@@ -142,7 +142,7 @@ class NotificationControllerTest {
 
     @Test
     void delete_existingId_returns204() throws Exception {
-        UUID id = UUID.randomUUID();
+        Long id = 1L;
 
         mockMvc.perform(delete("/notifications/{id}", id))
                 .andExpect(status().isNoContent());
@@ -150,22 +150,22 @@ class NotificationControllerTest {
 
     @Test
     void delete_notFound_returns404() throws Exception {
-        UUID id = UUID.randomUUID();
+        Long id = 99L;
         String message = "Notification not found: " + id;
-        doThrow(new NoSuchElementException(message)).when(notificationService).delete(id);
+        doThrow(new NotFoundException(message)).when(notificationService).delete(id);
 
         mockMvc.perform(delete("/notifications/{id}", id))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value(message));
+                .andExpect(jsonPath("$.message").value(message));
     }
 
-    private static NotificationResponse notificationResponse(UUID id, UUID userId, boolean isRead) {
+    private static NotificationResponse notificationResponse(Long id, Long userId, boolean isRead) {
         NotificationResponse response = new NotificationResponse();
         response.setId(id);
         response.setUserId(userId);
         response.setUserFullName("Test User");
         response.setUserEmail("user@example.com");
-        response.setLineId(UUID.randomUUID());
+        response.setLineId(101L);
         response.setLineCode("L1");
         response.setLineName("Line 1");
         response.setType(NotificationType.GENERAL);
@@ -178,10 +178,10 @@ class NotificationControllerTest {
 
     private static CreateNotificationRequest validCreateRequest() {
         CreateNotificationRequest request = new CreateNotificationRequest();
-        request.setUserId(UUID.randomUUID());
+        request.setUserId(1L);
         request.setUserFullName("Test User");
         request.setUserEmail("user@example.com");
-        request.setLineId(UUID.randomUUID());
+        request.setLineId(101L);
         request.setLineCode("L1");
         request.setLineName("Line 1");
         request.setType(NotificationType.GENERAL);

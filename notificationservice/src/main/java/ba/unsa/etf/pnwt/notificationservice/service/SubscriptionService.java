@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class SubscriptionService {
@@ -30,25 +29,25 @@ public class SubscriptionService {
                 .toList();
     }
 
-    public SubscriptionResponse getById(UUID id) {
+    public SubscriptionResponse getById(Long id) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Subscription not found: " + id));
         return modelMapper.map(subscription, SubscriptionResponse.class);
     }
 
-    public List<SubscriptionResponse> getByUserId(UUID userId) {
+    public List<SubscriptionResponse> getByUserId(Long userId) {
         return subscriptionRepository.findByUserId(userId).stream()
                 .map(s -> modelMapper.map(s, SubscriptionResponse.class))
                 .toList();
     }
 
-    public List<SubscriptionResponse> getByLineId(UUID lineId) {
+    public List<SubscriptionResponse> getByLineId(Long lineId) {
         return subscriptionRepository.findByLineId(lineId).stream()
                 .map(s -> modelMapper.map(s, SubscriptionResponse.class))
                 .toList();
     }
 
-    public List<SubscriptionResponse> getActiveByUserId(UUID userId) {
+    public List<SubscriptionResponse> getActiveByUserId(Long userId) {
         return subscriptionRepository.findByUserIdAndIsActive(userId, true).stream()
                 .map(s -> modelMapper.map(s, SubscriptionResponse.class))
                 .toList();
@@ -73,21 +72,21 @@ public class SubscriptionService {
         return modelMapper.map(saved, SubscriptionResponse.class);
     }
 
-    public SubscriptionResponse deactivate(UUID id) {
+    public SubscriptionResponse deactivate(Long id) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Subscription not found: " + id));
         subscription.setIsActive(false);
         return modelMapper.map(subscriptionRepository.save(subscription), SubscriptionResponse.class);
     }
 
-    public SubscriptionResponse activate(UUID id) {
+    public SubscriptionResponse activate(Long id) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Subscription not found: " + id));
         subscription.setIsActive(true);
         return modelMapper.map(subscriptionRepository.save(subscription), SubscriptionResponse.class);
     }
 
-    public SubscriptionResponse update(UUID id, UpdateSubscriptionRequest request) {
+    public SubscriptionResponse update(Long id, UpdateSubscriptionRequest request) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Subscription not found: " + id));
         if (request.getLineId() != null) subscription.setLineId(request.getLineId());
@@ -99,7 +98,7 @@ public class SubscriptionService {
         return modelMapper.map(subscriptionRepository.save(subscription), SubscriptionResponse.class);
     }
 
-    public void delete(UUID id) {
+    public void delete(Long id) {
         if (!subscriptionRepository.existsById(id)) {
             throw new NotFoundException("Subscription not found: " + id);
         }

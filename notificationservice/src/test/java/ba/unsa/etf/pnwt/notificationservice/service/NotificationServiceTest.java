@@ -15,11 +15,11 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
+
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,9 +39,9 @@ class NotificationServiceTest {
 
     @Test
     void getAll_returnsAllNotifications() {
-        UUID userId = UUID.randomUUID();
-        Notification first = createNotification(UUID.randomUUID(), userId, false);
-        Notification second = createNotification(UUID.randomUUID(), userId, true);
+        Long userId = 1L;
+        Notification first = createNotification(10L, userId, false);
+        Notification second = createNotification(11L, userId, true);
         when(notificationRepository.findAll()).thenReturn(List.of(first, second));
 
         List<NotificationResponse> result = notificationService.getAll();
@@ -54,8 +54,8 @@ class NotificationServiceTest {
 
     @Test
     void getById_existingId_returnsResponse() {
-        UUID id = UUID.randomUUID();
-        Notification notification = createNotification(id, UUID.randomUUID(), false);
+        Long id = 1L;
+        Notification notification = createNotification(id, 2L, false);
         when(notificationRepository.findById(id)).thenReturn(Optional.of(notification));
 
         NotificationResponse result = notificationService.getById(id);
@@ -67,10 +67,10 @@ class NotificationServiceTest {
 
     @Test
     void getById_nonExistingId_throwsException() {
-        UUID id = UUID.randomUUID();
+        Long id = 99L;
         when(notificationRepository.findById(id)).thenReturn(Optional.empty());
 
-        NoSuchElementException ex = assertThrows(NoSuchElementException.class, () -> notificationService.getById(id));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> notificationService.getById(id));
 
         assertTrue(ex.getMessage().contains(id.toString()));
         verify(notificationRepository).findById(id);
@@ -78,8 +78,8 @@ class NotificationServiceTest {
 
     @Test
     void getByUserId_returnsFilteredList() {
-        UUID userId = UUID.randomUUID();
-        Notification notification = createNotification(UUID.randomUUID(), userId, false);
+        Long userId = 1L;
+        Notification notification = createNotification(10L, userId, false);
         when(notificationRepository.findByUserId(userId)).thenReturn(List.of(notification));
 
         List<NotificationResponse> result = notificationService.getByUserId(userId);
@@ -91,8 +91,8 @@ class NotificationServiceTest {
 
     @Test
     void getUnreadByUserId_returnsUnreadOnly() {
-        UUID userId = UUID.randomUUID();
-        Notification unread = createNotification(UUID.randomUUID(), userId, false);
+        Long userId = 1L;
+        Notification unread = createNotification(10L, userId, false);
         when(notificationRepository.findByUserIdAndIsRead(userId, false)).thenReturn(List.of(unread));
 
         List<NotificationResponse> result = notificationService.getUnreadByUserId(userId);
@@ -105,7 +105,7 @@ class NotificationServiceTest {
     @Test
     void create_savesNotification_returnsResponse() {
         CreateNotificationRequest request = createNotificationRequest();
-        UUID savedId = UUID.randomUUID();
+        Long savedId = 10L;
         when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> {
             Notification toSave = invocation.getArgument(0);
             toSave.setId(savedId);
@@ -127,8 +127,8 @@ class NotificationServiceTest {
 
     @Test
     void markAsRead_setsIsReadTrue() {
-        UUID id = UUID.randomUUID();
-        Notification existing = createNotification(id, UUID.randomUUID(), false);
+        Long id = 1L;
+        Notification existing = createNotification(id, 2L, false);
         when(notificationRepository.findById(id)).thenReturn(Optional.of(existing));
         when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -141,10 +141,10 @@ class NotificationServiceTest {
 
     @Test
     void markAsRead_nonExistingId_throwsException() {
-        UUID id = UUID.randomUUID();
+        Long id = 99L;
         when(notificationRepository.findById(id)).thenReturn(Optional.empty());
 
-        NoSuchElementException ex = assertThrows(NoSuchElementException.class, () -> notificationService.markAsRead(id));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> notificationService.markAsRead(id));
 
         assertTrue(ex.getMessage().contains(id.toString()));
         verify(notificationRepository).findById(id);
@@ -153,7 +153,7 @@ class NotificationServiceTest {
 
     @Test
     void delete_existingId_deletesSuccessfully() {
-        UUID id = UUID.randomUUID();
+        Long id = 1L;
         when(notificationRepository.existsById(id)).thenReturn(true);
 
         notificationService.delete(id);
@@ -164,23 +164,23 @@ class NotificationServiceTest {
 
     @Test
     void delete_nonExistingId_throwsException() {
-        UUID id = UUID.randomUUID();
+        Long id = 99L;
         when(notificationRepository.existsById(id)).thenReturn(false);
 
-        NoSuchElementException ex = assertThrows(NoSuchElementException.class, () -> notificationService.delete(id));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> notificationService.delete(id));
 
         assertTrue(ex.getMessage().contains(id.toString()));
         verify(notificationRepository).existsById(id);
         verify(notificationRepository, never()).deleteById(id);
     }
 
-    private static Notification createNotification(UUID id, UUID userId, boolean isRead) {
+    private static Notification createNotification(Long id, Long userId, boolean isRead) {
         Notification notification = new Notification();
         notification.setId(id);
         notification.setUserId(userId);
         notification.setUserFullName("Test User");
         notification.setUserEmail("user@example.com");
-        notification.setLineId(UUID.randomUUID());
+        notification.setLineId(101L);
         notification.setLineCode("L1");
         notification.setLineName("Line 1");
         notification.setType(NotificationType.GENERAL);
@@ -193,10 +193,10 @@ class NotificationServiceTest {
 
     private static CreateNotificationRequest createNotificationRequest() {
         CreateNotificationRequest request = new CreateNotificationRequest();
-        request.setUserId(UUID.randomUUID());
+        request.setUserId(1L);
         request.setUserFullName("Test User");
         request.setUserEmail("user@example.com");
-        request.setLineId(UUID.randomUUID());
+        request.setLineId(101L);
         request.setLineCode("L1");
         request.setLineName("Line 1");
         request.setType(NotificationType.GENERAL);
