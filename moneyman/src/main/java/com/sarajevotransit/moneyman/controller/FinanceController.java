@@ -1,6 +1,7 @@
 package com.sarajevotransit.moneyman.controller;
 
 import com.sarajevotransit.moneyman.dto.TicketPurchaseRequest;
+import com.sarajevotransit.moneyman.dto.TicketResponseDTO;
 import com.sarajevotransit.moneyman.model.Ticket;
 import com.sarajevotransit.moneyman.model.enums.TicketStatus;
 import com.sarajevotransit.moneyman.service.MoneymanService;
@@ -13,11 +14,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/finance")
-@RequiredArgsConstructor
+//@RequiredArgsConstructor
 public class FinanceController {
 
     private final MoneymanService moneymanService;
 
+    public FinanceController(MoneymanService moneymanService) {
+        this.moneymanService = moneymanService;
+    }
     @PostMapping("/purchase")
     public ResponseEntity<Ticket> purchase(@Valid @RequestBody TicketPurchaseRequest request) {
         return ResponseEntity.ok(moneymanService.purchaseTicket(request));
@@ -29,13 +33,9 @@ public class FinanceController {
     }
 
     @GetMapping("/wallet/{userId}")
-    public ResponseEntity<List<Ticket>> getWallet(@PathVariable Long userId) {
-        List<Ticket> activeTickets = moneymanService.getUserWallet(userId);
-
-        if (activeTickets.isEmpty()) {
-            return ResponseEntity.noContent().build(); // Return 204 if wallet is empty
-        }
-
-        return ResponseEntity.ok(activeTickets); // Return 200 with the list
+    public ResponseEntity<List<TicketResponseDTO>> getWallet(@PathVariable Long userId) {
+        // This calls the service which should use the mapper
+        List<TicketResponseDTO> wallet = moneymanService.getUserWallet(userId);
+        return ResponseEntity.ok(wallet);
     }
 }

@@ -10,11 +10,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/payments/methods")
-@RequiredArgsConstructor
+//@RequiredArgsConstructor
 public class PaymentMethodController {
 
     private final PaymentMethodRepository repository;
 
+    public PaymentMethodController(PaymentMethodRepository repository) {
+        this.repository = repository;
+    }
     @GetMapping("/{userId}")
     public List<PaymentMethod> getMethods(@PathVariable Long userId) {
         return repository.findByUserId(userId);

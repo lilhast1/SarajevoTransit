@@ -1,11 +1,15 @@
 package com.sarajevotransit.moneyman.service;
 
 import com.sarajevotransit.moneyman.dto.TicketPurchaseRequest;
+import com.sarajevotransit.moneyman.dto.TicketResponseDTO;
+import com.sarajevotransit.moneyman.mapper.MoneymanMapper;
 import com.sarajevotransit.moneyman.model.*;
 import com.sarajevotransit.moneyman.model.enums.*;
 import com.sarajevotransit.moneyman.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,13 +20,21 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
+//@RequiredArgsConstructor
 public class MoneymanService {
 
     private final TicketRepository ticketRepository;
     private final TransactionRepository transactionRepository;
     private final PaymentMethodRepository paymentMethodRepository;
+    private final MoneymanMapper mapper;
 
+    public MoneymanService(TicketRepository ticketRepository, TransactionRepository transactionRepository, PaymentMethodRepository paymentMethodRepository, MoneymanMapper mapper) {
+        this.ticketRepository = ticketRepository;
+        this.transactionRepository = transactionRepository;
+        this.paymentMethodRepository = paymentMethodRepository;
+        this.mapper = mapper;
+    }
+    private static final Logger logger = LoggerFactory.getLogger(MoneymanService.class);
     @Transactional
     public Ticket purchaseTicket(TicketPurchaseRequest request) {
         // 1. F11: Verify tokenized payment method exists
@@ -35,7 +47,7 @@ public class MoneymanService {
         LocalDateTime expiry = calculateExpiry(request.getTicketType());
 
         // 3. F11: Simulate External Gateway (Stripe/PayPal) call using the token
-        log.info("Charging card ending in {} via {} token: {}", pm.getLastFour(), pm.getProvider(), pm.getGatewayToken());
+        logger.info("Charging card ending in {} via {} token: {}", pm.getLastFour(), pm.getProvider(), pm.getGatewayToken());
         String externalId = "PAY-" + UUID.randomUUID().toString().substring(0, 8);
 
         // 4. F11: Create Transaction History
@@ -89,16 +101,15 @@ public class MoneymanService {
     }
 
     private void sendEmailConfirmation(Long userId, Ticket ticket) {
-        log.info("F3: Email confirmation sent to User {} for Ticket {}", userId, ticket.getId());
+        logger.info("F3: Email confirmation sent to User {} for Ticket {}", userId, ticket.getId());
     }
 
     // MoneymanService.java
 
-    public List<Ticket> getUserWallet(Long userId) {
-        // We use the custom repository method with JOIN FETCH to prevent N+1
+    public List<TicketResponseDTO> getUserWallet(Long userId) {
         return ticketRepository.findAllByUserIdWithTransaction(userId)
                 .stream()
-                .filter(t -> t.getStatus() == TicketStatus.ACTIVE)
+                .map(mapper::toResponseDTO) // This "breaks" the cycle
                 .toList();
     }
 }
