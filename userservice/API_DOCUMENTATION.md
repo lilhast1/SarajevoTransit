@@ -754,7 +754,11 @@ curl --request GET "http://localhost:8080/api/v1/users/101/loyalty/transactions"
 ```json
 [
   { "op": "replace", "path": "/fullName", "value": "Lejla Updated" },
-  { "op": "replace", "path": "/email", "value": "lejla.updated@sarajevotransit.ba" }
+  {
+    "op": "replace",
+    "path": "/email",
+    "value": "lejla.updated@sarajevotransit.ba"
+  }
 ]
 ```
 
@@ -844,8 +848,8 @@ curl --request POST "http://localhost:8080/api/v1/users/101/travel-history/batch
 
 ```json
 [
-  { "ticketType": "MONTHLY", "purchaseCount": 2, "totalAmount": 106.00 },
-  { "ticketType": "DAILY", "purchaseCount": 1, "totalAmount": 2.00 }
+  { "ticketType": "MONTHLY", "purchaseCount": 2, "totalAmount": 106.0 },
+  { "ticketType": "DAILY", "purchaseCount": 1, "totalAmount": 2.0 }
 ]
 ```
 
