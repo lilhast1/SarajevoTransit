@@ -598,7 +598,7 @@ curl --request GET "http://localhost:8080/api/v1/users/101/suggestions?limit=3"
 ```
 
 - Success Response:
-  - Code: `200 OK`
+  - Code: `201 CREATED`
   - Content: `{ "userId": 101, "currentBalance": 50 }`
 - Error Response:
   - Code: `400 BAD REQUEST`
@@ -638,7 +638,7 @@ curl --request POST "http://localhost:8080/api/v1/users/101/loyalty/earn" \
 ```
 
 - Success Response:
-  - Code: `200 OK`
+  - Code: `201 CREATED`
   - Content: `{ "userId": 101, "currentBalance": 20 }`
 - Error Response:
   - Code: `400 BAD REQUEST`
@@ -736,6 +736,163 @@ curl --request GET "http://localhost:8080/api/v1/users/101/loyalty/transactions"
 
 - Notes:
   - 2026-04-12 (Copilot): Returned list is ordered by `createdAt` descending.
+
+## 18) Patch User Profile (JSON Patch)
+
+- Title: Patch User Profile (JSON Patch)
+- URL: `/api/v1/users/:userId`
+- Method: `PATCH`
+- URL Params:
+  - Required:
+    - `userId=[integer > 0]`
+      - Example: `userId=101`
+  - Optional: none
+- Headers:
+  - `Content-Type: application/json-patch+json`
+- Data Params:
+
+```json
+[
+  { "op": "replace", "path": "/fullName", "value": "Lejla Updated" },
+  { "op": "replace", "path": "/email", "value": "lejla.updated@sarajevotransit.ba" }
+]
+```
+
+- Success Response:
+  - Code: `200 OK`
+  - Content: `{ "id": 101, "fullName": "Lejla Updated", "email": "lejla.updated@sarajevotransit.ba" }`
+- Error Response:
+  - Code: `400 BAD REQUEST`
+  - Content: `{ "message": "Validation failed" }`
+  - OR
+  - Code: `404 NOT FOUND`
+  - Content: `{ "message": "User with id 101 not found." }`
+- Sample Call:
+
+```bash
+curl --request PATCH "http://localhost:8080/api/v1/users/101" \
+  --header "Content-Type: application/json-patch+json" \
+  --data '[{"op":"replace","path":"/fullName","value":"Lejla Updated"}]'
+```
+
+- Notes:
+  - 2026-04-15 (Copilot): Supported patch paths are `/fullName` and `/email`; unsupported operations/paths return 400.
+
+## 19) Batch Create Travel History Entries
+
+- Title: Batch Create Travel History Entries
+- URL: `/api/v1/users/:userId/travel-history/batch`
+- Method: `POST`
+- URL Params:
+  - Required:
+    - `userId=[integer > 0]`
+      - Example: `userId=101`
+  - Optional: none
+- Data Params:
+
+```json
+[
+  {
+    "lineCode": "TRAM-3",
+    "fromStop": "Skenderija",
+    "toStop": "Bascarsija",
+    "durationMinutes": 18
+  },
+  {
+    "lineCode": "BUS-31E",
+    "fromStop": "Nedzarici",
+    "toStop": "Dobrinja",
+    "durationMinutes": 22
+  }
+]
+```
+
+- Success Response:
+  - Code: `201 CREATED`
+  - Content: `[ { "id": 9001, "lineCode": "TRAM-3" }, { "id": 9002, "lineCode": "BUS-31E" } ]`
+- Error Response:
+  - Code: `400 BAD REQUEST`
+  - Content: `{ "message": "Validation failed" }`
+  - OR
+  - Code: `404 NOT FOUND`
+  - Content: `{ "message": "User with id 101 not found." }`
+- Sample Call:
+
+```bash
+curl --request POST "http://localhost:8080/api/v1/users/101/travel-history/batch" \
+  --header "Content-Type: application/json" \
+  --data '[{"lineCode":"TRAM-3","fromStop":"Skenderija","toStop":"Bascarsija","durationMinutes":18}]'
+```
+
+- Notes:
+  - 2026-04-15 (Copilot): Batch operation is transactional and rolls back all entries on any validation/persistence error.
+
+## 20) Ticket Purchase Statistics (Custom Query)
+
+- Title: Ticket Purchase Statistics
+- URL: `/api/v1/users/:userId/ticket-purchases/stats`
+- Method: `GET`
+- URL Params:
+  - Required:
+    - `userId=[integer > 0]`
+      - Example: `userId=101`
+  - Optional: none
+- Data Params: none
+- Success Response:
+  - Code: `200 OK`
+  - Content:
+
+```json
+[
+  { "ticketType": "MONTHLY", "purchaseCount": 2, "totalAmount": 106.00 },
+  { "ticketType": "DAILY", "purchaseCount": 1, "totalAmount": 2.00 }
+]
+```
+
+- Error Response:
+  - Code: `400 BAD REQUEST`
+  - Content: `{ "message": "Validation failed" }`
+  - OR
+  - Code: `404 NOT FOUND`
+  - Content: `{ "message": "User with id 101 not found." }`
+- Sample Call:
+
+```bash
+curl --request GET "http://localhost:8080/api/v1/users/101/ticket-purchases/stats"
+```
+
+- Notes:
+  - 2026-04-15 (Copilot): Backed by a JPQL aggregate query grouped by `ticketType` (not repository method derivation).
+
+## 21) Delete Travel History Entry
+
+- Title: Delete Travel History Entry
+- URL: `/api/v1/users/:userId/travel-history/:entryId`
+- Method: `DELETE`
+- URL Params:
+  - Required:
+    - `userId=[integer > 0]`
+    - `entryId=[integer > 0]`
+      - Example: `entryId=9001`
+  - Optional: none
+- Data Params: none
+- Success Response:
+  - Code: `204 NO CONTENT`
+  - Content: none
+- Error Response:
+  - Code: `400 BAD REQUEST`
+  - Content: `{ "message": "Validation failed" }`
+  - OR
+  - Code: `404 NOT FOUND`
+  - Content: `{ "message": "Travel history entry with id 9001 not found for user 101." }`
+- Sample Call:
+
+```bash
+curl --request DELETE "http://localhost:8080/api/v1/users/101/travel-history/9001"
+```
+
+- Notes:
+  - 2026-04-15 (Copilot): Entry ownership is checked by custom query before delete.
 
 ## Documentation Artifacts
 

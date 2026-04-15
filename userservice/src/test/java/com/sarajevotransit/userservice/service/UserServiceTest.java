@@ -21,6 +21,7 @@ import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
 import com.sarajevotransit.userservice.repository.TicketPurchaseHistoryRepository;
 import com.sarajevotransit.userservice.repository.TravelHistoryRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,6 +57,9 @@ class UserServiceTest {
 
     @Mock
     private LoyaltyTransactionRepository loyaltyTransactionRepository;
+
+    @Mock
+    private Validator validator;
 
     @Spy
     private UserPreferenceMapper userPreferenceMapper = new UserPreferenceMapper(modelMapper);

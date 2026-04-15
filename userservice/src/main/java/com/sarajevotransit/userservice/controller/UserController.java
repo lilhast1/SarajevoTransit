@@ -4,6 +4,7 @@ import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.dto.TicketPurchaseResponse;
+import com.sarajevotransit.userservice.dto.TicketPurchaseStatsResponse;
 import com.sarajevotransit.userservice.dto.TravelHistoryResponse;
 import com.sarajevotransit.userservice.dto.UpdatePasswordRequest;
 import com.sarajevotransit.userservice.dto.UpdateUserPreferenceRequest;
@@ -16,12 +17,14 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -30,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
@@ -98,6 +102,13 @@ public class UserController {
         return userService.updateUserProfile(userId, request);
     }
 
+    @PatchMapping(path = "/{userId}", consumes = "application/json-patch+json")
+    public UserProfileResponse patchUserProfile(
+            @PathVariable @Positive Long userId,
+            @RequestBody String patchDocument) {
+        return userService.patchUserProfile(userId, patchDocument);
+    }
+
     @PutMapping("/{userId}/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updatePassword(
@@ -125,6 +136,18 @@ public class UserController {
         return ResponseEntity.created(location).body(created);
     }
 
+    @PostMapping("/{userId}/travel-history/batch")
+    public ResponseEntity<List<TravelHistoryResponse>> addTravelHistoryBatch(
+            @PathVariable @Positive Long userId,
+            @RequestBody @Size(min = 1, max = 200, message = "Batch size must be between 1 and 200 entries") List<@Valid AddTravelHistoryRequest> requests) {
+        List<TravelHistoryResponse> created = userService.addTravelHistoryBatch(userId, requests);
+        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/api/v1/users/{userId}/travel-history")
+                .buildAndExpand(userId)
+                .toUri();
+        return ResponseEntity.created(location).body(created);
+    }
+
     @PostMapping("/{userId}/ticket-purchases")
     public ResponseEntity<TicketPurchaseResponse> addTicketPurchase(
             @PathVariable @Positive Long userId,
@@ -135,6 +158,20 @@ public class UserController {
                 .buildAndExpand(created.id())
                 .toUri();
         return ResponseEntity.created(location).body(created);
+    }
+
+    @GetMapping("/{userId}/ticket-purchases/stats")
+    public List<TicketPurchaseStatsResponse> getTicketPurchaseStats(
+            @PathVariable @Positive Long userId) {
+        return userService.getTicketPurchaseStats(userId);
+    }
+
+    @DeleteMapping("/{userId}/travel-history/{entryId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteTravelHistoryEntry(
+            @PathVariable @Positive Long userId,
+            @PathVariable @Positive Long entryId) {
+        userService.deleteTravelHistoryEntry(userId, entryId);
     }
 
     @GetMapping("/{userId}/summary")

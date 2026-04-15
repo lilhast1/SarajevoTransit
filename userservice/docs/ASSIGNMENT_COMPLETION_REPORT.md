@@ -251,3 +251,68 @@ Kljucni izvjestaji:
 - [../target/surefire-reports/TEST-com.sarajevotransit.userservice.service.LoyaltyServiceTest.xml](../target/surefire-reports/TEST-com.sarajevotransit.userservice.service.LoyaltyServiceTest.xml)
 - [../target/surefire-reports/TEST-com.sarajevotransit.userservice.repository.RepositoryQueryPerformanceTests.xml](../target/surefire-reports/TEST-com.sarajevotransit.userservice.repository.RepositoryQueryPerformanceTests.xml)
 - [../target/surefire-reports/TEST-com.sarajevotransit.userservice.integration.PostgresUserDbIntegrationTests.xml](../target/surefire-reports/TEST-com.sarajevotransit.userservice.integration.PostgresUserDbIntegrationTests.xml)
+
+## 13. Pokrivenost dodatnih zahtjeva iz assignment-a
+
+### 13.1 PATCH metoda (JSON Patch stil)
+
+- Endpoint:
+  - [../src/main/java/com/sarajevotransit/userservice/controller/UserController.java](../src/main/java/com/sarajevotransit/userservice/controller/UserController.java)
+- Service logika:
+  - [../src/main/java/com/sarajevotransit/userservice/service/UserService.java](../src/main/java/com/sarajevotransit/userservice/service/UserService.java)
+
+Implementiran je PATCH endpoint za parcijalnu izmjenu profila korisnika putem JSON Patch operacija (`add`, `replace`, `remove`) nad poljima `/fullName` i `/email`, uz validaciju rezultata i 409 provjeru jedinstvenosti email-a.
+
+### 13.2 Paginacija i sortiranje
+
+Paginacija/sort su dostupni na list endpointima kroz `page`, `size`, `sort` parametre i `Page<T>` odgovore:
+
+- User list, travel history, ticket purchases, loyalty transactions.
+- Implementacija helpera:
+  - [../src/main/java/com/sarajevotransit/userservice/service/PaginationUtils.java](../src/main/java/com/sarajevotransit/userservice/service/PaginationUtils.java)
+
+### 13.3 Custom upiti (nisu generisani derivacijom)
+
+Custom JPQL upiti su implementirani u repozitorijima:
+
+- Line usage statistika:
+  - [../src/main/java/com/sarajevotransit/userservice/repository/TravelHistoryRepository.java](../src/main/java/com/sarajevotransit/userservice/repository/TravelHistoryRepository.java)
+- Ownership check za delete:
+  - [../src/main/java/com/sarajevotransit/userservice/repository/TravelHistoryRepository.java](../src/main/java/com/sarajevotransit/userservice/repository/TravelHistoryRepository.java)
+- Ticket purchase agregacija (group by ticketType):
+  - [../src/main/java/com/sarajevotransit/userservice/repository/TicketPurchaseHistoryRepository.java](../src/main/java/com/sarajevotransit/userservice/repository/TicketPurchaseHistoryRepository.java)
+
+### 13.4 Batch unos
+
+- Endpoint za batch travel history insert:
+  - [../src/main/java/com/sarajevotransit/userservice/controller/UserController.java](../src/main/java/com/sarajevotransit/userservice/controller/UserController.java)
+- Transakcijska batch logika:
+  - [../src/main/java/com/sarajevotransit/userservice/service/UserService.java](../src/main/java/com/sarajevotransit/userservice/service/UserService.java)
+
+Implementiran je unos liste stavki (`/travel-history/batch`) sa rollback ponasanjem ako bilo koja stavka ne prodje.
+
+### 13.5 Koristenje Entity Grapha
+
+EntityGraph optimizacija je prisutna u user upitima:
+
+- [../src/main/java/com/sarajevotransit/userservice/repository/UserProfileRepository.java](../src/main/java/com/sarajevotransit/userservice/repository/UserProfileRepository.java)
+
+Time se izbjegava N+1 pri ucitavanju korisnika sa wallet/preference relacijama.
+
+### 13.6 Transakcijske metode servisa (vise repository poziva)
+
+Primjeri transakcijskih metoda sa vise repository operacija:
+
+- Loyalty earn/redeem:
+  - [../src/main/java/com/sarajevotransit/userservice/service/LoyaltyService.java](../src/main/java/com/sarajevotransit/userservice/service/LoyaltyService.java)
+- Batch travel insert i patch/update operacije:
+  - [../src/main/java/com/sarajevotransit/userservice/service/UserService.java](../src/main/java/com/sarajevotransit/userservice/service/UserService.java)
+
+### 13.7 Najmanje jedna DELETE metoda
+
+Implementiran je ownership-safe delete endpoint:
+
+- [../src/main/java/com/sarajevotransit/userservice/controller/UserController.java](../src/main/java/com/sarajevotransit/userservice/controller/UserController.java)
+- [../src/main/java/com/sarajevotransit/userservice/service/UserService.java](../src/main/java/com/sarajevotransit/userservice/service/UserService.java)
+
+Brisanje je dostupno na `/api/v1/users/{userId}/travel-history/{entryId}` i vraca `204 NO CONTENT`.
