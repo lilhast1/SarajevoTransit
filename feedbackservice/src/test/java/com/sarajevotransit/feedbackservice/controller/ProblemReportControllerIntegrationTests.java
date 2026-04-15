@@ -18,7 +18,9 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -145,5 +147,163 @@ class ProblemReportControllerIntegrationTests {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.content[0].lineId").value(33))
                                 .andExpect(jsonPath("$.totalElements").value(1));
+        }
+
+        @Test
+        void patchReport_withJsonPatch_shouldApplyPartialUpdate() throws Exception {
+                ProblemReport report = new ProblemReport();
+                report.setReporterUserId(7001L);
+                report.setLineId(44L);
+                report.setStationId(101L);
+                report.setCategory(ProblemCategory.DELAY);
+                report.setDescription("Initial description");
+                report.setPhotoUrls(List.of("https://example.com/report-initial.png"));
+                report.setStatus(ReportStatus.RECEIVED);
+                report = problemReportRepository.saveAndFlush(report);
+
+                String patchPayload = """
+                                [
+                                        { "op": "replace", "path": "/description", "value": "Updated by JSON Patch" },
+                                        { "op": "replace", "path": "/status", "value": "IN_PROGRESS" }
+                                ]
+                                """;
+
+                mockMvc.perform(patch("/api/v1/reports/{id}", report.getId())
+                                .contentType("application/json-patch+json")
+                                .content(patchPayload))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.description").value("Updated by JSON Patch"))
+                                .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+        }
+
+        @Test
+        void createReportsBatch_shouldReturnCreated() throws Exception {
+                String payload = """
+                                {
+                                        "reports": [
+                                                {
+                                                        "reporterUserId": 8101,
+                                                        "lineId": 6,
+                                                        "stationId": 18,
+                                                        "category": "DELAY",
+                                                        "description": "Batch report one."
+                                                },
+                                                {
+                                                        "reporterUserId": 8102,
+                                                        "lineId": 6,
+                                                        "vehicleId": 902,
+                                                        "category": "CROWDING",
+                                                        "description": "Batch report two."
+                                                }
+                                        ]
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/reports/batch")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.insertedCount").value(2))
+                                .andExpect(jsonPath("$.reports.length()").value(2));
+        }
+
+        @Test
+        void searchReports_shouldReturnPagedMatches() throws Exception {
+                ProblemReport first = new ProblemReport();
+                first.setReporterUserId(9201L);
+                first.setLineId(33L);
+                first.setStationId(301L);
+                first.setCategory(ProblemCategory.DELAY);
+                first.setDescription("Tram delay at station A");
+                first.setStatus(ReportStatus.RECEIVED);
+                first.setPhotoUrls(List.of());
+                problemReportRepository.save(first);
+
+                ProblemReport second = new ProblemReport();
+                second.setReporterUserId(9202L);
+                second.setLineId(33L);
+                second.setStationId(302L);
+                second.setCategory(ProblemCategory.CROWDING);
+                second.setDescription("Crowded tram in peak hour");
+                second.setStatus(ReportStatus.RECEIVED);
+                second.setPhotoUrls(List.of());
+                problemReportRepository.save(second);
+
+                ProblemReport third = new ProblemReport();
+                third.setReporterUserId(9203L);
+                third.setLineId(33L);
+                third.setStationId(303L);
+                third.setCategory(ProblemCategory.OTHER);
+                third.setDescription("Bus line feedback unrelated");
+                third.setStatus(ReportStatus.RECEIVED);
+                third.setPhotoUrls(List.of());
+                problemReportRepository.saveAndFlush(third);
+
+                mockMvc.perform(get("/api/v1/reports/search")
+                                .param("q", "tram")
+                                .param("page", "0")
+                                .param("size", "1")
+                                .param("sort", "createdAt,desc"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.totalElements").value(2))
+                                .andExpect(jsonPath("$.content.length()").value(1));
+        }
+
+        @Test
+        void countReportsByLine_shouldReturnTotal() throws Exception {
+                ProblemReport first = new ProblemReport();
+                first.setReporterUserId(9301L);
+                first.setLineId(55L);
+                first.setStationId(401L);
+                first.setCategory(ProblemCategory.DELAY);
+                first.setDescription("First count report");
+                first.setStatus(ReportStatus.RECEIVED);
+                first.setPhotoUrls(List.of());
+                problemReportRepository.save(first);
+
+                ProblemReport second = new ProblemReport();
+                second.setReporterUserId(9302L);
+                second.setLineId(55L);
+                second.setStationId(402L);
+                second.setCategory(ProblemCategory.CROWDING);
+                second.setDescription("Second count report");
+                second.setStatus(ReportStatus.RECEIVED);
+                second.setPhotoUrls(List.of());
+                problemReportRepository.save(second);
+
+                ProblemReport otherLine = new ProblemReport();
+                otherLine.setReporterUserId(9303L);
+                otherLine.setLineId(77L);
+                otherLine.setStationId(403L);
+                otherLine.setCategory(ProblemCategory.OTHER);
+                otherLine.setDescription("Other line report");
+                otherLine.setStatus(ReportStatus.RECEIVED);
+                otherLine.setPhotoUrls(List.of());
+                problemReportRepository.saveAndFlush(otherLine);
+
+                mockMvc.perform(get("/api/v1/reports/line/55/count"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.lineId").value(55))
+                                .andExpect(jsonPath("$.totalReports").value(2));
+        }
+
+        @Test
+        void deleteReport_shouldRemoveEntityAndReturnNoContent() throws Exception {
+                ProblemReport report = new ProblemReport();
+                report.setReporterUserId(9401L);
+                report.setLineId(66L);
+                report.setStationId(501L);
+                report.setCategory(ProblemCategory.DELAY);
+                report.setDescription("Delete me");
+                report.setStatus(ReportStatus.RECEIVED);
+                report.setPhotoUrls(List.of());
+                report = problemReportRepository.saveAndFlush(report);
+
+                mockMvc.perform(delete("/api/v1/reports/{id}", report.getId()))
+                                .andExpect(status().isNoContent());
+
+                mockMvc.perform(get("/api/v1/reports/{id}", report.getId()))
+                                .andExpect(status().isNotFound())
+                                .andExpect(jsonPath("$.error").value("not_found"));
         }
 }

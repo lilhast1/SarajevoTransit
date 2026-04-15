@@ -17,6 +17,7 @@ import java.time.LocalDate;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -159,5 +160,60 @@ class LineReviewControllerIntegrationTests {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.content.length()").value(1))
                                 .andExpect(jsonPath("$.totalElements").value(2));
+        }
+
+        @Test
+        void getLatestVisibleReviewByLine_shouldReturnLatestVisibleOnly() throws Exception {
+                LineReview hiddenReview = new LineReview();
+                hiddenReview.setReviewerUserId(7101L);
+                hiddenReview.setLineId(21L);
+                hiddenReview.setRating(2);
+                hiddenReview.setReviewText("Hidden review");
+                hiddenReview.setRideDate(LocalDate.now().minusDays(1));
+                hiddenReview.setModerationStatus(ModerationStatus.HIDDEN);
+                lineReviewRepository.save(hiddenReview);
+
+                LineReview visibleOlder = new LineReview();
+                visibleOlder.setReviewerUserId(7102L);
+                visibleOlder.setLineId(21L);
+                visibleOlder.setRating(3);
+                visibleOlder.setReviewText("Visible older");
+                visibleOlder.setRideDate(LocalDate.now().minusDays(2));
+                visibleOlder.setModerationStatus(ModerationStatus.VISIBLE);
+                lineReviewRepository.save(visibleOlder);
+
+                LineReview visibleLatest = new LineReview();
+                visibleLatest.setReviewerUserId(7103L);
+                visibleLatest.setLineId(21L);
+                visibleLatest.setRating(5);
+                visibleLatest.setReviewText("Visible latest");
+                visibleLatest.setRideDate(LocalDate.now().minusDays(1));
+                visibleLatest.setModerationStatus(ModerationStatus.VISIBLE);
+                lineReviewRepository.saveAndFlush(visibleLatest);
+
+                mockMvc.perform(get("/api/v1/reviews/line/21/latest"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.lineId").value(21))
+                                .andExpect(jsonPath("$.moderationStatus").value("VISIBLE"))
+                                .andExpect(jsonPath("$.reviewText").value("Visible latest"));
+        }
+
+        @Test
+        void deleteReview_shouldReturnNoContentAndRemoveEntity() throws Exception {
+                LineReview review = new LineReview();
+                review.setReviewerUserId(7201L);
+                review.setLineId(31L);
+                review.setRating(4);
+                review.setReviewText("Delete this review");
+                review.setRideDate(LocalDate.now().minusDays(1));
+                review.setModerationStatus(ModerationStatus.VISIBLE);
+                review = lineReviewRepository.saveAndFlush(review);
+
+                mockMvc.perform(delete("/api/v1/reviews/{id}", review.getId()))
+                                .andExpect(status().isNoContent());
+
+                mockMvc.perform(get("/api/v1/reviews/{id}", review.getId()))
+                                .andExpect(status().isNotFound())
+                                .andExpect(jsonPath("$.error").value("not_found"));
         }
 }

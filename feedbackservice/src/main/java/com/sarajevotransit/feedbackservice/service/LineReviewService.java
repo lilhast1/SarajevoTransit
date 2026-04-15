@@ -70,6 +70,15 @@ public class LineReviewService {
     }
 
     @Transactional(readOnly = true)
+    public LineReviewResponse getLatestVisibleReviewByLine(Long lineId) {
+        LineReview review = lineReviewRepository.findFirstByLineIdAndModerationStatusOrderByCreatedAtDesc(
+                lineId,
+                ModerationStatus.VISIBLE)
+                .orElseThrow(() -> new NotFoundException("No visible review found for lineId=" + lineId));
+        return lineReviewMapper.toResponse(review);
+    }
+
+    @Transactional(readOnly = true)
     public Page<LineReviewResponse> getReviewsByReviewer(Long reviewerUserId, Pageable pageable) {
         return lineReviewRepository.findByReviewerUserId(reviewerUserId, pageable)
                 .map(lineReviewMapper::toResponse);
@@ -82,6 +91,13 @@ public class LineReviewService {
         review.setModerationStatus(moderationStatus);
         LineReview saved = lineReviewRepository.save(review);
         return lineReviewMapper.toResponse(saved);
+    }
+
+    @Transactional
+    public void deleteReview(Long id) {
+        LineReview review = lineReviewRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Line review not found: id=" + id));
+        lineReviewRepository.delete(review);
     }
 
     @Transactional(readOnly = true)

@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -28,6 +30,18 @@ public interface ProblemReportRepository extends JpaRepository<ProblemReport, Lo
     Page<ProblemReport> findByStatusAndReporterUserId(ReportStatus status, Long reporterUserId, Pageable pageable);
 
     @EntityGraph(attributePaths = "photoUrls")
+    @Query("""
+            select pr
+            from ProblemReport pr
+            where lower(pr.description) like lower(concat('%', :keyword, '%'))
+              and (:status is null or pr.status = :status)
+            """)
+    Page<ProblemReport> searchByDescriptionKeyword(
+            @Param("keyword") String keyword,
+            @Param("status") ReportStatus status,
+            Pageable pageable);
+
+    @EntityGraph(attributePaths = "photoUrls")
     List<ProblemReport> findAllByOrderByCreatedAtDesc();
 
     @EntityGraph(attributePaths = "photoUrls")
@@ -38,6 +52,8 @@ public interface ProblemReportRepository extends JpaRepository<ProblemReport, Lo
 
     @EntityGraph(attributePaths = "photoUrls")
     List<ProblemReport> findByLineIdOrderByCreatedAtDesc(Long lineId);
+
+    long countByLineId(Long lineId);
 
     @EntityGraph(attributePaths = "photoUrls")
     List<ProblemReport> findByStatusAndReporterUserIdOrderByCreatedAtDesc(ReportStatus status, Long reporterUserId);

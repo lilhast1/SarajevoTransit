@@ -119,4 +119,37 @@ class LineReviewServiceTest {
                 .isInstanceOf(NotFoundException.class)
                 .hasMessageContaining("Line review not found");
     }
+
+    @Test
+    void getLatestVisibleReviewByLine_shouldReturnMappedResponse() {
+        LineReview review = new LineReview();
+        review.setId(101L);
+        review.setLineId(8L);
+        review.setModerationStatus(ModerationStatus.VISIBLE);
+
+        LineReviewResponse response = new LineReviewResponse();
+        response.setId(101L);
+        response.setLineId(8L);
+
+        when(lineReviewRepository.findFirstByLineIdAndModerationStatusOrderByCreatedAtDesc(8L,
+                ModerationStatus.VISIBLE))
+                .thenReturn(Optional.of(review));
+        when(lineReviewMapper.toResponse(review)).thenReturn(response);
+
+        LineReviewResponse result = lineReviewService.getLatestVisibleReviewByLine(8L);
+
+        assertThat(result.getId()).isEqualTo(101L);
+        assertThat(result.getLineId()).isEqualTo(8L);
+    }
+
+    @Test
+    void deleteReview_shouldDeleteExistingReview() {
+        LineReview review = new LineReview();
+        review.setId(51L);
+        when(lineReviewRepository.findById(51L)).thenReturn(Optional.of(review));
+
+        lineReviewService.deleteReview(51L);
+
+        verify(lineReviewRepository).delete(review);
+    }
 }

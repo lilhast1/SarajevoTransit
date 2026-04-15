@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -58,6 +59,11 @@ public class LineReviewController {
         return lineReviewService.getReview(id);
     }
 
+    @GetMapping("/line/{lineId}/latest")
+    public LineReviewResponse getLatestVisibleReviewByLine(@PathVariable @Positive Long lineId) {
+        return lineReviewService.getLatestVisibleReviewByLine(lineId);
+    }
+
     @GetMapping("/reviewer/{reviewerUserId}")
     public Page<LineReviewResponse> getReviewsByReviewer(
             @PathVariable @Positive Long reviewerUserId,
@@ -70,6 +76,12 @@ public class LineReviewController {
             @PathVariable Long id,
             @Valid @RequestBody ReviewModerationRequest request) {
         return lineReviewService.updateModerationStatus(id, request.getModerationStatus());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteReview(@PathVariable @Positive Long id) {
+        lineReviewService.deleteReview(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/summary")
