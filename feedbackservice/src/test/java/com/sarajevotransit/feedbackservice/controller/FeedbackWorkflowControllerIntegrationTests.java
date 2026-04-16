@@ -107,4 +107,34 @@ class FeedbackWorkflowControllerIntegrationTests {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("not_found"));
     }
+
+    @Test
+    void moderateLineFeedback_withMissingBodyFields_shouldReturnBadRequest() throws Exception {
+        String payload = """
+                {
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/workflows/lines/88/moderation")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("bad_request"));
+    }
+
+    @Test
+    void moderateLineFeedback_withInvalidPathVariable_shouldReturnBadRequest() throws Exception {
+        String payload = """
+                {
+                  "reportStatus": "RESOLVED",
+                  "moderationStatus": "HIDDEN"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/workflows/lines/0/moderation")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("bad_request"));
+    }
 }

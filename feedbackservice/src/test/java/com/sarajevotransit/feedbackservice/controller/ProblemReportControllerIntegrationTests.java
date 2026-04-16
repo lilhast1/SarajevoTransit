@@ -208,6 +208,64 @@ class ProblemReportControllerIntegrationTests {
         }
 
         @Test
+        void createReportsBatch_withEmptyReports_shouldReturnBadRequest() throws Exception {
+                String payload = """
+                                {
+                                        "reports": []
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/reports/batch")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("validation_error"));
+        }
+
+        @Test
+        void getReports_shouldApplyStatusAndReporterFilters() throws Exception {
+                ProblemReport matching = new ProblemReport();
+                matching.setReporterUserId(8801L);
+                matching.setLineId(6L);
+                matching.setStationId(611L);
+                matching.setCategory(ProblemCategory.DELAY);
+                matching.setDescription("Matching report");
+                matching.setStatus(ReportStatus.IN_PROGRESS);
+                matching.setPhotoUrls(List.of());
+                problemReportRepository.save(matching);
+
+                ProblemReport wrongStatus = new ProblemReport();
+                wrongStatus.setReporterUserId(8801L);
+                wrongStatus.setLineId(6L);
+                wrongStatus.setStationId(612L);
+                wrongStatus.setCategory(ProblemCategory.DELAY);
+                wrongStatus.setDescription("Wrong status");
+                wrongStatus.setStatus(ReportStatus.RECEIVED);
+                wrongStatus.setPhotoUrls(List.of());
+                problemReportRepository.save(wrongStatus);
+
+                ProblemReport wrongReporter = new ProblemReport();
+                wrongReporter.setReporterUserId(8802L);
+                wrongReporter.setLineId(6L);
+                wrongReporter.setStationId(613L);
+                wrongReporter.setCategory(ProblemCategory.CROWDING);
+                wrongReporter.setDescription("Wrong reporter");
+                wrongReporter.setStatus(ReportStatus.IN_PROGRESS);
+                wrongReporter.setPhotoUrls(List.of());
+                problemReportRepository.saveAndFlush(wrongReporter);
+
+                mockMvc.perform(get("/api/v1/reports")
+                                .param("status", "IN_PROGRESS")
+                                .param("reporterUserId", "8801")
+                                .param("page", "0")
+                                .param("size", "5"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.totalElements").value(1))
+                                .andExpect(jsonPath("$.content[0].reporterUserId").value(8801))
+                                .andExpect(jsonPath("$.content[0].status").value("IN_PROGRESS"));
+        }
+
+        @Test
         void searchReports_shouldReturnPagedMatches() throws Exception {
                 ProblemReport first = new ProblemReport();
                 first.setReporterUserId(9201L);
@@ -250,6 +308,62 @@ class ProblemReportControllerIntegrationTests {
         }
 
         @Test
+        void searchReports_withBlankKeyword_shouldReturnBadRequest() throws Exception {
+                mockMvc.perform(get("/api/v1/reports/search")
+                                .param("q", "   "))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("bad_request"))
+                                .andExpect(jsonPath("$.message").value("Search keyword must not be blank."));
+        }
+
+        @Test
+        void patchReport_withInvalidPayload_shouldReturnBadRequest() throws Exception {
+                ProblemReport report = new ProblemReport();
+                report.setReporterUserId(9501L);
+                report.setLineId(44L);
+                report.setStationId(111L);
+                report.setCategory(ProblemCategory.DELAY);
+                report.setDescription("Patch target");
+                report.setPhotoUrls(List.of());
+                report.setStatus(ReportStatus.RECEIVED);
+                report = problemReportRepository.saveAndFlush(report);
+
+                mockMvc.perform(patch("/api/v1/reports/{id}", report.getId())
+                                .contentType("application/json-patch+json")
+                                .content("{}"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("bad_request"))
+                                .andExpect(jsonPath("$.message")
+                                                .value("JSON Patch payload must be an array of operations."));
+        }
+
+        @Test
+        void getReport_shouldReturnSingleEntity() throws Exception {
+                ProblemReport report = new ProblemReport();
+                report.setReporterUserId(9601L);
+                report.setLineId(67L);
+                report.setStationId(701L);
+                report.setCategory(ProblemCategory.OTHER);
+                report.setDescription("Single report fetch");
+                report.setPhotoUrls(List.of("https://example.com/single.png"));
+                report.setStatus(ReportStatus.RECEIVED);
+                report = problemReportRepository.saveAndFlush(report);
+
+                mockMvc.perform(get("/api/v1/reports/{id}", report.getId()))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.id").value(report.getId()))
+                                .andExpect(jsonPath("$.reporterUserId").value(9601))
+                                .andExpect(jsonPath("$.description").value("Single report fetch"));
+        }
+
+        @Test
+        void getReport_withInvalidPathVariable_shouldReturnBadRequest() throws Exception {
+                mockMvc.perform(get("/api/v1/reports/0"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("bad_request"));
+        }
+
+        @Test
         void countReportsByLine_shouldReturnTotal() throws Exception {
                 ProblemReport first = new ProblemReport();
                 first.setReporterUserId(9301L);
@@ -288,6 +402,13 @@ class ProblemReportControllerIntegrationTests {
         }
 
         @Test
+        void countReportsByLine_withInvalidPathVariable_shouldReturnBadRequest() throws Exception {
+                mockMvc.perform(get("/api/v1/reports/line/0/count"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("bad_request"));
+        }
+
+        @Test
         void deleteReport_shouldRemoveEntityAndReturnNoContent() throws Exception {
                 ProblemReport report = new ProblemReport();
                 report.setReporterUserId(9401L);
@@ -305,5 +426,57 @@ class ProblemReportControllerIntegrationTests {
                 mockMvc.perform(get("/api/v1/reports/{id}", report.getId()))
                                 .andExpect(status().isNotFound())
                                 .andExpect(jsonPath("$.error").value("not_found"));
+        }
+
+        @Test
+        void deleteReport_whenEntityMissing_shouldReturnNotFound() throws Exception {
+                mockMvc.perform(delete("/api/v1/reports/{id}", 999999L))
+                                .andExpect(status().isNotFound())
+                                .andExpect(jsonPath("$.error").value("not_found"));
+        }
+
+        @Test
+        void updateStatus_shouldReturnUpdatedReport() throws Exception {
+                ProblemReport report = new ProblemReport();
+                report.setReporterUserId(9701L);
+                report.setLineId(78L);
+                report.setStationId(801L);
+                report.setCategory(ProblemCategory.DELAY);
+                report.setDescription("Status update target");
+                report.setPhotoUrls(List.of());
+                report.setStatus(ReportStatus.RECEIVED);
+                report = problemReportRepository.saveAndFlush(report);
+
+                String payload = """
+                                {
+                                  "status": "RESOLVED"
+                                }
+                                """;
+
+                mockMvc.perform(patch("/api/v1/reports/{id}/status", report.getId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.id").value(report.getId()))
+                                .andExpect(jsonPath("$.status").value("RESOLVED"));
+        }
+
+        @Test
+        void updateStatus_withValidationError_shouldReturnBadRequest() throws Exception {
+                ProblemReport report = new ProblemReport();
+                report.setReporterUserId(9801L);
+                report.setLineId(79L);
+                report.setStationId(901L);
+                report.setCategory(ProblemCategory.OTHER);
+                report.setDescription("Validation target");
+                report.setPhotoUrls(List.of());
+                report.setStatus(ReportStatus.RECEIVED);
+                report = problemReportRepository.saveAndFlush(report);
+
+                mockMvc.perform(patch("/api/v1/reports/{id}/status", report.getId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("bad_request"));
         }
 }
