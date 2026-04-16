@@ -11,6 +11,7 @@ import com.sarajevotransit.feedbackservice.model.ReportStatus;
 import com.sarajevotransit.feedbackservice.service.ProblemReportService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -32,13 +33,10 @@ import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/reports")
+@RequiredArgsConstructor
 public class ProblemReportController {
 
     private final ProblemReportService problemReportService;
-
-    public ProblemReportController(ProblemReportService problemReportService) {
-        this.problemReportService = problemReportService;
-    }
 
     @PostMapping
     public ResponseEntity<ProblemReportResponse> createReport(@Valid @RequestBody CreateProblemReportRequest request) {
@@ -104,7 +102,7 @@ public class ProblemReportController {
     }
 
     @PatchMapping("/{id}/status")
-    public ProblemReportResponse updateStatus(@PathVariable Long id,
+    public ProblemReportResponse updateStatus(@PathVariable @Positive Long id,
             @Valid @RequestBody ReportStatusUpdateRequest request) {
         return problemReportService.updateStatus(id, request.getStatus());
     }

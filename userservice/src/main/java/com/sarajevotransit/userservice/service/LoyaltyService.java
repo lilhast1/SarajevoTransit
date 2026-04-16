@@ -12,6 +12,7 @@ import com.sarajevotransit.userservice.model.LoyaltyTransactionType;
 import com.sarajevotransit.userservice.model.UserProfile;
 import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class LoyaltyService {
 
     private final UserProfileRepository userProfileRepository;
@@ -29,25 +31,10 @@ public class LoyaltyService {
     private final UserService userService;
     private final LoyaltyTransactionMapper loyaltyTransactionMapper;
 
-    public LoyaltyService(
-            UserProfileRepository userProfileRepository,
-            LoyaltyTransactionRepository loyaltyTransactionRepository,
-            UserService userService,
-            LoyaltyTransactionMapper loyaltyTransactionMapper) {
-        this.userProfileRepository = userProfileRepository;
-        this.loyaltyTransactionRepository = loyaltyTransactionRepository;
-        this.userService = userService;
-        this.loyaltyTransactionMapper = loyaltyTransactionMapper;
-    }
-
     @Transactional
     public LoyaltyBalanceResponse earnPoints(Long userId, LoyaltyEarnRequest request) {
         UserProfile user = userService.findUserById(userId);
         DigitalWallet wallet = getOrCreateWallet(user);
-        if (request.points() <= 0) {
-            throw new IllegalArgumentException("Points to earn must be greater than zero.");
-        }
-
         wallet.setLoyaltyPointsTotal(wallet.getLoyaltyPointsTotal() + request.points());
         createTransaction(user, LoyaltyTransactionType.EARN, request.points(), request.description(),
                 request.referenceType());
@@ -60,10 +47,6 @@ public class LoyaltyService {
     public LoyaltyBalanceResponse redeemPoints(Long userId, LoyaltyRedeemRequest request) {
         UserProfile user = userService.findUserById(userId);
         DigitalWallet wallet = getOrCreateWallet(user);
-        if (request.points() <= 0) {
-            throw new IllegalArgumentException("Points to redeem must be greater than zero.");
-        }
-
         if (wallet.getLoyaltyPointsTotal() < request.points()) {
             throw new InsufficientLoyaltyPointsException("User does not have enough loyalty points for redemption.");
         }

@@ -3,7 +3,15 @@ package com.sarajevotransit.userservice.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class PatchUserProfileRequest {
 
     @NotBlank(message = "Full name is required")
@@ -14,28 +22,4 @@ public class PatchUserProfileRequest {
     @Email(message = "Email format is invalid")
     @Size(max = 254, message = "Email can be at most 254 characters")
     private String email;
-
-    public PatchUserProfileRequest() {
-    }
-
-    public PatchUserProfileRequest(String fullName, String email) {
-        this.fullName = fullName;
-        this.email = email;
-    }
-
-    public String getFullName() {
-        return fullName;
-    }
-
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
 }

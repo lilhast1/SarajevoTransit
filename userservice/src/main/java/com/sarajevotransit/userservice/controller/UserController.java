@@ -3,6 +3,7 @@ package com.sarajevotransit.userservice.controller;
 import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
+import com.sarajevotransit.userservice.dto.PaginationRequest;
 import com.sarajevotransit.userservice.dto.TicketPurchaseResponse;
 import com.sarajevotransit.userservice.dto.TicketPurchaseStatsResponse;
 import com.sarajevotransit.userservice.dto.TravelHistoryResponse;
@@ -18,6 +19,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,14 +42,11 @@ import java.util.List;
 
 @RestController
 @Validated
+@RequiredArgsConstructor
 @RequestMapping({ "/api/users", "/api/v1/users" })
 public class UserController {
 
     private final UserService userService;
-
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
 
     @PostMapping
     public ResponseEntity<UserProfileResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
@@ -61,10 +60,8 @@ public class UserController {
 
     @GetMapping
     public Page<UserProfileResponse> getAllUsers(
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort) {
-        return userService.getAllUsers(page, size, sort);
+            @Valid PaginationRequest request) {
+        return userService.getAllUsers(request.getPage(), request.getSize(), request.getSort());
     }
 
     @GetMapping("/{userId}")
@@ -80,19 +77,15 @@ public class UserController {
     @GetMapping("/{userId}/travel-history")
     public Page<TravelHistoryResponse> getTravelHistory(
             @PathVariable @Positive Long userId,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
-            @RequestParam(defaultValue = "traveledAt,desc") String sort) {
-        return userService.getTravelHistory(userId, page, size, sort);
+            @Valid PaginationRequest request) {
+        return userService.getTravelHistory(userId, request.getPage(), request.getSize(), request.getSort());
     }
 
     @GetMapping("/{userId}/ticket-purchases")
     public Page<TicketPurchaseResponse> getTicketPurchases(
             @PathVariable @Positive Long userId,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
-            @RequestParam(defaultValue = "purchasedAt,desc") String sort) {
-        return userService.getTicketPurchases(userId, page, size, sort);
+            @Valid PaginationRequest request) {
+        return userService.getTicketPurchases(userId, request.getPage(), request.getSize(), request.getSort());
     }
 
     @PutMapping("/{userId}")

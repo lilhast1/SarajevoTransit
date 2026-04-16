@@ -37,6 +37,7 @@ import com.sarajevotransit.userservice.repository.UserProfileRepository;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.json.JsonParser;
 import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.data.domain.Page;
@@ -57,6 +58,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserProfileRepository userProfileRepository;
@@ -69,31 +71,7 @@ public class UserService {
     private final TicketPurchaseMapper ticketPurchaseMapper;
     private final LoyaltyTransactionMapper loyaltyTransactionMapper;
     private final Validator validator;
-    private final JsonParser jsonParser;
-
-    public UserService(
-            UserProfileRepository userProfileRepository,
-            TravelHistoryRepository travelHistoryRepository,
-            TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository,
-            LoyaltyTransactionRepository loyaltyTransactionRepository,
-            UserProfileMapper userProfileMapper,
-            UserPreferenceMapper userPreferenceMapper,
-            TravelHistoryMapper travelHistoryMapper,
-            TicketPurchaseMapper ticketPurchaseMapper,
-            LoyaltyTransactionMapper loyaltyTransactionMapper,
-            Validator validator) {
-        this.userProfileRepository = userProfileRepository;
-        this.travelHistoryRepository = travelHistoryRepository;
-        this.ticketPurchaseHistoryRepository = ticketPurchaseHistoryRepository;
-        this.loyaltyTransactionRepository = loyaltyTransactionRepository;
-        this.userProfileMapper = userProfileMapper;
-        this.userPreferenceMapper = userPreferenceMapper;
-        this.travelHistoryMapper = travelHistoryMapper;
-        this.ticketPurchaseMapper = ticketPurchaseMapper;
-        this.loyaltyTransactionMapper = loyaltyTransactionMapper;
-        this.validator = validator;
-        this.jsonParser = JsonParserFactory.getJsonParser();
-    }
+    private final JsonParser jsonParser = JsonParserFactory.getJsonParser();
 
     @Transactional
     public UserProfileResponse createUser(CreateUserRequest request) {

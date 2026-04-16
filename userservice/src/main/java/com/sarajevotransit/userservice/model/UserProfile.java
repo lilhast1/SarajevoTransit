@@ -19,6 +19,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,6 +28,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "users")
+@Getter
+@Setter
 public class UserProfile {
 
     @Id
@@ -129,14 +133,6 @@ public class UserProfile {
         transaction.setUser(this);
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public String getFullName() {
         String left = this.firstName == null ? "" : this.firstName.trim();
         String right = this.lastName == null ? "" : this.lastName.trim();
@@ -200,61 +196,5 @@ public class UserProfile {
             setWallet(new DigitalWallet());
         }
         this.wallet.setLoyaltyPointsTotal(loyaltyPointsBalance == null ? 0 : loyaltyPointsBalance);
-    }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public void setRole(UserRole role) {
-        this.role = role;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public UserPreference getPreference() {
-        return preference;
-    }
-
-    public DigitalWallet getWallet() {
-        return wallet;
-    }
-
-    public List<TravelHistoryEntry> getTravelHistoryEntries() {
-        return travelHistoryEntries;
-    }
-
-    public void setTravelHistoryEntries(List<TravelHistoryEntry> travelHistoryEntries) {
-        this.travelHistoryEntries = travelHistoryEntries;
-    }
-
-    public List<TicketPurchaseHistoryEntry> getTicketPurchases() {
-        return ticketPurchases;
-    }
-
-    public void setTicketPurchases(List<TicketPurchaseHistoryEntry> ticketPurchases) {
-        this.ticketPurchases = ticketPurchases;
-    }
-
-    public List<LoyaltyTransaction> getLoyaltyTransactions() {
-        return loyaltyTransactions;
-    }
-
-    public void setLoyaltyTransactions(List<LoyaltyTransaction> loyaltyTransactions) {
-        this.loyaltyTransactions = loyaltyTransactions;
     }
 }

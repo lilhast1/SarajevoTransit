@@ -5,9 +5,15 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
+@Getter
+@Setter
+@NoArgsConstructor
 public class CreateLineReviewRequest {
 
     @NotNull
@@ -28,44 +34,4 @@ public class CreateLineReviewRequest {
 
     @NotNull
     private LocalDate rideDate;
-
-    public Long getReviewerUserId() {
-        return reviewerUserId;
-    }
-
-    public void setReviewerUserId(Long reviewerUserId) {
-        this.reviewerUserId = reviewerUserId;
-    }
-
-    public Long getLineId() {
-        return lineId;
-    }
-
-    public void setLineId(Long lineId) {
-        this.lineId = lineId;
-    }
-
-    public Integer getRating() {
-        return rating;
-    }
-
-    public void setRating(Integer rating) {
-        this.rating = rating;
-    }
-
-    public String getReviewText() {
-        return reviewText;
-    }
-
-    public void setReviewText(String reviewText) {
-        this.reviewText = reviewText;
-    }
-
-    public LocalDate getRideDate() {
-        return rideDate;
-    }
-
-    public void setRideDate(LocalDate rideDate) {
-        this.rideDate = rideDate;
-    }
 }

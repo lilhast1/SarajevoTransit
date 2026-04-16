@@ -14,12 +14,16 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "loyalty_points")
+@Getter
+@Setter
 public class LoyaltyTransaction {
 
     @Id
@@ -69,54 +73,6 @@ public class LoyaltyTransaction {
         }
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public UserProfile getUser() {
-        return user;
-    }
-
-    public void setUser(UserProfile user) {
-        this.user = user;
-    }
-
-    public Long getTransactionId() {
-        return transactionId;
-    }
-
-    public void setTransactionId(Long transactionId) {
-        this.transactionId = transactionId;
-    }
-
-    public Integer getPointsEarned() {
-        return pointsEarned;
-    }
-
-    public void setPointsEarned(Integer pointsEarned) {
-        this.pointsEarned = pointsEarned;
-    }
-
-    public Integer getPointsSpent() {
-        return pointsSpent;
-    }
-
-    public void setPointsSpent(Integer pointsSpent) {
-        this.pointsSpent = pointsSpent;
-    }
-
-    public LocalDate getExpiryDate() {
-        return expiryDate;
-    }
-
-    public void setExpiryDate(LocalDate expiryDate) {
-        this.expiryDate = expiryDate;
-    }
-
     public LoyaltyTransactionType getTransactionType() {
         if (pointsSpent != null && pointsSpent > 0) {
             return LoyaltyTransactionType.REDEEM;
@@ -129,29 +85,5 @@ public class LoyaltyTransaction {
             return pointsSpent;
         }
         return pointsEarned == null ? 0 : pointsEarned;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getReferenceType() {
-        return referenceType;
-    }
-
-    public void setReferenceType(String referenceType) {
-        this.referenceType = referenceType;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
     }
 }

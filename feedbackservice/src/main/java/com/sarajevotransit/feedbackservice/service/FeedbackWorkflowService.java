@@ -8,22 +8,18 @@ import com.sarajevotransit.feedbackservice.model.ProblemReport;
 import com.sarajevotransit.feedbackservice.model.ReportStatus;
 import com.sarajevotransit.feedbackservice.repository.LineReviewRepository;
 import com.sarajevotransit.feedbackservice.repository.ProblemReportRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class FeedbackWorkflowService {
 
     private final ProblemReportRepository problemReportRepository;
     private final LineReviewRepository lineReviewRepository;
-
-    public FeedbackWorkflowService(ProblemReportRepository problemReportRepository,
-            LineReviewRepository lineReviewRepository) {
-        this.problemReportRepository = problemReportRepository;
-        this.lineReviewRepository = lineReviewRepository;
-    }
 
     @Transactional
     public LineModerationResponse moderateLineFeedback(

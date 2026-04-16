@@ -19,6 +19,7 @@ import com.sarajevotransit.feedbackservice.repository.ProblemReportRepository;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,22 +31,13 @@ import java.util.Locale;
 import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class ProblemReportService {
 
     private final ProblemReportRepository problemReportRepository;
     private final ProblemReportMapper problemReportMapper;
     private final ObjectMapper objectMapper;
     private final Validator validator;
-
-    public ProblemReportService(ProblemReportRepository problemReportRepository,
-            ProblemReportMapper problemReportMapper,
-            ObjectMapper objectMapper,
-            Validator validator) {
-        this.problemReportRepository = problemReportRepository;
-        this.problemReportMapper = problemReportMapper;
-        this.objectMapper = objectMapper;
-        this.validator = validator;
-    }
 
     @Transactional
     public ProblemReportResponse createReport(CreateProblemReportRequest request) {
@@ -70,8 +62,7 @@ public class ProblemReportService {
 
     @Transactional
     public ProblemReportResponse patchReport(Long id, JsonNode patchDocument) {
-        ProblemReport report = problemReportRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Problem report not found: id=" + id));
+        ProblemReport report = findReportOrThrow(id);
 
         ProblemReportPatchRequest currentRequest = mapToPatchRequest(report);
         ProblemReportPatchRequest patchedRequest = applyJsonPatchToRequest(currentRequest, patchDocument);
@@ -111,8 +102,7 @@ public class ProblemReportService {
 
     @Transactional(readOnly = true)
     public ProblemReportResponse getReport(Long id) {
-        ProblemReport report = problemReportRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Problem report not found: id=" + id));
+        ProblemReport report = findReportOrThrow(id);
         return problemReportMapper.toResponse(report);
     }
 
@@ -129,8 +119,7 @@ public class ProblemReportService {
 
     @Transactional
     public ProblemReportResponse updateStatus(Long id, ReportStatus status) {
-        ProblemReport report = problemReportRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Problem report not found: id=" + id));
+        ProblemReport report = findReportOrThrow(id);
         report.setStatus(status);
         ProblemReport saved = problemReportRepository.save(report);
         return problemReportMapper.toResponse(saved);
@@ -138,9 +127,13 @@ public class ProblemReportService {
 
     @Transactional
     public void deleteReport(Long id) {
-        ProblemReport report = problemReportRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Problem report not found: id=" + id));
+        ProblemReport report = findReportOrThrow(id);
         problemReportRepository.delete(report);
+    }
+
+    private ProblemReport findReportOrThrow(Long id) {
+        return problemReportRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Problem report not found: id=" + id));
     }
 
     private ProblemReport buildEntityForCreate(CreateProblemReportRequest request) {

@@ -9,6 +9,7 @@ import com.sarajevotransit.feedbackservice.mapper.LineReviewMapper;
 import com.sarajevotransit.feedbackservice.model.LineReview;
 import com.sarajevotransit.feedbackservice.model.ModerationStatus;
 import com.sarajevotransit.feedbackservice.repository.LineReviewRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -19,17 +20,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class LineReviewService {
 
     private static final int REVIEW_WINDOW_DAYS = 30;
 
     private final LineReviewRepository lineReviewRepository;
     private final LineReviewMapper lineReviewMapper;
-
-    public LineReviewService(LineReviewRepository lineReviewRepository, LineReviewMapper lineReviewMapper) {
-        this.lineReviewRepository = lineReviewRepository;
-        this.lineReviewMapper = lineReviewMapper;
-    }
 
     @Transactional
     public LineReviewResponse createReview(CreateLineReviewRequest request) {
@@ -64,8 +61,7 @@ public class LineReviewService {
 
     @Transactional(readOnly = true)
     public LineReviewResponse getReview(Long id) {
-        LineReview review = lineReviewRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Line review not found: id=" + id));
+        LineReview review = findReviewOrThrow(id);
         return lineReviewMapper.toResponse(review);
     }
 
@@ -86,8 +82,7 @@ public class LineReviewService {
 
     @Transactional
     public LineReviewResponse updateModerationStatus(Long id, ModerationStatus moderationStatus) {
-        LineReview review = lineReviewRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Line review not found: id=" + id));
+        LineReview review = findReviewOrThrow(id);
         review.setModerationStatus(moderationStatus);
         LineReview saved = lineReviewRepository.save(review);
         return lineReviewMapper.toResponse(saved);
@@ -95,9 +90,13 @@ public class LineReviewService {
 
     @Transactional
     public void deleteReview(Long id) {
-        LineReview review = lineReviewRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Line review not found: id=" + id));
+        LineReview review = findReviewOrThrow(id);
         lineReviewRepository.delete(review);
+    }
+
+    private LineReview findReviewOrThrow(Long id) {
+        return lineReviewRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Line review not found: id=" + id));
     }
 
     @Transactional(readOnly = true)

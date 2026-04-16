@@ -7,6 +7,7 @@ import com.sarajevotransit.feedbackservice.dto.ReviewModerationRequest;
 import com.sarajevotransit.feedbackservice.service.LineReviewService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -28,13 +29,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/reviews")
+@RequiredArgsConstructor
 public class LineReviewController {
 
     private final LineReviewService lineReviewService;
-
-    public LineReviewController(LineReviewService lineReviewService) {
-        this.lineReviewService = lineReviewService;
-    }
 
     @PostMapping
     public ResponseEntity<LineReviewResponse> createReview(@Valid @RequestBody CreateLineReviewRequest request) {
@@ -73,7 +71,7 @@ public class LineReviewController {
 
     @PatchMapping("/{id}/moderation-status")
     public LineReviewResponse updateModerationStatus(
-            @PathVariable Long id,
+            @PathVariable @Positive Long id,
             @Valid @RequestBody ReviewModerationRequest request) {
         return lineReviewService.updateModerationStatus(id, request.getModerationStatus());
     }

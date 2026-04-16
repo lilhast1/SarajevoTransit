@@ -16,12 +16,16 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ticket_purchase_history_entries")
+@Getter
+@Setter
 public class TicketPurchaseHistoryEntry {
 
     @Id
@@ -66,69 +70,5 @@ public class TicketPurchaseHistoryEntry {
         if (this.purchasedAt == null) {
             this.purchasedAt = LocalDateTime.now();
         }
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public UserProfile getUser() {
-        return user;
-    }
-
-    public void setUser(UserProfile user) {
-        this.user = user;
-    }
-
-    public TicketType getTicketType() {
-        return ticketType;
-    }
-
-    public void setTicketType(TicketType ticketType) {
-        this.ticketType = ticketType;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-
-    public String getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public void setPaymentMethod(String paymentMethod) {
-        this.paymentMethod = paymentMethod;
-    }
-
-    public String getExternalTransactionId() {
-        return externalTransactionId;
-    }
-
-    public void setExternalTransactionId(String externalTransactionId) {
-        this.externalTransactionId = externalTransactionId;
-    }
-
-    public String getLineCode() {
-        return lineCode;
-    }
-
-    public void setLineCode(String lineCode) {
-        this.lineCode = lineCode;
-    }
-
-    public LocalDateTime getPurchasedAt() {
-        return purchasedAt;
-    }
-
-    public void setPurchasedAt(LocalDateTime purchasedAt) {
-        this.purchasedAt = purchasedAt;
     }
 }

@@ -12,6 +12,7 @@ Ovaj dokument opisuje kako su realizovani zahtjevi:
 - Testirati service klase.
 - Provjeriti N+1 problem kroz Hibernate statistics.
 - Implementirati uniforman error handling.
+- Uspostaviti konzistentnu strukturu paketa i koristiti Lombok za smanjenje boilerplate koda.
 
 Opseg ovog izvjestaja je modul `feedbackservice`.
 
@@ -25,6 +26,7 @@ Opseg ovog izvjestaja je modul `feedbackservice`.
 6. Testovi service sloja: zavrseno.
 7. N+1 provjera sa Hibernate statistics: zavrseno.
 8. Uniforman error handling: zavrseno.
+9. Konzistentna struktura paketa + Lombok refaktor: zavrseno.
 
 ## 3. Web servisi bez komunikacije sa drugim mikroservisima
 
@@ -322,7 +324,7 @@ Pokrenuto lokalno:
 
 Rezultat posljednjeg pokretanja:
 
-- Tests run: 29
+- Tests run: 47
 - Failures: 0
 - Errors: 0
 - Skipped: 0
@@ -344,4 +346,4 @@ Kljucni izvjestaji:
 ## 14. Zakljucak
 
 Svi trazeni zadaci su implementirani u `feedbackservice` modulu sa jasnim dokazima u kodu, dokumentaciji i test artefaktima.
-Implementacija je uskladjena sa trazenim smjernicama za REST dizajn, testiranje, DTO pristup, validaciju, N+1 kontrolu i uniforman error handling.
+Implementacija je uskladjena sa trazenim smjernicama za REST dizajn, testiranje, DTO pristup, validaciju, N+1 kontrolu, uniforman error handling i Lombok-based smanjenje boilerplate koda.

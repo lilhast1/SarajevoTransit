@@ -14,11 +14,15 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "travel_history_entries")
+@Getter
+@Setter
 public class TravelHistoryEntry {
 
     @Id
@@ -59,61 +63,5 @@ public class TravelHistoryEntry {
         if (this.traveledAt == null) {
             this.traveledAt = LocalDateTime.now();
         }
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public UserProfile getUser() {
-        return user;
-    }
-
-    public void setUser(UserProfile user) {
-        this.user = user;
-    }
-
-    public String getLineCode() {
-        return lineCode;
-    }
-
-    public void setLineCode(String lineCode) {
-        this.lineCode = lineCode;
-    }
-
-    public String getFromStop() {
-        return fromStop;
-    }
-
-    public void setFromStop(String fromStop) {
-        this.fromStop = fromStop;
-    }
-
-    public String getToStop() {
-        return toStop;
-    }
-
-    public void setToStop(String toStop) {
-        this.toStop = toStop;
-    }
-
-    public LocalDateTime getTraveledAt() {
-        return traveledAt;
-    }
-
-    public void setTraveledAt(LocalDateTime traveledAt) {
-        this.traveledAt = traveledAt;
-    }
-
-    public Integer getDurationMinutes() {
-        return durationMinutes;
-    }
-
-    public void setDurationMinutes(Integer durationMinutes) {
-        this.durationMinutes = durationMinutes;
     }
 }

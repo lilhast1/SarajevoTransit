@@ -18,6 +18,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -31,6 +34,9 @@ import java.util.List;
         @Index(name = "idx_incident_reports_station", columnList = "station_id"),
         @Index(name = "idx_incident_reports_vehicle", columnList = "vehicle_id")
 })
+@Getter
+@Setter
+@NoArgsConstructor
 public class ProblemReport {
 
     @Id
@@ -107,115 +113,7 @@ public class ProblemReport {
         this.updatedAt = OffsetDateTime.now();
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getReporterUserId() {
-        return reporterUserId;
-    }
-
-    public void setReporterUserId(Long reporterUserId) {
-        this.reporterUserId = reporterUserId;
-    }
-
-    public Long getLineId() {
-        return lineId;
-    }
-
-    public void setLineId(Long lineId) {
-        this.lineId = lineId;
-    }
-
-    public Long getVehicleId() {
-        return vehicleId;
-    }
-
-    public void setVehicleId(Long vehicleId) {
-        this.vehicleId = vehicleId;
-    }
-
-    public String getVehicleRegistrationNumber() {
-        return vehicleRegistrationNumber;
-    }
-
-    public void setVehicleRegistrationNumber(String vehicleRegistrationNumber) {
-        this.vehicleRegistrationNumber = vehicleRegistrationNumber;
-    }
-
-    public String getVehicleInternalId() {
-        return vehicleInternalId;
-    }
-
-    public void setVehicleInternalId(String vehicleInternalId) {
-        this.vehicleInternalId = vehicleInternalId;
-    }
-
-    public String getVehicleType() {
-        return vehicleType;
-    }
-
-    public void setVehicleType(String vehicleType) {
-        this.vehicleType = vehicleType;
-    }
-
-    public Long getStationId() {
-        return stationId;
-    }
-
-    public void setStationId(Long stationId) {
-        this.stationId = stationId;
-    }
-
-    public ProblemCategory getCategory() {
-        return category;
-    }
-
-    public void setCategory(ProblemCategory category) {
-        this.category = category;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public List<String> getPhotoUrls() {
-        return photoUrls;
-    }
-
     public void setPhotoUrls(List<String> photoUrls) {
         this.photoUrls = photoUrls == null ? new ArrayList<>() : new ArrayList<>(photoUrls);
-    }
-
-    public ReportStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(ReportStatus status) {
-        this.status = status;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }
