@@ -326,3 +326,9 @@ Implementacija Eureka registracije, health check provjere, client-side load bala
 Skripta za mjerenje i distribuciju zahtjeva:
 
 - [../scripts/benchmark-discovery-loadbalancing.ps1](../scripts/benchmark-discovery-loadbalancing.ps1)
+
+## 15. Centralizovana konfiguracija (Spring Cloud Config)
+
+Implementacija centralizovanog config servera i odvojenih dev/test profila za userservice i feedbackservice je dokumentovana u:
+
+- [CENTRALIZED_CONFIGURATION_REPORT.md](CENTRALIZED_CONFIGURATION_REPORT.md)
