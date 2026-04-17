@@ -316,3 +316,13 @@ Implementiran je ownership-safe delete endpoint:
 - [../src/main/java/com/sarajevotransit/userservice/service/UserService.java](../src/main/java/com/sarajevotransit/userservice/service/UserService.java)
 
 Brisanje je dostupno na `/api/v1/users/{userId}/travel-history/{entryId}` i vraca `204 NO CONTENT`.
+
+## 14. Service Discovery i Load Balancing dodatak
+
+Implementacija Eureka registracije, health check provjere, client-side load balancing benchmark endpointa i skripte za 100 zahtjeva je dokumentovana u:
+
+- [SERVICE_DISCOVERY_LOADBALANCING_REPORT.md](SERVICE_DISCOVERY_LOADBALANCING_REPORT.md)
+
+Skripta za mjerenje i distribuciju zahtjeva:
+
+- [../scripts/benchmark-discovery-loadbalancing.ps1](../scripts/benchmark-discovery-loadbalancing.ps1)
