@@ -18,6 +18,10 @@ public interface DirectionStationRepository extends JpaRepository<DirectionStati
 
     @EntityGraph(attributePaths = {"direction", "station"})
     List<DirectionStation> findByStation_Id(Integer stationId);
+
+    @EntityGraph(attributePaths = {"direction", "station"})
+    List<DirectionStation> findByDirection_IdInOrderByDirection_IdAscStopSequenceAsc(Collection<Integer> directionIds);
+
     void deleteByDirection_Id(Integer directionId);
 
     @Modifying
