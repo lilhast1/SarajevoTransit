@@ -18,6 +18,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -204,6 +205,49 @@ class NotificationControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.notificationsCreated").value(3))
                 .andExpect(jsonPath("$.lineId").value(101L));
+    }
+
+    @Test
+    void markAsRead_notFound_returns404() throws Exception {
+        Long id = 99L;
+        String message = "Notification not found: " + id;
+        when(notificationService.markAsRead(id)).thenThrow(new NotFoundException(message));
+
+        mockMvc.perform(patch("/notifications/{id}/read", id))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value(message));
+    }
+
+    @Test
+    void markAllAsRead_returns204() throws Exception {
+        Long userId = 1L;
+        doNothing().when(notificationService).markAllAsRead(userId);
+
+        mockMvc.perform(patch("/notifications/user/{userId}/read-all", userId))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void broadcast_missingRequiredFields_returns400() throws Exception {
+        mockMvc.perform(post("/notifications/broadcast")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.lineId").exists())
+                .andExpect(jsonPath("$.validationErrors.type").exists());
+    }
+
+    @Test
+    void createBatch_exceedsMaxSize_returns400() throws Exception {
+        BatchCreateNotificationRequest batchRequest = new BatchCreateNotificationRequest();
+        List<CreateNotificationRequest> oversized = new java.util.ArrayList<>();
+        for (int i = 0; i < 101; i++) oversized.add(validCreateRequest());
+        batchRequest.setNotifications(oversized);
+
+        mockMvc.perform(post("/notifications/batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(batchRequest)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

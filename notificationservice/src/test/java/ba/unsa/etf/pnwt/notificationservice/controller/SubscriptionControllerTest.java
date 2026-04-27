@@ -3,6 +3,7 @@ package ba.unsa.etf.pnwt.notificationservice.controller;
 import ba.unsa.etf.pnwt.notificationservice.dto.CreateSubscriptionRequest;
 import ba.unsa.etf.pnwt.notificationservice.dto.PagedResponse;
 import ba.unsa.etf.pnwt.notificationservice.dto.SubscriptionResponse;
+import ba.unsa.etf.pnwt.notificationservice.dto.UpdateSubscriptionRequest;
 import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
 import ba.unsa.etf.pnwt.notificationservice.service.SubscriptionService;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -181,6 +183,82 @@ class SubscriptionControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.validationErrors.startInterval").exists())
                 .andExpect(jsonPath("$.validationErrors.endInterval").exists());
+    }
+
+    @Test
+    void deactivate_notFound_returns404() throws Exception {
+        Long id = 99L;
+        String message = "Subscription not found: " + id;
+        doThrow(new NotFoundException(message)).when(subscriptionService).deactivate(id);
+
+        mockMvc.perform(patch("/subscriptions/{id}/deactivate", id))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value(message));
+    }
+
+    @Test
+    void activate_returns200() throws Exception {
+        Long id = 1L;
+        SubscriptionResponse response = subscriptionResponse(id, 2L, true);
+        when(subscriptionService.activate(id)).thenReturn(response);
+
+        mockMvc.perform(patch("/subscriptions/{id}/activate", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isActive").value(true));
+    }
+
+    @Test
+    void activate_notFound_returns404() throws Exception {
+        Long id = 99L;
+        String message = "Subscription not found: " + id;
+        doThrow(new NotFoundException(message)).when(subscriptionService).activate(id);
+
+        mockMvc.perform(patch("/subscriptions/{id}/activate", id))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value(message));
+    }
+
+    @Test
+    void update_validRequest_returns200() throws Exception {
+        Long id = 1L;
+        UpdateSubscriptionRequest request = new UpdateSubscriptionRequest();
+        request.setLineCode("L2");
+        SubscriptionResponse response = subscriptionResponse(id, 2L, true);
+        response.setLineCode("L2");
+        when(subscriptionService.update(eq(id), any(UpdateSubscriptionRequest.class))).thenReturn(response);
+
+        mockMvc.perform(patch("/subscriptions/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lineCode").value("L2"));
+    }
+
+    @Test
+    void update_notFound_returns404() throws Exception {
+        Long id = 99L;
+        String message = "Subscription not found: " + id;
+        UpdateSubscriptionRequest request = new UpdateSubscriptionRequest();
+        request.setLineCode("L2");
+        doThrow(new NotFoundException(message)).when(subscriptionService).update(eq(id), any(UpdateSubscriptionRequest.class));
+
+        mockMvc.perform(patch("/subscriptions/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value(message));
+    }
+
+    @Test
+    void search_byName_returns200() throws Exception {
+        String name = "Ali";
+        SubscriptionResponse response = subscriptionResponse(10L, 1L, true);
+        response.setUserFullName("Ali Aljaljak");
+        when(subscriptionService.searchByName(name)).thenReturn(List.of(response));
+
+        mockMvc.perform(get("/subscriptions/search").param("name", name))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].userFullName").value("Ali Aljaljak"));
     }
 
     @Test
