@@ -3,10 +3,10 @@ package com.sarajevotransit.moneyman.service;
 import com.sarajevotransit.moneyman.dto.TicketPurchaseRequest;
 import com.sarajevotransit.moneyman.dto.TicketResponseDTO;
 import com.sarajevotransit.moneyman.mapper.MoneymanMapper;
+import com.sarajevotransit.moneyman.exception.ResourceNotFoundException;
 import com.sarajevotransit.moneyman.model.*;
 import com.sarajevotransit.moneyman.model.enums.*;
 import com.sarajevotransit.moneyman.repository.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +20,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-//@RequiredArgsConstructor
+// @RequiredArgsConstructor
 public class MoneymanService {
 
     private final TicketRepository ticketRepository;
@@ -28,26 +28,30 @@ public class MoneymanService {
     private final PaymentMethodRepository paymentMethodRepository;
     private final MoneymanMapper mapper;
 
-    public MoneymanService(TicketRepository ticketRepository, TransactionRepository transactionRepository, PaymentMethodRepository paymentMethodRepository, MoneymanMapper mapper) {
+    public MoneymanService(TicketRepository ticketRepository, TransactionRepository transactionRepository,
+            PaymentMethodRepository paymentMethodRepository, MoneymanMapper mapper) {
         this.ticketRepository = ticketRepository;
         this.transactionRepository = transactionRepository;
         this.paymentMethodRepository = paymentMethodRepository;
         this.mapper = mapper;
     }
+
     private static final Logger logger = LoggerFactory.getLogger(MoneymanService.class);
+
     @Transactional
     public Ticket purchaseTicket(TicketPurchaseRequest request) {
         // 1. F11: Verify tokenized payment method exists
         PaymentMethod pm = paymentMethodRepository.findById(request.getPaymentMethodId())
                 .filter(p -> p.getUserId().equals(request.getUserId()))
-                .orElseThrow(() -> new RuntimeException("Valid payment method not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Valid payment method not found"));
 
         // 2. F3 Logic: Determine Price and Duration
         BigDecimal price = calculatePrice(request.getTicketType());
         LocalDateTime expiry = calculateExpiry(request.getTicketType());
 
         // 3. F11: Simulate External Gateway (Stripe/PayPal) call using the token
-        logger.info("Charging card ending in {} via {} token: {}", pm.getLastFour(), pm.getProvider(), pm.getGatewayToken());
+        logger.info("Charging card ending in {} via {} token: {}", pm.getLastFour(), pm.getProvider(),
+                pm.getGatewayToken());
         String externalId = "PAY-" + UUID.randomUUID().toString().substring(0, 8);
 
         // 4. F11: Create Transaction History

@@ -3,11 +3,16 @@ package com.sarajevotransit.moneyman.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sarajevotransit.moneyman.dto.TicketPurchaseRequest;
 import com.sarajevotransit.moneyman.dto.TicketResponseDTO;
+import com.sarajevotransit.moneyman.mapper.MoneymanMapper;
+import com.sarajevotransit.moneyman.mapper.MoneymanMapperImpl;
+import com.sarajevotransit.moneyman.model.Ticket;
+import com.sarajevotransit.moneyman.model.Transaction;
 import com.sarajevotransit.moneyman.model.enums.TicketStatus;
 import com.sarajevotransit.moneyman.model.enums.TicketType;
 import com.sarajevotransit.moneyman.service.MoneymanService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -35,24 +40,41 @@ public class FinanceControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockBean
+    private MoneymanMapper moneymanMapperImpl;
+
     @Test
     void purchaseTicket_ValidRequest_ReturnsOk() throws Exception {
-        // Setup DTO for response
+        // Mock domain entity
+        Ticket ticket = new Ticket();
+        ticket.setId(UUID.randomUUID());
+        Transaction transaction = new Transaction();
+        transaction.setAmount(new BigDecimal("1.80"));
+        transaction.setCurrency("BAM");
+        transaction.setExternalTransactionId("TX-123");
+        ticket.setTransaction(transaction);
+        ticket.setStatus(TicketStatus.ACTIVE);
+
+        // Mock DTO
         TicketResponseDTO response = new TicketResponseDTO();
-        response.setId(UUID.randomUUID());
-        response.setAmount(new BigDecimal("1.80"));
-        response.setStatus(TicketStatus.ACTIVE);
+        response.setId(ticket.getId());
+        response.setAmount(ticket.getTransaction().getAmount());
+        response.setStatus(ticket.getStatus());
 
         TicketPurchaseRequest request = new TicketPurchaseRequest();
         request.setUserId(1L);
         request.setTicketType(TicketType.SINGLE);
         request.setPaymentMethodId(1L);
 
-        when(moneymanService.purchaseTicket(any())).thenReturn(response);
+        // FIX: service returns Ticket
+        when(moneymanService.purchaseTicket(any())).thenReturn(ticket);
+
+        // FIX: mapper converts → DTO
+        when(moneymanMapperImpl.toResponseDTO(ticket)).thenReturn(response);
 
         mockMvc.perform(post("/api/finance/purchase")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
                 .andExpect(jsonPath("$.amount").value(1.80));
@@ -65,9 +87,11 @@ public class FinanceControllerTest {
         request.setUserId(1L);
 
         mockMvc.perform(post("/api/finance/purchase")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation"))
+                .andExpect(jsonPath("$.fieldErrors.ticketType").value("Ticket Type is required"));
     }
 
     @Test

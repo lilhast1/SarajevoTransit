@@ -1,6 +1,7 @@
 package com.sarajevotransit.moneyman.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sarajevotransit.moneyman.dto.PaymentMethodRequest;
 import com.sarajevotransit.moneyman.model.PaymentMethod;
 import com.sarajevotransit.moneyman.repository.PaymentMethodRepository;
 import org.junit.jupiter.api.Test;
@@ -43,17 +44,31 @@ public class PaymentMethodControllerTest {
 
     @Test
     void addMethod_ReturnsCreatedMethod() throws Exception {
+        PaymentMethodRequest request = PaymentMethodRequest.builder()
+                .userId(1L)
+                .provider("STRIPE")
+                .gatewayToken("tok_123")
+                .lastFour("4242")
+                .cardType("VISA")
+                .isDefault(true)
+                .build();
+
         PaymentMethod pm = new PaymentMethod();
+        pm.setId(1L);
         pm.setUserId(1L);
-        pm.setGatewayToken("tok_123");
+        pm.setProvider("STRIPE");
+        pm.setLastFour("4242");
+        pm.setCardType("VISA");
+        pm.setDefault(true);
 
         when(repository.save(any())).thenReturn(pm);
 
         mockMvc.perform(post("/api/payments/methods")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(pm)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.gatewayToken").value("tok_123"));
+                .andExpect(jsonPath("$.provider").value("STRIPE"))
+                .andExpect(jsonPath("$.lastFour").value("4242"));
     }
 
     @Test
