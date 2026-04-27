@@ -1,0 +1,7 @@
+{
+  "generatedAt": "2026-04-27T16:17:47Z",
+  "baseUrl": "http://localhost:8086",
+  "iterations": 100,
+  "direct": {"mode":"direct","successCount":100,"failureCount":0,"minMs":12,"avgMs":16,"maxMs":124,"instanceDistribution":{"notifications:192.168.1.13:8086": 100}},
+  "loadBalanced": {"mode":"lb","successCount":100,"failureCount":0,"minMs":12,"avgMs":15,"maxMs":167,"instanceDistribution":{"notifications:192.168.1.13:8087": 50, "notifications:192.168.1.13:8086": 50}}
+}
