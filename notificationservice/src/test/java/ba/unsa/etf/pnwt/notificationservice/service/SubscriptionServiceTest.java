@@ -1,7 +1,9 @@
 package ba.unsa.etf.pnwt.notificationservice.service;
 
 import ba.unsa.etf.pnwt.notificationservice.dto.CreateSubscriptionRequest;
+import ba.unsa.etf.pnwt.notificationservice.dto.PagedResponse;
 import ba.unsa.etf.pnwt.notificationservice.dto.SubscriptionResponse;
+import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
 import ba.unsa.etf.pnwt.notificationservice.model.Subscription;
 import ba.unsa.etf.pnwt.notificationservice.repository.SubscriptionRepository;
 import org.junit.jupiter.api.Test;
@@ -13,8 +15,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -38,17 +41,19 @@ class SubscriptionServiceTest {
     private SubscriptionService subscriptionService;
 
     @Test
-    void getAll_returnsAllSubscriptions() {
+    void getAll_returnsPagedSubscriptions() {
         Subscription first = createSubscription(10L, 1L, 101L, true);
         Subscription second = createSubscription(11L, 2L, 102L, true);
-        when(subscriptionRepository.findAll()).thenReturn(List.of(first, second));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(subscriptionRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(first, second)));
 
-        List<SubscriptionResponse> result = subscriptionService.getAll();
+        PagedResponse<SubscriptionResponse> result = subscriptionService.getAll(pageable);
 
-        assertEquals(2, result.size());
-        assertEquals(first.getId(), result.get(0).getId());
-        assertEquals(second.getId(), result.get(1).getId());
-        verify(subscriptionRepository).findAll();
+        assertEquals(2, result.getContent().size());
+        assertEquals(first.getId(), result.getContent().get(0).getId());
+        assertEquals(second.getId(), result.getContent().get(1).getId());
+        assertEquals(2L, result.getTotalElements());
+        verify(subscriptionRepository).findAll(pageable);
     }
 
     @Test
@@ -89,16 +94,17 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    void getByLineId_returnsSubscriptions() {
+    void getByLineId_returnsPagedSubscriptions() {
         Long lineId = 101L;
         Subscription subscription = createSubscription(10L, 1L, lineId, true);
-        when(subscriptionRepository.findByLineId(lineId)).thenReturn(List.of(subscription));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(subscriptionRepository.findByLineId(lineId, pageable)).thenReturn(new PageImpl<>(List.of(subscription)));
 
-        List<SubscriptionResponse> result = subscriptionService.getByLineId(lineId);
+        PagedResponse<SubscriptionResponse> result = subscriptionService.getByLineId(lineId, pageable);
 
-        assertEquals(1, result.size());
-        assertEquals(lineId, result.get(0).getLineId());
-        verify(subscriptionRepository).findByLineId(lineId);
+        assertEquals(1, result.getContent().size());
+        assertEquals(lineId, result.getContent().get(0).getLineId());
+        verify(subscriptionRepository).findByLineId(lineId, pageable);
     }
 
     @Test
@@ -140,6 +146,33 @@ class SubscriptionServiceTest {
         assertEquals(1, result.size());
         assertEquals(email, result.get(0).getUserEmail());
         verify(subscriptionRepository).findByUserEmailIgnoreCase(email);
+    }
+
+    @Test
+    void countActiveByLineId_returnsCorrectCount() {
+        Long lineId = 101L;
+        when(subscriptionRepository.countActiveByLineId(lineId)).thenReturn(5L);
+
+        long count = subscriptionService.countActiveByLineId(lineId);
+
+        assertEquals(5L, count);
+        verify(subscriptionRepository).countActiveByLineId(lineId);
+    }
+
+    @Test
+    void getActiveForLineAtTime_returnsMatchingSubscriptions() {
+        Long lineId = 101L;
+        LocalTime targetTime = LocalTime.of(9, 0);
+        String dayAbbr = "MON";
+        Subscription subscription = createSubscription(10L, 1L, lineId, true);
+        when(subscriptionRepository.findActiveForLineAtTime(lineId, targetTime, dayAbbr))
+                .thenReturn(List.of(subscription));
+
+        List<SubscriptionResponse> result = subscriptionService.getActiveForLineAtTime(lineId, targetTime, dayAbbr);
+
+        assertEquals(1, result.size());
+        assertEquals(lineId, result.get(0).getLineId());
+        verify(subscriptionRepository).findActiveForLineAtTime(lineId, targetTime, dayAbbr);
     }
 
     @Test

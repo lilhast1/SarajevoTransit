@@ -1,23 +1,25 @@
 package ba.unsa.etf.pnwt.notificationservice.controller;
 
 import ba.unsa.etf.pnwt.notificationservice.dto.CreateSubscriptionRequest;
+import ba.unsa.etf.pnwt.notificationservice.dto.PagedResponse;
 import ba.unsa.etf.pnwt.notificationservice.dto.SubscriptionResponse;
+import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
 import ba.unsa.etf.pnwt.notificationservice.service.SubscriptionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
-
-import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -37,13 +39,15 @@ class SubscriptionControllerTest {
     private SubscriptionService subscriptionService;
 
     @Test
-    void getAll_returns200() throws Exception {
+    void getAll_returns200WithPagedResponse() throws Exception {
         SubscriptionResponse response = subscriptionResponse(1L, 2L, true);
-        when(subscriptionService.getAll()).thenReturn(List.of(response));
+        PagedResponse<SubscriptionResponse> paged = new PagedResponse<>(List.of(response), 0, 20, 1L, 1, true);
+        when(subscriptionService.getAll(any(Pageable.class))).thenReturn(paged);
 
         mockMvc.perform(get("/subscriptions"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(response.getId()));
+                .andExpect(jsonPath("$.content[0].id").value(response.getId()))
+                .andExpect(jsonPath("$.totalElements").value(1));
     }
 
     @Test
@@ -91,15 +95,41 @@ class SubscriptionControllerTest {
     }
 
     @Test
-    void getByLineId_returns200() throws Exception {
+    void getByLineId_returns200WithPagedResponse() throws Exception {
         Long lineId = 101L;
         SubscriptionResponse response = subscriptionResponse(10L, 1L, true);
         response.setLineId(lineId);
-        when(subscriptionService.getByLineId(lineId)).thenReturn(List.of(response));
+        PagedResponse<SubscriptionResponse> paged = new PagedResponse<>(List.of(response), 0, 20, 1L, 1, true);
+        when(subscriptionService.getByLineId(eq(lineId), any(Pageable.class))).thenReturn(paged);
 
         mockMvc.perform(get("/subscriptions/line/{lineId}", lineId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].lineId").value(lineId));
+                .andExpect(jsonPath("$.content[0].lineId").value(lineId))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void countActiveByLine_returns200WithCount() throws Exception {
+        Long lineId = 101L;
+        when(subscriptionService.countActiveByLineId(lineId)).thenReturn(7L);
+
+        mockMvc.perform(get("/subscriptions/line/{lineId}/active/count", lineId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(7));
+    }
+
+    @Test
+    void getActiveAtTime_returns200() throws Exception {
+        Long lineId = 101L;
+        SubscriptionResponse response = subscriptionResponse(10L, 1L, true);
+        when(subscriptionService.getActiveForLineAtTime(eq(lineId), any(LocalTime.class), eq("MON")))
+                .thenReturn(List.of(response));
+
+        mockMvc.perform(get("/subscriptions/line/{lineId}/active-at", lineId)
+                        .param("time", "09:00:00")
+                        .param("day", "MON"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(10L));
     }
 
     @Test

@@ -1,10 +1,12 @@
 package ba.unsa.etf.pnwt.notificationservice.service;
 
-import ba.unsa.etf.pnwt.notificationservice.dto.CreateNotificationRequest;
-import ba.unsa.etf.pnwt.notificationservice.dto.NotificationResponse;
+import ba.unsa.etf.pnwt.notificationservice.dto.*;
+import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
 import ba.unsa.etf.pnwt.notificationservice.model.Notification;
 import ba.unsa.etf.pnwt.notificationservice.model.NotificationType;
+import ba.unsa.etf.pnwt.notificationservice.model.Subscription;
 import ba.unsa.etf.pnwt.notificationservice.repository.NotificationRepository;
+import ba.unsa.etf.pnwt.notificationservice.repository.SubscriptionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.modelmapper.ModelMapper;
@@ -14,15 +16,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +36,9 @@ class NotificationServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
+
     @Spy
     private ModelMapper modelMapper = createModelMapper();
 
@@ -38,18 +46,20 @@ class NotificationServiceTest {
     private NotificationService notificationService;
 
     @Test
-    void getAll_returnsAllNotifications() {
+    void getAll_returnsPagedNotifications() {
         Long userId = 1L;
         Notification first = createNotification(10L, userId, false);
         Notification second = createNotification(11L, userId, true);
-        when(notificationRepository.findAll()).thenReturn(List.of(first, second));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(notificationRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(first, second)));
 
-        List<NotificationResponse> result = notificationService.getAll();
+        PagedResponse<NotificationResponse> result = notificationService.getAll(pageable);
 
-        assertEquals(2, result.size());
-        assertEquals(first.getId(), result.get(0).getId());
-        assertEquals(second.getId(), result.get(1).getId());
-        verify(notificationRepository).findAll();
+        assertEquals(2, result.getContent().size());
+        assertEquals(first.getId(), result.getContent().get(0).getId());
+        assertEquals(second.getId(), result.getContent().get(1).getId());
+        assertEquals(2L, result.getTotalElements());
+        verify(notificationRepository).findAll(pageable);
     }
 
     @Test
@@ -77,16 +87,17 @@ class NotificationServiceTest {
     }
 
     @Test
-    void getByUserId_returnsFilteredList() {
+    void getByUserId_returnsPagedList() {
         Long userId = 1L;
         Notification notification = createNotification(10L, userId, false);
-        when(notificationRepository.findByUserId(userId)).thenReturn(List.of(notification));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(notificationRepository.findByUserId(userId, pageable)).thenReturn(new PageImpl<>(List.of(notification)));
 
-        List<NotificationResponse> result = notificationService.getByUserId(userId);
+        PagedResponse<NotificationResponse> result = notificationService.getByUserId(userId, pageable);
 
-        assertEquals(1, result.size());
-        assertEquals(userId, result.get(0).getUserId());
-        verify(notificationRepository).findByUserId(userId);
+        assertEquals(1, result.getContent().size());
+        assertEquals(userId, result.getContent().get(0).getUserId());
+        verify(notificationRepository).findByUserId(userId, pageable);
     }
 
     @Test
@@ -100,6 +111,32 @@ class NotificationServiceTest {
         assertEquals(1, result.size());
         assertFalse(result.get(0).getIsRead());
         verify(notificationRepository).findByUserIdAndIsRead(userId, false);
+    }
+
+    @Test
+    void countUnreadByUserId_returnsCorrectCount() {
+        Long userId = 1L;
+        when(notificationRepository.countUnreadByUserId(userId)).thenReturn(3L);
+
+        long count = notificationService.countUnreadByUserId(userId);
+
+        assertEquals(3L, count);
+        verify(notificationRepository).countUnreadByUserId(userId);
+    }
+
+    @Test
+    void getByUserIdAndDateRange_returnsNotificationsInRange() {
+        Long userId = 1L;
+        LocalDateTime from = LocalDateTime.now().minusDays(7);
+        LocalDateTime to = LocalDateTime.now();
+        Notification notification = createNotification(10L, userId, false);
+        when(notificationRepository.findByUserIdAndSentAtBetween(userId, from, to)).thenReturn(List.of(notification));
+
+        List<NotificationResponse> result = notificationService.getByUserIdAndDateRange(userId, from, to);
+
+        assertEquals(1, result.size());
+        assertEquals(userId, result.get(0).getUserId());
+        verify(notificationRepository).findByUserIdAndSentAtBetween(userId, from, to);
     }
 
     @Test
@@ -123,6 +160,66 @@ class NotificationServiceTest {
         assertEquals(savedId, result.getId());
         assertFalse(result.getIsRead());
         assertNotNull(result.getSentAt());
+    }
+
+    @Test
+    void createBatch_savesAllNotifications_returnsResponses() {
+        BatchCreateNotificationRequest batchRequest = new BatchCreateNotificationRequest();
+        batchRequest.setNotifications(List.of(createNotificationRequest(), createNotificationRequest()));
+        when(notificationRepository.saveAll(anyList())).thenAnswer(invocation -> {
+            List<Notification> list = invocation.getArgument(0);
+            for (int i = 0; i < list.size(); i++) list.get(i).setId((long) (i + 1));
+            return list;
+        });
+
+        List<NotificationResponse> result = notificationService.createBatch(batchRequest);
+
+        assertEquals(2, result.size());
+        result.forEach(r -> {
+            assertFalse(r.getIsRead());
+            assertNotNull(r.getSentAt());
+        });
+        verify(notificationRepository).saveAll(argThat((Iterable<Notification> it) -> ((List<?>) it).size() == 2));
+        verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
+    void broadcast_withActiveSubscribers_createsNotificationsForAll() {
+        Long lineId = 101L;
+        Subscription sub1 = createSubscription(1L, 10L, lineId);
+        Subscription sub2 = createSubscription(2L, 11L, lineId);
+        when(subscriptionRepository.findByLineIdAndIsActive(lineId, true)).thenReturn(List.of(sub1, sub2));
+        when(notificationRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BroadcastNotificationRequest request = new BroadcastNotificationRequest();
+        request.setLineId(lineId);
+        request.setType(NotificationType.DELAY);
+        request.setTitle("Line delayed");
+        request.setContent("Expect delays on line L1");
+
+        BroadcastNotificationResponse result = notificationService.broadcast(request);
+
+        assertEquals(2, result.getNotificationsCreated());
+        assertEquals(lineId, result.getLineId());
+        verify(notificationRepository).saveAll(argThat((Iterable<Notification> it) -> ((List<?>) it).size() == 2));
+        verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
+    void broadcast_withNoSubscribers_returnsZeroCount() {
+        Long lineId = 999L;
+        when(subscriptionRepository.findByLineIdAndIsActive(lineId, true)).thenReturn(List.of());
+
+        BroadcastNotificationRequest request = new BroadcastNotificationRequest();
+        request.setLineId(lineId);
+        request.setType(NotificationType.DELAY);
+        request.setTitle("Delayed");
+        request.setContent("No service");
+
+        BroadcastNotificationResponse result = notificationService.broadcast(request);
+
+        assertEquals(0, result.getNotificationsCreated());
+        verify(notificationRepository, never()).saveAll(any());
     }
 
     @Test
@@ -189,6 +286,22 @@ class NotificationServiceTest {
         notification.setIsRead(isRead);
         notification.setSentAt(LocalDateTime.now().minusMinutes(5));
         return notification;
+    }
+
+    private static Subscription createSubscription(Long id, Long userId, Long lineId) {
+        Subscription sub = new Subscription();
+        sub.setId(id);
+        sub.setUserId(userId);
+        sub.setUserFullName("Test User");
+        sub.setUserEmail("user@example.com");
+        sub.setLineId(lineId);
+        sub.setLineCode("L1");
+        sub.setLineName("Line 1");
+        sub.setStartInterval(LocalTime.of(8, 0));
+        sub.setEndInterval(LocalTime.of(18, 0));
+        sub.setDaysOfWeek("MON,TUE,WED,THU,FRI");
+        sub.setIsActive(true);
+        return sub;
     }
 
     private static CreateNotificationRequest createNotificationRequest() {

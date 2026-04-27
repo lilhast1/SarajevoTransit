@@ -1,15 +1,17 @@
 package ba.unsa.etf.pnwt.notificationservice.service;
 
 import ba.unsa.etf.pnwt.notificationservice.dto.CreateSubscriptionRequest;
+import ba.unsa.etf.pnwt.notificationservice.dto.PagedResponse;
 import ba.unsa.etf.pnwt.notificationservice.dto.SubscriptionResponse;
 import ba.unsa.etf.pnwt.notificationservice.dto.UpdateSubscriptionRequest;
+import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
 import ba.unsa.etf.pnwt.notificationservice.model.Subscription;
 import ba.unsa.etf.pnwt.notificationservice.repository.SubscriptionRepository;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import ba.unsa.etf.pnwt.notificationservice.exception.NotFoundException;
-
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -23,10 +25,11 @@ public class SubscriptionService {
         this.modelMapper = modelMapper;
     }
 
-    public List<SubscriptionResponse> getAll() {
-        return subscriptionRepository.findAll().stream()
-                .map(s -> modelMapper.map(s, SubscriptionResponse.class))
-                .toList();
+    public PagedResponse<SubscriptionResponse> getAll(Pageable pageable) {
+        return PagedResponse.of(
+                subscriptionRepository.findAll(pageable)
+                        .map(s -> modelMapper.map(s, SubscriptionResponse.class))
+        );
     }
 
     public SubscriptionResponse getById(Long id) {
@@ -41,10 +44,11 @@ public class SubscriptionService {
                 .toList();
     }
 
-    public List<SubscriptionResponse> getByLineId(Long lineId) {
-        return subscriptionRepository.findByLineId(lineId).stream()
-                .map(s -> modelMapper.map(s, SubscriptionResponse.class))
-                .toList();
+    public PagedResponse<SubscriptionResponse> getByLineId(Long lineId, Pageable pageable) {
+        return PagedResponse.of(
+                subscriptionRepository.findByLineId(lineId, pageable)
+                        .map(s -> modelMapper.map(s, SubscriptionResponse.class))
+        );
     }
 
     public List<SubscriptionResponse> getActiveByUserId(Long userId) {
@@ -61,6 +65,16 @@ public class SubscriptionService {
 
     public List<SubscriptionResponse> searchByEmail(String email) {
         return subscriptionRepository.findByUserEmailIgnoreCase(email).stream()
+                .map(s -> modelMapper.map(s, SubscriptionResponse.class))
+                .toList();
+    }
+
+    public long countActiveByLineId(Long lineId) {
+        return subscriptionRepository.countActiveByLineId(lineId);
+    }
+
+    public List<SubscriptionResponse> getActiveForLineAtTime(Long lineId, LocalTime targetTime, String dayAbbr) {
+        return subscriptionRepository.findActiveForLineAtTime(lineId, targetTime, dayAbbr).stream()
                 .map(s -> modelMapper.map(s, SubscriptionResponse.class))
                 .toList();
     }
