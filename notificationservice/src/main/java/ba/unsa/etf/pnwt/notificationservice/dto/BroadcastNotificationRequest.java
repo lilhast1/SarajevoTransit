@@ -4,7 +4,9 @@ import ba.unsa.etf.pnwt.notificationservice.model.NotificationType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
 
+@Data
 public class BroadcastNotificationRequest {
 
     @NotNull
@@ -19,16 +21,4 @@ public class BroadcastNotificationRequest {
 
     @NotBlank
     private String content;
-
-    public Long getLineId() { return lineId; }
-    public void setLineId(Long lineId) { this.lineId = lineId; }
-
-    public NotificationType getType() { return type; }
-    public void setType(NotificationType type) { this.type = type; }
-
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
 }
