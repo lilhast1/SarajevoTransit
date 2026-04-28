@@ -24,6 +24,20 @@ And includes:
 3. Start `otpproxyservice`.
 4. Start `routingservice`.
 
+## One-command startup/shutdown (Windows)
+
+From repository root:
+
+```bat
+scripts\start-all.bat
+```
+
+To stop everything:
+
+```bat
+scripts\stop-all.bat
+```
+
 ### Start commands (Windows)
 
 ```bat
