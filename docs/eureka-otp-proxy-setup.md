@@ -1,8 +1,11 @@
 # Eureka + OTP Proxy setup
 
-This repository now includes two new services:
+This repository now uses the Eureka server from:
 
-- `discoveryservice` (Eureka server, port `8761`)
+- `userservice/scripts/eureka-server` (port `8761`)
+
+And includes:
+
 - `otpproxyservice` (Eureka client + synchronous OTP proxy, port `8082`)
 
 `routingservice` is now also a Eureka client and includes a test route that forwards synchronously to `otpproxyservice`.
@@ -16,10 +19,29 @@ This repository now includes two new services:
 
 ## Run order
 
-1. Start `discoveryservice`.
+1. Start `userservice/scripts/eureka-server`.
 2. Start OTP container (`docker-compose.otp.yml`).
 3. Start `otpproxyservice`.
 4. Start `routingservice`.
+
+### Start commands (Windows)
+
+```bat
+cd userservice
+.\mvnw.cmd -f .\scripts\eureka-server\pom.xml spring-boot:run
+```
+
+In separate terminals:
+
+```bat
+cd otpproxyservice
+.\mvnw.cmd spring-boot:run
+```
+
+```bat
+cd routingservice
+.\mvnw.cmd spring-boot:run
+```
 
 ## Manual test
 
