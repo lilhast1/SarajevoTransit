@@ -1,0 +1,31 @@
+{
+  "testCase": "US-S-01 create user success",
+  "method": "POST",
+  "path": "/api/v1/users",
+  "requestBody": {
+    "fullName": "Lejla Music",
+    "email": "LEJLA.MUSIC@SARAJEVOTRANSIT.BA",
+    "password": "StrongPass123",
+    "languageCode": "BS",
+    "themeMode": "SYSTEM",
+    "notificationChannel": "PUSH"
+  },
+  "responseStatus": 201,
+  "responseBody": {
+    "id": 101,
+    "fullName": "Lejla Music",
+    "email": "lejla.music@sarajevotransit.ba",
+    "loyaltyPointsBalance": 0,
+    "preference": {
+      "languageCode": "BS",
+      "themeMode": "SYSTEM",
+      "notificationChannel": "PUSH",
+      "highContrastEnabled": false,
+      "largeTextEnabled": false,
+      "screenReaderEnabled": false,
+      "updatedAt": "2026-04-12T21:55:10.514"
+    },
+    "createdAt": "2026-04-12T21:55:10.514",
+    "updatedAt": "2026-04-12T21:55:10.514"
+  }
+}

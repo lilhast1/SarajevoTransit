@@ -1,0 +1,393 @@
+{
+  "info": {
+    "name": "Feedback Service API",
+    "_postman_id": "cb0ea9ef-4efe-4f93-b6be-bb4fbe5f9e2b",
+    "description": "Collection for Feedback Service API documentation and assignment testing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Problem Reports",
+      "item": [
+        {
+          "name": "PR-S-01 Create report success",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reporterUserId\": 5101,\n  \"lineId\": 6,\n  \"stationId\": 18,\n  \"category\": \"DELAY\",\n  \"description\": \"Delay around 8 minutes at evening peak.\",\n  \"photoUrls\": [\n    \"https://example.com/evidence/report-ok.png\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response has id', function () { pm.expect(pm.response.json().id).to.be.a('number'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PR-F-01 Create report failure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reporterUserId\": -1,\n  \"lineId\": 6,\n  \"description\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Validation message present', function () { pm.expect(pm.response.json().message).to.eql('Validation failed'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get reports",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get reports by line",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/line/{{lineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "line",
+                "{{lineId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update report status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/{{reportId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "{{reportId}}",
+                "status"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Line Reviews",
+      "item": [
+        {
+          "name": "LR-S-01 Create review success",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewerUserId\": 5201,\n  \"lineId\": 6,\n  \"rating\": 4,\n  \"reviewText\": \"Ride was stable with medium crowd.\",\n  \"rideDate\": \"2026-04-10\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Moderation is VISIBLE', function () { pm.expect(pm.response.json().moderationStatus).to.eql('VISIBLE'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "LR-F-01 Create review failure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewerUserId\": 5201,\n  \"lineId\": 6,\n  \"rating\": 7,\n  \"rideDate\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Validation message present', function () { pm.expect(pm.response.json().message).to.eql('Validation failed'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get reviews by line",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews?lineId={{lineId}}&includeHidden=false",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews"
+              ],
+              "query": [
+                {
+                  "key": "lineId",
+                  "value": "{{lineId}}"
+                },
+                {
+                  "key": "includeHidden",
+                  "value": "false"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get review by id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews/{{reviewId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews",
+                "{{reviewId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get reviews by reviewer",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews/reviewer/{{reviewerUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews",
+                "reviewer",
+                "{{reviewerUserId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update moderation status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"moderationStatus\": \"HIDDEN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews/{{reviewId}}/moderation-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews",
+                "{{reviewId}}",
+                "moderation-status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get summary all lines",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get summary by line",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews/summary/{{lineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews",
+                "summary",
+                "{{lineId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "lineId",
+      "value": "5"
+    },
+    {
+      "key": "reportId",
+      "value": "1"
+    },
+    {
+      "key": "reviewId",
+      "value": "1"
+    },
+    {
+      "key": "reviewerUserId",
+      "value": "4201"
+    }
+  ]
+}

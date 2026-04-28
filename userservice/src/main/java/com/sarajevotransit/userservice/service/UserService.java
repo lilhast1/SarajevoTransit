@@ -3,7 +3,9 @@ package com.sarajevotransit.userservice.service;
 import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyTransactionResponse;
+import com.sarajevotransit.userservice.dto.PatchUserProfileRequest;
 import com.sarajevotransit.userservice.dto.TicketPurchaseResponse;
+import com.sarajevotransit.userservice.dto.TicketPurchaseStatsResponse;
 import com.sarajevotransit.userservice.dto.TravelHistoryResponse;
 import com.sarajevotransit.userservice.dto.UpdatePasswordRequest;
 import com.sarajevotransit.userservice.dto.UpdateUserPreferenceRequest;
@@ -14,6 +16,11 @@ import com.sarajevotransit.userservice.dto.UserSummaryResponse;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.exception.DuplicateResourceException;
 import com.sarajevotransit.userservice.exception.ResourceNotFoundException;
+import com.sarajevotransit.userservice.mapper.LoyaltyTransactionMapper;
+import com.sarajevotransit.userservice.mapper.TicketPurchaseMapper;
+import com.sarajevotransit.userservice.mapper.TravelHistoryMapper;
+import com.sarajevotransit.userservice.mapper.UserPreferenceMapper;
+import com.sarajevotransit.userservice.mapper.UserProfileMapper;
 import com.sarajevotransit.userservice.model.LoyaltyTransaction;
 import com.sarajevotransit.userservice.model.NotificationChannel;
 import com.sarajevotransit.userservice.model.ThemeMode;
@@ -27,6 +34,15 @@ import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
 import com.sarajevotransit.userservice.repository.TicketPurchaseHistoryRepository;
 import com.sarajevotransit.userservice.repository.TravelHistoryRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validator;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.json.JsonParser;
+import org.springframework.boot.json.JsonParserFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,25 +55,23 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserProfileRepository userProfileRepository;
     private final TravelHistoryRepository travelHistoryRepository;
     private final TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
-
-    public UserService(
-            UserProfileRepository userProfileRepository,
-            TravelHistoryRepository travelHistoryRepository,
-            TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository,
-            LoyaltyTransactionRepository loyaltyTransactionRepository) {
-        this.userProfileRepository = userProfileRepository;
-        this.travelHistoryRepository = travelHistoryRepository;
-        this.ticketPurchaseHistoryRepository = ticketPurchaseHistoryRepository;
-        this.loyaltyTransactionRepository = loyaltyTransactionRepository;
-    }
+    private final UserProfileMapper userProfileMapper;
+    private final UserPreferenceMapper userPreferenceMapper;
+    private final TravelHistoryMapper travelHistoryMapper;
+    private final TicketPurchaseMapper ticketPurchaseMapper;
+    private final LoyaltyTransactionMapper loyaltyTransactionMapper;
+    private final Validator validator;
+    private final JsonParser jsonParser = JsonParserFactory.getJsonParser();
 
     @Transactional
     public UserProfileResponse createUser(CreateUserRequest request) {
@@ -85,21 +99,90 @@ public class UserService {
         user.setPreference(preference);
 
         UserProfile saved = userProfileRepository.save(user);
-        return toUserProfileResponse(saved);
+        return userProfileMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public List<UserProfileResponse> getAllUsers() {
-        return userProfileRepository.findAll()
+        return userProfileRepository.findAllWithWalletAndPreference()
                 .stream()
-                .map(this::toUserProfileResponse)
+                .map(userProfileMapper::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserProfileResponse> getAllUsers(int page, int size, String sort) {
+        Pageable pageable = PaginationUtils.buildPageable(
+                page,
+                size,
+                sort,
+                "createdAt",
+                Sort.Direction.DESC,
+                Set.of("id", "firstName", "lastName", "email", "createdAt", "updatedAt"));
+
+        return userProfileRepository.findAllWithWalletAndPreference(pageable)
+                .map(userProfileMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
     public UserProfileResponse getUser(Long userId) {
         UserProfile user = findUserById(userId);
-        return toUserProfileResponse(user);
+        return userProfileMapper.toResponse(user);
+    }
+
+    @Transactional(readOnly = true)
+    public UserPreferenceResponse getPreference(Long userId) {
+        UserProfile user = findUserById(userId);
+        return userPreferenceMapper.toResponse(user.getPreference());
+    }
+
+    @Transactional(readOnly = true)
+    public List<TravelHistoryResponse> getTravelHistory(Long userId) {
+        findUserById(userId);
+        return travelHistoryRepository.findByUserIdOrderByTraveledAtDesc(userId)
+                .stream()
+                .map(travelHistoryMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TravelHistoryResponse> getTravelHistory(Long userId, int page, int size, String sort) {
+        findUserById(userId);
+        Pageable pageable = PaginationUtils.buildPageable(
+                page,
+                size,
+                sort,
+                "traveledAt",
+                Sort.Direction.DESC,
+                Set.of("id", "lineCode", "fromStop", "toStop", "traveledAt", "durationMinutes"));
+
+        return travelHistoryRepository.findByUserId(userId, pageable)
+                .map(travelHistoryMapper::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TicketPurchaseResponse> getTicketPurchases(Long userId) {
+        findUserById(userId);
+        return ticketPurchaseHistoryRepository.findByUserIdOrderByPurchasedAtDesc(userId)
+                .stream()
+                .map(ticketPurchaseMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TicketPurchaseResponse> getTicketPurchases(Long userId, int page, int size, String sort) {
+        findUserById(userId);
+        Pageable pageable = PaginationUtils.buildPageable(
+                page,
+                size,
+                sort,
+                "purchasedAt",
+                Sort.Direction.DESC,
+                Set.of("id", "ticketType", "amount", "paymentMethod", "externalTransactionId", "lineCode",
+                        "purchasedAt"));
+
+        return ticketPurchaseHistoryRepository.findByUserId(userId, pageable)
+                .map(ticketPurchaseMapper::toResponse);
     }
 
     @Transactional
@@ -113,7 +196,32 @@ public class UserService {
 
         user.setFullName(request.fullName().trim());
         user.setEmail(normalizedEmail);
-        return toUserProfileResponse(userProfileRepository.save(user));
+        return userProfileMapper.toResponse(userProfileRepository.save(user));
+    }
+
+    @Transactional
+    public UserProfileResponse patchUserProfile(Long userId, String patchDocument) {
+        if (patchDocument == null || patchDocument.isBlank()) {
+            throw new IllegalArgumentException("Patch document is required.");
+        }
+
+        UserProfile user = findUserById(userId);
+        PatchUserProfileRequest current = new PatchUserProfileRequest(user.getFullName(), user.getEmail());
+        PatchUserProfileRequest patched = applyPatch(current, patchDocument);
+
+        Set<ConstraintViolation<PatchUserProfileRequest>> violations = validator.validate(patched);
+        if (!violations.isEmpty()) {
+            throw new ConstraintViolationException(violations);
+        }
+
+        String normalizedEmail = patched.getEmail().trim().toLowerCase();
+        if (userProfileRepository.existsByEmailIgnoreCaseAndIdNot(normalizedEmail, userId)) {
+            throw new DuplicateResourceException("Email is already used by another user.");
+        }
+
+        user.setFullName(patched.getFullName().trim());
+        user.setEmail(normalizedEmail);
+        return userProfileMapper.toResponse(userProfileRepository.save(user));
     }
 
     @Transactional
@@ -140,23 +248,37 @@ public class UserService {
         preference.setScreenReaderEnabled(request.screenReaderEnabled());
 
         userProfileRepository.save(user);
-        return toUserPreferenceResponse(preference);
+        return userPreferenceMapper.toResponse(preference);
     }
 
     @Transactional
     public TravelHistoryResponse addTravelHistory(Long userId, AddTravelHistoryRequest request) {
         UserProfile user = findUserById(userId);
 
-        TravelHistoryEntry entry = new TravelHistoryEntry();
-        entry.setLineCode(request.lineCode().trim());
-        entry.setFromStop(request.fromStop().trim());
-        entry.setToStop(request.toStop().trim());
-        entry.setDurationMinutes(request.durationMinutes());
-        entry.setTraveledAt(request.traveledAt() != null ? request.traveledAt() : LocalDateTime.now());
+        TravelHistoryEntry entry = buildTravelHistoryEntry(request);
 
         user.addTravelHistoryEntry(entry);
         travelHistoryRepository.save(entry);
-        return toTravelHistoryResponse(entry);
+        return travelHistoryMapper.toResponse(entry);
+    }
+
+    @Transactional
+    public List<TravelHistoryResponse> addTravelHistoryBatch(Long userId, List<AddTravelHistoryRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new IllegalArgumentException("Batch payload must contain at least one travel history entry.");
+        }
+
+        UserProfile user = findUserById(userId);
+        List<TravelHistoryEntry> entries = requests.stream()
+                .map(this::buildTravelHistoryEntry)
+                .toList();
+
+        entries.forEach(user::addTravelHistoryEntry);
+        travelHistoryRepository.saveAll(entries);
+
+        return entries.stream()
+                .map(travelHistoryMapper::toResponse)
+                .toList();
     }
 
     @Transactional
@@ -173,7 +295,22 @@ public class UserService {
 
         user.addTicketPurchase(entry);
         ticketPurchaseHistoryRepository.save(entry);
-        return toTicketPurchaseResponse(entry);
+        return ticketPurchaseMapper.toResponse(entry);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TicketPurchaseStatsResponse> getTicketPurchaseStats(Long userId) {
+        findUserById(userId);
+        return ticketPurchaseHistoryRepository.findTicketPurchaseStatsByUserId(userId);
+    }
+
+    @Transactional
+    public void deleteTravelHistoryEntry(Long userId, Long entryId) {
+        findUserById(userId);
+        TravelHistoryEntry entry = travelHistoryRepository.findEntryForUser(userId, entryId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Travel history entry with id " + entryId + " not found for user " + userId + "."));
+        travelHistoryRepository.delete(entry);
     }
 
     @Transactional(readOnly = true)
@@ -210,25 +347,25 @@ public class UserService {
 
         List<TravelHistoryResponse> travelHistory = travelHistoryRepository.findByUserIdOrderByTraveledAtDesc(userId)
                 .stream()
-                .map(this::toTravelHistoryResponse)
+                .map(travelHistoryMapper::toResponse)
                 .toList();
 
         List<TicketPurchaseResponse> purchases = ticketPurchaseHistoryRepository
                 .findByUserIdOrderByPurchasedAtDesc(userId)
                 .stream()
-                .map(this::toTicketPurchaseResponse)
+                .map(ticketPurchaseMapper::toResponse)
                 .toList();
 
         List<LoyaltyTransactionResponse> transactions = loyaltyTransactionRepository
                 .findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(this::toLoyaltyTransactionResponse)
+                .map(loyaltyTransactionMapper::toResponse)
                 .toList();
 
         List<String> suggestions = getPersonalizedLineSuggestions(userId, 3);
 
         return new UserSummaryResponse(
-                toUserProfileResponse(user),
+                userProfileMapper.toResponse(user),
                 travelHistory,
                 purchases,
                 transactions,
@@ -251,64 +388,76 @@ public class UserService {
         }
     }
 
-    public UserProfileResponse toUserProfileResponse(UserProfile user) {
-        return new UserProfileResponse(
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getLoyaltyPointsBalance(),
-                toUserPreferenceResponse(user.getPreference()),
-                user.getCreatedAt(),
-                user.getUpdatedAt());
+    private TravelHistoryEntry buildTravelHistoryEntry(AddTravelHistoryRequest request) {
+        TravelHistoryEntry entry = new TravelHistoryEntry();
+        entry.setLineCode(request.lineCode().trim());
+        entry.setFromStop(request.fromStop().trim());
+        entry.setToStop(request.toStop().trim());
+        entry.setDurationMinutes(request.durationMinutes());
+        entry.setTraveledAt(request.traveledAt() != null ? request.traveledAt() : LocalDateTime.now());
+        return entry;
     }
 
-    public UserPreferenceResponse toUserPreferenceResponse(UserPreference preference) {
-        if (preference == null) {
-            return null;
+    private PatchUserProfileRequest applyPatch(PatchUserProfileRequest source, String patchDocument) {
+        List<Object> operations;
+        try {
+            operations = jsonParser.parseList(patchDocument);
+        } catch (RuntimeException ex) {
+            throw new IllegalArgumentException("Invalid JSON patch document.", ex);
         }
 
-        return new UserPreferenceResponse(
-                preference.getLanguageCode(),
-                preference.getThemeMode(),
-                preference.getNotificationChannel(),
-                Boolean.TRUE.equals(preference.getHighContrastEnabled()),
-                Boolean.TRUE.equals(preference.getLargeTextEnabled()),
-                Boolean.TRUE.equals(preference.getScreenReaderEnabled()),
-                preference.getUpdatedAt());
+        if (operations.isEmpty()) {
+            throw new IllegalArgumentException("Patch document must contain at least one operation.");
+        }
+
+        PatchUserProfileRequest patched = new PatchUserProfileRequest(source.getFullName(), source.getEmail());
+        for (Object operation : operations) {
+            if (!(operation instanceof Map<?, ?> operationMap)) {
+                throw new IllegalArgumentException("Each patch operation must be a JSON object.");
+            }
+            applyPatchOperation(patched, operationMap);
+        }
+        return patched;
     }
 
-    public TravelHistoryResponse toTravelHistoryResponse(TravelHistoryEntry entry) {
-        return new TravelHistoryResponse(
-                entry.getId(),
-                entry.getLineCode(),
-                entry.getFromStop(),
-                entry.getToStop(),
-                entry.getTraveledAt(),
-                entry.getDurationMinutes());
+    private void applyPatchOperation(PatchUserProfileRequest target, Map<?, ?> operationNode) {
+        String op = getRequiredTextValue(operationNode, "op");
+        String path = getRequiredTextValue(operationNode, "path");
+
+        if (!"/fullName".equals(path) && !"/email".equals(path)) {
+            throw new IllegalArgumentException("Unsupported patch path: " + path);
+        }
+
+        switch (op) {
+            case "replace", "add" -> {
+                Object valueNode = operationNode.get("value");
+                if (!(valueNode instanceof String value)) {
+                    throw new IllegalArgumentException("Patch value for path '" + path + "' must be a string.");
+                }
+                setPatchedField(target, path, value);
+            }
+            case "remove" -> setPatchedField(target, path, null);
+            default -> throw new IllegalArgumentException("Unsupported patch operation: " + op);
+        }
     }
 
-    public TicketPurchaseResponse toTicketPurchaseResponse(TicketPurchaseHistoryEntry entry) {
-        return new TicketPurchaseResponse(
-                entry.getId(),
-                entry.getTicketType(),
-                entry.getAmount(),
-                entry.getPaymentMethod(),
-                entry.getExternalTransactionId(),
-                entry.getLineCode(),
-                entry.getPurchasedAt());
+    private String getRequiredTextValue(Map<?, ?> node, String fieldName) {
+        Object valueNode = node.get(fieldName);
+        if (!(valueNode instanceof String value) || value.isBlank()) {
+            throw new IllegalArgumentException("Patch operation must contain textual field '" + fieldName + "'.");
+        }
+        return value;
     }
 
-    public LoyaltyTransactionResponse toLoyaltyTransactionResponse(LoyaltyTransaction transaction) {
-        return new LoyaltyTransactionResponse(
-                transaction.getId(),
-                transaction.getTransactionType(),
-                transaction.getPoints(),
-                transaction.getPointsEarned() == null ? 0 : transaction.getPointsEarned(),
-                transaction.getPointsSpent() == null ? 0 : transaction.getPointsSpent(),
-                transaction.getDescription(),
-                transaction.getReferenceType(),
-                transaction.getTransactionId(),
-                transaction.getExpiryDate(),
-                transaction.getCreatedAt());
+    private void setPatchedField(PatchUserProfileRequest target, String path, String value) {
+        if ("/fullName".equals(path)) {
+            target.setFullName(value);
+            return;
+        }
+        if ("/email".equals(path)) {
+            target.setEmail(value);
+            return;
+        }
+        throw new IllegalArgumentException("Unsupported patch path: " + path);
     }
 }

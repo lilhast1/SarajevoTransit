@@ -1,0 +1,52 @@
+﻿{
+    "generatedAt":  "2026-04-16T21:08:31.1701664+02:00",
+    "userserviceBaseUrl":  "http://localhost:8080",
+    "iterations":  100,
+    "endpoints":  {
+                      "direct":  "http://localhost:8080/api/v1/discovery/feedback/ping?mode=direct",
+                      "loadBalanced":  "http://localhost:8080/api/v1/discovery/feedback/ping?mode=lb"
+                  },
+    "direct":  {
+                   "mode":  "direct",
+                   "successCount":  100,
+                   "failureCount":  0,
+                   "totalDurationMs":  1348.13,
+                   "requestStats":  {
+                                        "minMs":  5.77,
+                                        "avgMs":  13.11,
+                                        "p95Ms":  10.71,
+                                        "maxMs":  568
+                                    },
+                   "downstreamStats":  {
+                                           "minMs":  3,
+                                           "avgMs":  6.75,
+                                           "p95Ms":  6,
+                                           "maxMs":  278
+                                       },
+                   "instanceDistribution":  {
+                                                "feedbackservice:localhost:8091":  100
+                                            }
+               },
+    "loadBalanced":  {
+                         "mode":  "lb",
+                         "successCount":  100,
+                         "failureCount":  0,
+                         "totalDurationMs":  1064.82,
+                         "requestStats":  {
+                                              "minMs":  5.28,
+                                              "avgMs":  10.62,
+                                              "p95Ms":  8.97,
+                                              "maxMs":  397.61
+                                          },
+                         "downstreamStats":  {
+                                                 "minMs":  3,
+                                                 "avgMs":  7.54,
+                                                 "p95Ms":  5,
+                                                 "maxMs":  392
+                                             },
+                         "instanceDistribution":  {
+                                                      "feedbackservice:localhost:8092":  50,
+                                                      "feedbackservice:localhost:8091":  50
+                                                  }
+                     }
+}
