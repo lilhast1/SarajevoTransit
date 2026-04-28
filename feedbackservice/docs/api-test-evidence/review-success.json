@@ -1,0 +1,24 @@
+{
+    "name":  "review-success",
+    "method":  "POST",
+    "path":  "/api/v1/reviews",
+    "status":  201,
+    "requestBody":  {
+                    "reviewerUserId": 5201,
+                    "lineId": 6,
+                    "rating": 4,
+                    "reviewText": "Ride was stable with medium crowd.",
+                    "rideDate": "2026-04-10"
+                    },
+    "responseBody":  {
+                    "createdAt": "2026-04-12T15:19:06.1022898Z",
+                    "id": 5,
+                    "lineId": 6,
+                    "moderationStatus": "VISIBLE",
+                    "rating": 4,
+                    "reviewText": "Ride was stable with medium crowd.",
+                    "reviewerUserId": 5201,
+                    "rideDate": "2026-04-10",
+                    "updatedAt": "2026-04-12T15:19:06.1022898Z"
+                }
+}

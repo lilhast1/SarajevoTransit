@@ -1,14 +1,19 @@
 package com.sarajevotransit.userservice.repository;
 
 import com.sarajevotransit.userservice.model.TravelHistoryEntry;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TravelHistoryRepository extends JpaRepository<TravelHistoryEntry, Long> {
 
     List<TravelHistoryEntry> findByUserIdOrderByTraveledAtDesc(Long userId);
+
+    Page<TravelHistoryEntry> findByUserId(Long userId, Pageable pageable);
 
     @Query("""
             select t.lineCode as lineCode, count(t.id) as usageCount
@@ -18,6 +23,13 @@ public interface TravelHistoryRepository extends JpaRepository<TravelHistoryEntr
             order by count(t.id) desc
             """)
     List<LineUsageView> findLineUsageStats(Long userId);
+
+    @Query("""
+            select t
+            from TravelHistoryEntry t
+            where t.user.id = :userId and t.id = :entryId
+            """)
+    Optional<TravelHistoryEntry> findEntryForUser(Long userId, Long entryId);
 
     interface LineUsageView {
         String getLineCode();

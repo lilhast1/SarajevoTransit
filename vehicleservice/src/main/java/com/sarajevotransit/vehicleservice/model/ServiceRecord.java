@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Table(name = "service_records")
 @Getter
 @Setter
+@NoArgsConstructor
 public class ServiceRecord {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

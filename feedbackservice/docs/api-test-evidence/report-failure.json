@@ -1,0 +1,22 @@
+{
+    "name":  "report-failure",
+    "method":  "POST",
+    "path":  "/api/v1/reports",
+    "status":  400,
+    "requestBody":  {
+                    "reporterUserId": -1,
+                    "lineId": 6,
+                    "description": ""
+                    },
+    "responseBody":  {
+                    "timestamp": "2026-04-12T15:25:32.2947782Z",
+                    "status": 400,
+                    "error": "Bad Request",
+                    "message": "Validation failed",
+                    "fieldErrors": {
+                        "category": "must not be null",
+                        "description": "must not be blank",
+                        "reporterUserId": "must be greater than 0"
+                    }
+                }
+}

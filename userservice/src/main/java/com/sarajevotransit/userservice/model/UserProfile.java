@@ -14,6 +14,13 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -21,6 +28,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "users")
+@Getter
+@Setter
 public class UserProfile {
 
     @Id
@@ -29,19 +38,29 @@ public class UserProfile {
     private Long id;
 
     @Column(name = "first_name", nullable = false)
+    @NotBlank
+    @Size(max = 120)
     private String firstName;
 
     @Column(name = "last_name", nullable = false)
+    @NotNull
+    @Size(max = 120)
     private String lastName;
 
     @Column(name = "email", nullable = false, unique = true)
+    @NotBlank
+    @Email
+    @Size(max = 254)
     private String email;
 
     @Column(name = "password_hash", nullable = false)
+    @NotBlank
+    @Size(max = 255)
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
+    @NotNull
     private UserRole role = UserRole.PASSENGER;
 
     @Column(name = "created_at", nullable = false)
@@ -51,9 +70,11 @@ public class UserProfile {
     private LocalDateTime updatedAt;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Valid
     private DigitalWallet wallet;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Valid
     private UserPreference preference;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -110,14 +131,6 @@ public class UserProfile {
     public void addLoyaltyTransaction(LoyaltyTransaction transaction) {
         loyaltyTransactions.add(transaction);
         transaction.setUser(this);
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public String getFullName() {
@@ -183,61 +196,5 @@ public class UserProfile {
             setWallet(new DigitalWallet());
         }
         this.wallet.setLoyaltyPointsTotal(loyaltyPointsBalance == null ? 0 : loyaltyPointsBalance);
-    }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public void setRole(UserRole role) {
-        this.role = role;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public UserPreference getPreference() {
-        return preference;
-    }
-
-    public DigitalWallet getWallet() {
-        return wallet;
-    }
-
-    public List<TravelHistoryEntry> getTravelHistoryEntries() {
-        return travelHistoryEntries;
-    }
-
-    public void setTravelHistoryEntries(List<TravelHistoryEntry> travelHistoryEntries) {
-        this.travelHistoryEntries = travelHistoryEntries;
-    }
-
-    public List<TicketPurchaseHistoryEntry> getTicketPurchases() {
-        return ticketPurchases;
-    }
-
-    public void setTicketPurchases(List<TicketPurchaseHistoryEntry> ticketPurchases) {
-        this.ticketPurchases = ticketPurchases;
-    }
-
-    public List<LoyaltyTransaction> getLoyaltyTransactions() {
-        return loyaltyTransactions;
-    }
-
-    public void setLoyaltyTransactions(List<LoyaltyTransaction> loyaltyTransactions) {
-        this.loyaltyTransactions = loyaltyTransactions;
     }
 }

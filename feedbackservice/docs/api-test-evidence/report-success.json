@@ -1,0 +1,34 @@
+{
+    "name":  "report-success",
+    "method":  "POST",
+    "path":  "/api/v1/reports",
+    "status":  201,
+    "requestBody":  {
+                    "reporterUserId": 5101,
+                    "lineId": 6,
+                    "stationId": 18,
+                    "category": "DELAY",
+                    "description": "Delay around 8 minutes at evening peak.",
+                    "photoUrls": [
+                        "https://example.com/evidence/report-ok.png"
+                    ]
+                    },
+    "responseBody":  {
+                    "category": "DELAY",
+                    "createdAt": "2026-04-12T15:21:30.751908Z",
+                    "description": "Delay around 8 minutes at evening peak.",
+                    "id": 5,
+                    "lineId": 6,
+                    "photoUrls": [
+                        "https://example.com/evidence/report-ok.png"
+                    ],
+                    "reporterUserId": 5101,
+                    "stationId": 18,
+                    "status": "RECEIVED",
+                    "updatedAt": "2026-04-12T15:21:30.751908Z",
+                    "vehicleId": null,
+                    "vehicleInternalId": null,
+                    "vehicleRegistrationNumber": null,
+                    "vehicleType": null
+                }
+}

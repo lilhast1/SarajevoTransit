@@ -12,11 +12,16 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_preferences")
+@Getter
+@Setter
 public class UserPreference {
 
     @Id
@@ -25,27 +30,34 @@ public class UserPreference {
     @MapsId
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @NotNull
     private UserProfile user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @NotNull
     private LanguageCode languageCode = LanguageCode.BS;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @NotNull
     private ThemeMode themeMode = ThemeMode.SYSTEM;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @NotNull
     private NotificationChannel notificationChannel = NotificationChannel.PUSH;
 
     @Column(nullable = false)
+    @NotNull
     private Boolean highContrastEnabled = false;
 
     @Column(nullable = false)
+    @NotNull
     private Boolean largeTextEnabled = false;
 
     @Column(nullable = false)
+    @NotNull
     private Boolean screenReaderEnabled = false;
 
     @Column(nullable = false)
@@ -59,77 +71,5 @@ public class UserPreference {
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public UserProfile getUser() {
-        return user;
-    }
-
-    public void setUser(UserProfile user) {
-        this.user = user;
-    }
-
-    public LanguageCode getLanguageCode() {
-        return languageCode;
-    }
-
-    public void setLanguageCode(LanguageCode languageCode) {
-        this.languageCode = languageCode;
-    }
-
-    public ThemeMode getThemeMode() {
-        return themeMode;
-    }
-
-    public void setThemeMode(ThemeMode themeMode) {
-        this.themeMode = themeMode;
-    }
-
-    public NotificationChannel getNotificationChannel() {
-        return notificationChannel;
-    }
-
-    public void setNotificationChannel(NotificationChannel notificationChannel) {
-        this.notificationChannel = notificationChannel;
-    }
-
-    public Boolean getHighContrastEnabled() {
-        return highContrastEnabled;
-    }
-
-    public void setHighContrastEnabled(Boolean highContrastEnabled) {
-        this.highContrastEnabled = highContrastEnabled;
-    }
-
-    public Boolean getLargeTextEnabled() {
-        return largeTextEnabled;
-    }
-
-    public void setLargeTextEnabled(Boolean largeTextEnabled) {
-        this.largeTextEnabled = largeTextEnabled;
-    }
-
-    public Boolean getScreenReaderEnabled() {
-        return screenReaderEnabled;
-    }
-
-    public void setScreenReaderEnabled(Boolean screenReaderEnabled) {
-        this.screenReaderEnabled = screenReaderEnabled;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }
