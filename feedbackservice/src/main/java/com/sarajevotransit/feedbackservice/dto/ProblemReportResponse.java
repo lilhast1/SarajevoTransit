@@ -2,10 +2,16 @@ package com.sarajevotransit.feedbackservice.dto;
 
 import com.sarajevotransit.feedbackservice.model.ProblemCategory;
 import com.sarajevotransit.feedbackservice.model.ReportStatus;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 
+@Getter
+@Setter
+@NoArgsConstructor
 public class ProblemReportResponse {
 
     private Long id;
@@ -22,116 +28,4 @@ public class ProblemReportResponse {
     private ReportStatus status;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getReporterUserId() {
-        return reporterUserId;
-    }
-
-    public void setReporterUserId(Long reporterUserId) {
-        this.reporterUserId = reporterUserId;
-    }
-
-    public Long getLineId() {
-        return lineId;
-    }
-
-    public void setLineId(Long lineId) {
-        this.lineId = lineId;
-    }
-
-    public Long getVehicleId() {
-        return vehicleId;
-    }
-
-    public void setVehicleId(Long vehicleId) {
-        this.vehicleId = vehicleId;
-    }
-
-    public String getVehicleRegistrationNumber() {
-        return vehicleRegistrationNumber;
-    }
-
-    public void setVehicleRegistrationNumber(String vehicleRegistrationNumber) {
-        this.vehicleRegistrationNumber = vehicleRegistrationNumber;
-    }
-
-    public String getVehicleInternalId() {
-        return vehicleInternalId;
-    }
-
-    public void setVehicleInternalId(String vehicleInternalId) {
-        this.vehicleInternalId = vehicleInternalId;
-    }
-
-    public String getVehicleType() {
-        return vehicleType;
-    }
-
-    public void setVehicleType(String vehicleType) {
-        this.vehicleType = vehicleType;
-    }
-
-    public Long getStationId() {
-        return stationId;
-    }
-
-    public void setStationId(Long stationId) {
-        this.stationId = stationId;
-    }
-
-    public ProblemCategory getCategory() {
-        return category;
-    }
-
-    public void setCategory(ProblemCategory category) {
-        this.category = category;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public List<String> getPhotoUrls() {
-        return photoUrls;
-    }
-
-    public void setPhotoUrls(List<String> photoUrls) {
-        this.photoUrls = photoUrls;
-    }
-
-    public ReportStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(ReportStatus status) {
-        this.status = status;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
 }

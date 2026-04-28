@@ -5,41 +5,36 @@ import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyRedeemRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyTransactionResponse;
 import com.sarajevotransit.userservice.exception.InsufficientLoyaltyPointsException;
+import com.sarajevotransit.userservice.mapper.LoyaltyTransactionMapper;
 import com.sarajevotransit.userservice.model.DigitalWallet;
 import com.sarajevotransit.userservice.model.LoyaltyTransaction;
 import com.sarajevotransit.userservice.model.LoyaltyTransactionType;
 import com.sarajevotransit.userservice.model.UserProfile;
 import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class LoyaltyService {
 
     private final UserProfileRepository userProfileRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
     private final UserService userService;
-
-    public LoyaltyService(
-            UserProfileRepository userProfileRepository,
-            LoyaltyTransactionRepository loyaltyTransactionRepository,
-            UserService userService) {
-        this.userProfileRepository = userProfileRepository;
-        this.loyaltyTransactionRepository = loyaltyTransactionRepository;
-        this.userService = userService;
-    }
+    private final LoyaltyTransactionMapper loyaltyTransactionMapper;
 
     @Transactional
     public LoyaltyBalanceResponse earnPoints(Long userId, LoyaltyEarnRequest request) {
         UserProfile user = userService.findUserById(userId);
         DigitalWallet wallet = getOrCreateWallet(user);
-        if (request.points() <= 0) {
-            throw new IllegalArgumentException("Points to earn must be greater than zero.");
-        }
-
         wallet.setLoyaltyPointsTotal(wallet.getLoyaltyPointsTotal() + request.points());
         createTransaction(user, LoyaltyTransactionType.EARN, request.points(), request.description(),
                 request.referenceType());
@@ -52,10 +47,6 @@ public class LoyaltyService {
     public LoyaltyBalanceResponse redeemPoints(Long userId, LoyaltyRedeemRequest request) {
         UserProfile user = userService.findUserById(userId);
         DigitalWallet wallet = getOrCreateWallet(user);
-        if (request.points() <= 0) {
-            throw new IllegalArgumentException("Points to redeem must be greater than zero.");
-        }
-
         if (wallet.getLoyaltyPointsTotal() < request.points()) {
             throw new InsufficientLoyaltyPointsException("User does not have enough loyalty points for redemption.");
         }
@@ -80,8 +71,24 @@ public class LoyaltyService {
         userService.findUserById(userId);
         return loyaltyTransactionRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(userService::toLoyaltyTransactionResponse)
+                .map(loyaltyTransactionMapper::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<LoyaltyTransactionResponse> getTransactions(Long userId, int page, int size, String sort) {
+        userService.findUserById(userId);
+        Pageable pageable = PaginationUtils.buildPageable(
+                page,
+                size,
+                sort,
+                "createdAt",
+                Sort.Direction.DESC,
+                Set.of("id", "transactionType", "pointsEarned", "pointsSpent", "description", "referenceType",
+                        "createdAt", "expiryDate"));
+
+        return loyaltyTransactionRepository.findByUserId(userId, pageable)
+                .map(loyaltyTransactionMapper::toResponse);
     }
 
     private void createTransaction(UserProfile user, LoyaltyTransactionType type, int points, String description,
