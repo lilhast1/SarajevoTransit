@@ -11,12 +11,19 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "digital_wallets")
+@Getter
+@Setter
 public class DigitalWallet {
 
     @Id
@@ -26,12 +33,17 @@ public class DigitalWallet {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @NotNull
     private UserProfile user;
 
     @Column(nullable = false, precision = 10, scale = 2)
+    @NotNull
+    @DecimalMin(value = "0.0")
     private BigDecimal balance = BigDecimal.ZERO;
 
     @Column(name = "loyalty_points_total", nullable = false)
+    @NotNull
+    @Min(0)
     private Integer loyaltyPointsTotal = 0;
 
     @Column(name = "updated_at", nullable = false)
@@ -51,45 +63,5 @@ public class DigitalWallet {
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public UserProfile getUser() {
-        return user;
-    }
-
-    public void setUser(UserProfile user) {
-        this.user = user;
-    }
-
-    public BigDecimal getBalance() {
-        return balance;
-    }
-
-    public void setBalance(BigDecimal balance) {
-        this.balance = balance;
-    }
-
-    public Integer getLoyaltyPointsTotal() {
-        return loyaltyPointsTotal;
-    }
-
-    public void setLoyaltyPointsTotal(Integer loyaltyPointsTotal) {
-        this.loyaltyPointsTotal = loyaltyPointsTotal;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }

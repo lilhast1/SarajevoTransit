@@ -1,0 +1,23 @@
+{
+  "testCase": "US-F-01 create user failure - invalid payload",
+  "method": "POST",
+  "path": "/api/v1/users",
+  "requestBody": {
+    "fullName": "",
+    "email": "not-an-email",
+    "password": "123"
+  },
+  "responseStatus": 400,
+  "responseBody": {
+    "timestamp": "2026-04-12T21:56:03.102",
+    "status": 400,
+    "error": "Bad Request",
+    "message": "Validation failed",
+    "path": "/api/v1/users",
+    "validationErrors": [
+      "fullName: Full name is required",
+      "email: Email format is invalid",
+      "password: Password must be between 8 and 128 characters"
+    ]
+  }
+}
