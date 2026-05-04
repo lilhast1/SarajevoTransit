@@ -4,29 +4,56 @@ server:
 spring:
   application:
     name: apigateway
+  profiles:
+    default: dev
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
   cloud:
+    config:
+      fail-fast: false
     gateway:
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
-      routes:
-        - id: userservice-route
-          uri: lb://userservice
-          predicates:
-            - Path=/api/v1/users/**, /api/users/**
-        - id: feedbackservice-route
-          uri: lb://feedbackservice
-          predicates:
-            - Path=/api/v1/workflows/**, /api/v1/reviews/**, /api/v1/reports/**
-        - id: userservice-discovery-benchmark
-          uri: lb://userservice
-          predicates:
-            - Path=/api/v1/discovery/benchmark/**, /api/discovery/benchmark/**
-        - id: feedbackservice-discovery
-          uri: lb://feedbackservice
-          predicates:
-            - Path=/api/v1/discovery/**, /api/discovery/**
+      mvc:
+        routes:
+          - id: userservice-route
+            uri: lb://userservice
+            predicates:
+              - Path=/api/v1/users/**, /api/users/**
+
+          - id: feedbackservice-route
+            uri: lb://feedbackservice
+            predicates:
+              - Path=/api/v1/workflows/**, /api/v1/reviews/**, /api/v1/reports/**
+
+          - id: notificationservice-route
+            uri: lb://notifications
+            predicates:
+              - Path=/notifications/**, /subscriptions/**
+
+          - id: vehicleservice-route
+            uri: lb://vehicle-service
+            predicates:
+              - Path=/api/vehicles/**
+
+          - id: routingservice-route
+            uri: lb://routingservice
+            predicates:
+              - Path=/api/v1/routes/**, /api/v1/lines/**
+
+          - id: moneyman-route
+            uri: lb://moneyman
+            predicates:
+              - Path=/api/finance/**, /api/payments/**
+
+          - id: userservice-discovery-benchmark
+            uri: lb://userservice
+            predicates:
+              - Path=/api/v1/discovery/benchmark/**, /api/discovery/benchmark/**
+
+          - id: feedbackservice-discovery
+            uri: lb://feedbackservice
+            predicates:
+              - Path=/api/v1/discovery/**, /api/discovery/**
+
 
 eureka:
   client:
@@ -50,3 +77,20 @@ management:
       enabled: true
     health:
       show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: userservice
+        url: /v3/api-docs/userservice
+      - name: feedbackservice
+        url: /v3/api-docs/feedbackservice
+      - name: notificationservice
+        url: /v3/api-docs/notificationservice
+      - name: vehicleservice
+        url: /v3/api-docs/vehicleservice
+      - name: routingservice
+        url: /v3/api-docs/routingservice
+      - name: moneyman
+        url: /v3/api-docs/moneyman

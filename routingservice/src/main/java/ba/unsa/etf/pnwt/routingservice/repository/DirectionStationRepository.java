@@ -1,6 +1,7 @@
 package ba.unsa.etf.pnwt.routingservice.repository;
 
 import ba.unsa.etf.pnwt.routingservice.model.DirectionStation;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,7 +13,10 @@ import java.util.List;
 
 @Repository
 public interface DirectionStationRepository extends JpaRepository<DirectionStation, Integer> {
+    @EntityGraph(attributePaths = {"direction", "station"})
     List<DirectionStation> findByDirection_IdOrderByStopSequenceAsc(Integer directionId);
+
+    @EntityGraph(attributePaths = {"direction", "station"})
     List<DirectionStation> findByStation_Id(Integer stationId);
     void deleteByDirection_Id(Integer directionId);
 

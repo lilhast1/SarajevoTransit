@@ -98,29 +98,29 @@ public class RoutingSnapshotImporter {
         Map<Integer, Direction> importedDirections = new HashMap<>();
         Map<Integer, Set<Integer>> directionIdsByLine = new HashMap<>();
 
-        List<Integer> lineIds = snapshot.getLines().stream()
+        List<Integer> lineExternalIds = snapshot.getLines().stream()
                 .map(ScrapedLine::getId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
-        Map<Integer, Line> existingLines = fetchLinesByIds(lineIds);
+        Map<Integer, Line> existingLines = fetchLinesByExternalIds(lineExternalIds);
 
-        List<Integer> directionIds = snapshot.getLines().stream()
+        List<Integer> directionExternalIds = snapshot.getLines().stream()
                 .flatMap(line -> safeList(line.getDirections()).stream())
                 .map(ScrapedDirection::getTerminusLineId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
-        Map<Integer, Direction> existingDirections = fetchDirectionsByIds(directionIds);
+        Map<Integer, Direction> existingDirections = fetchDirectionsByExternalIds(directionExternalIds);
 
-        List<Integer> stationIds = snapshot.getLines().stream()
+        List<Integer> stationExternalIds = snapshot.getLines().stream()
                 .flatMap(line -> safeList(line.getDirections()).stream())
                 .flatMap(direction -> safeList(direction.getStations()).stream())
                 .map(ScrapedStation::getId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
-        Map<Integer, Station> existingStations = fetchStationsByIds(stationIds);
+        Map<Integer, Station> existingStations = fetchStationsByExternalIds(stationExternalIds);
 
         Map<Integer, ScrapedStation> scrapedStationsById = new HashMap<>();
         for (ScrapedLine line : snapshot.getLines()) {
@@ -138,7 +138,7 @@ public class RoutingSnapshotImporter {
         List<Station> stationsToSave = new ArrayList<>();
         for (ScrapedStation scrapedStation : scrapedStationsById.values()) {
             Station station = existingStations.getOrDefault(scrapedStation.getId(), new Station());
-            station.setId(scrapedStation.getId());
+            station.setExternalId(scrapedStation.getId());
             station.setCode(scrapedStation.getCode());
             station.setName(scrapedStation.getName());
             station.setAddress(scrapedStation.getAddress());
@@ -146,18 +146,26 @@ public class RoutingSnapshotImporter {
             station.setLongitude(scrapedStation.getLongitude());
             station.setIsActive(true);
             stationsToSave.add(station);
-            existingStations.put(station.getId(), station);
+            existingStations.put(station.getExternalId(), station);
             summary.incrementStationsProcessed();
         }
 
         saveInChunks(stationsToSave, stationRepository::saveAll);
 
-        if (!directionIds.isEmpty()) {
-            directionStationRepository.deleteByDirection_IdIn(directionIds);
-            routePointRepository.deleteByDirection_IdIn(directionIds);
+        List<Integer> existingDirectionIdsToClear = existingDirections.values().stream()
+                .map(Direction::getId)
+                .filter(Objects::nonNull)
+                .toList();
+        if (!existingDirectionIdsToClear.isEmpty()) {
+            directionStationRepository.deleteByDirection_IdIn(existingDirectionIdsToClear);
+            routePointRepository.deleteByDirection_IdIn(existingDirectionIdsToClear);
         }
-        if (!lineIds.isEmpty()) {
-            timetableRepository.deleteByLine_IdIn(lineIds);
+        List<Integer> existingLineIdsToClear = existingLines.values().stream()
+                .map(Line::getId)
+                .filter(Objects::nonNull)
+                .toList();
+        if (!existingLineIdsToClear.isEmpty()) {
+            timetableRepository.deleteByLine_IdIn(existingLineIdsToClear);
         }
 
         List<Line> linesToSave = new ArrayList<>();
@@ -172,10 +180,10 @@ public class RoutingSnapshotImporter {
                 continue;
             }
 
-            existingLines.put(line.getId(), line);
+            existingLines.put(line.getExternalId(), line);
             linesToSave.add(line);
 
-            importedLines.put(line.getId(), line);
+            importedLines.put(line.getExternalId(), line);
             summary.incrementLinesProcessed();
 
             for (ScrapedDirection scrapedDirection : safeList(scrapedLine.getDirections())) {
@@ -184,11 +192,11 @@ public class RoutingSnapshotImporter {
                     continue;
                 }
 
-                existingDirections.put(direction.getId(), direction);
+                existingDirections.put(direction.getExternalId(), direction);
                 directionsToSave.add(direction);
 
-                importedDirections.put(direction.getId(), direction);
-                directionIdsByLine.computeIfAbsent(line.getId(), key -> new HashSet<>()).add(direction.getId());
+                importedDirections.put(direction.getExternalId(), direction);
+                directionIdsByLine.computeIfAbsent(line.getExternalId(), key -> new HashSet<>()).add(direction.getExternalId());
                 summary.incrementDirectionsProcessed();
 
                 List<DirectionStation> directionStations = rebuildDirectionStations(direction, scrapedDirection, existingStations, summary);
@@ -200,7 +208,21 @@ public class RoutingSnapshotImporter {
         }
 
         saveInChunks(linesToSave, lineRepository::saveAll);
+
+        for (Line savedLine : linesToSave) {
+            if (savedLine.getExternalId() != null) {
+                importedLines.put(savedLine.getExternalId(), savedLine);
+            }
+        }
+
         saveInChunks(directionsToSave, directionRepository::saveAll);
+
+        for (Direction savedDirection : directionsToSave) {
+            if (savedDirection.getExternalId() != null) {
+                importedDirections.put(savedDirection.getExternalId(), savedDirection);
+            }
+        }
+
         saveInChunks(routePointsToSave, routePointRepository::saveAll);
         saveInChunks(directionStationsToSave, directionStationRepository::saveAll);
 
@@ -255,7 +277,7 @@ public class RoutingSnapshotImporter {
         }
 
         Line line = existingLines.getOrDefault(scrapedLine.getId(), new Line());
-        line.setId(scrapedLine.getId());
+        line.setExternalId(scrapedLine.getId());
         line.setCode(scrapedLine.getCode());
         line.setName(scrapedLine.getName());
         line.setVehicleType(vehicleTypeOptional.get());
@@ -266,12 +288,12 @@ public class RoutingSnapshotImporter {
     private Direction upsertDirection(Line line, ScrapedDirection scrapedDirection, Map<Integer, Direction> existingDirections, ImportSummary summary) {
         Integer directionId = scrapedDirection.getTerminusLineId();
         if (directionId == null) {
-            summary.addWarning("Skipped direction on line " + line.getId() + " due to missing terminusLineId");
+            summary.addWarning("Skipped direction on line " + line.getExternalId() + " due to missing terminusLineId");
             return null;
         }
 
         Direction direction = existingDirections.getOrDefault(directionId, new Direction());
-        direction.setId(directionId);
+        direction.setExternalId(directionId);
         direction.setLine(line);
         direction.setCode(scrapedDirection.getCode());
         direction.setName(scrapedDirection.getName());
@@ -347,13 +369,13 @@ public class RoutingSnapshotImporter {
         for (ScrapedTimetableGroup group : safeList(scrapedLine.getTimetableGroups())) {
             Integer directionId = group.getId();
             if (directionId == null) {
-                summary.addWarning("Skipped timetable group on line " + line.getId() + " due to missing group id");
+                summary.addWarning("Skipped timetable group on line " + line.getExternalId() + " due to missing group id");
                 continue;
             }
 
             Direction direction = importedDirections.get(directionId);
             if (direction == null) {
-                summary.addWarning("Skipped timetable group for unknown direction " + directionId + " on line " + line.getId());
+                summary.addWarning("Skipped timetable group for unknown direction " + directionId + " on line " + line.getExternalId());
                 continue;
             }
 
@@ -368,17 +390,17 @@ public class RoutingSnapshotImporter {
             for (ScrapedTimetableEntry entry : entries) {
                 if (entry.getId() == null || entry.getTerminusLineId() == null || entry.getLineId() == null) {
                     summary.incrementTimetableEntriesSkipped();
-                    summary.addWarning("Skipped timetable entry due to missing ids in line " + line.getId());
+                    summary.addWarning("Skipped timetable entry due to missing ids in line " + line.getExternalId());
                     continue;
                 }
-                if (!Objects.equals(entry.getLineId(), line.getId())) {
+                if (!Objects.equals(entry.getLineId(), line.getExternalId())) {
                     summary.incrementTimetableEntriesSkipped();
-                    summary.addWarning("Skipped timetable " + entry.getId() + " due to line mismatch. expected=" + line.getId() + ", actual=" + entry.getLineId());
+                    summary.addWarning("Skipped timetable " + entry.getId() + " due to line mismatch. expected=" + line.getExternalId() + ", actual=" + entry.getLineId());
                     continue;
                 }
-                if (!Objects.equals(entry.getTerminusLineId(), direction.getId())) {
+                if (!Objects.equals(entry.getTerminusLineId(), direction.getExternalId())) {
                     summary.incrementTimetableEntriesSkipped();
-                    summary.addWarning("Skipped timetable " + entry.getId() + " due to direction mismatch. expected=" + direction.getId() + ", actual=" + entry.getTerminusLineId());
+                    summary.addWarning("Skipped timetable " + entry.getId() + " due to direction mismatch. expected=" + direction.getExternalId() + ", actual=" + entry.getTerminusLineId());
                     continue;
                 }
 
@@ -398,7 +420,7 @@ public class RoutingSnapshotImporter {
                 }
 
                 Timetable timetable = new Timetable();
-                timetable.setId(entry.getId());
+                timetable.setExternalId(entry.getId());
                 timetable.setName(entry.getName());
                 timetable.setDirection(direction);
                 timetable.setLine(line);
@@ -416,7 +438,7 @@ public class RoutingSnapshotImporter {
             }
         }
 
-        Set<Integer> allDirectionsForLine = directionIdsByLine.getOrDefault(line.getId(), Set.of());
+        Set<Integer> allDirectionsForLine = directionIdsByLine.getOrDefault(line.getExternalId(), Set.of());
         for (Integer directionId : allDirectionsForLine) {
             if (!directionsWithTimetable.contains(directionId)) {
                 summary.addMissingTimetableDirection(directionId);
@@ -579,26 +601,35 @@ public class RoutingSnapshotImporter {
         return list == null ? List.of() : list;
     }
 
-    private Map<Integer, Line> fetchLinesByIds(List<Integer> ids) {
+    private Map<Integer, Line> fetchLinesByExternalIds(List<Integer> externalIds) {
         Map<Integer, Line> map = new HashMap<>();
-        for (Line line : lineRepository.findAllById(ids)) {
-            map.put(line.getId(), line);
+        if (externalIds.isEmpty()) {
+            return map;
+        }
+        for (Line line : lineRepository.findByExternalIdIn(externalIds)) {
+            map.put(line.getExternalId(), line);
         }
         return map;
     }
 
-    private Map<Integer, Direction> fetchDirectionsByIds(List<Integer> ids) {
+    private Map<Integer, Direction> fetchDirectionsByExternalIds(List<Integer> externalIds) {
         Map<Integer, Direction> map = new HashMap<>();
-        for (Direction direction : directionRepository.findAllById(ids)) {
-            map.put(direction.getId(), direction);
+        if (externalIds.isEmpty()) {
+            return map;
+        }
+        for (Direction direction : directionRepository.findByExternalIdIn(externalIds)) {
+            map.put(direction.getExternalId(), direction);
         }
         return map;
     }
 
-    private Map<Integer, Station> fetchStationsByIds(List<Integer> ids) {
+    private Map<Integer, Station> fetchStationsByExternalIds(List<Integer> externalIds) {
         Map<Integer, Station> map = new HashMap<>();
-        for (Station station : stationRepository.findAllById(ids)) {
-            map.put(station.getId(), station);
+        if (externalIds.isEmpty()) {
+            return map;
+        }
+        for (Station station : stationRepository.findByExternalIdIn(externalIds)) {
+            map.put(station.getExternalId(), station);
         }
         return map;
     }

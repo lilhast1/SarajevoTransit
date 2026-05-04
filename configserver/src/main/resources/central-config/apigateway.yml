@@ -1,0 +1,44 @@
+spring:
+  cloud:
+    gateway:
+      mvc:
+        routes:
+        - id: userservice-route
+          uri: lb://userservice
+          predicates:
+            - Path=/api/v1/users/**, /api/users/**
+
+        - id: feedbackservice-route
+          uri: lb://feedbackservice
+          predicates:
+            - Path=/api/v1/workflows/**, /api/v1/reviews/**, /api/v1/reports/**
+
+        - id: notificationservice-route
+          uri: lb://notifications
+          predicates:
+            - Path=/notifications/**, /subscriptions/**
+
+        - id: vehicleservice-route
+          uri: lb://vehicle-service
+          predicates:
+            - Path=/api/vehicles/**
+
+        - id: routingservice-route
+          uri: lb://routingservice
+          predicates:
+            - Path=/api/v1/routes/**, /api/v1/lines/**
+
+        - id: moneyman-route
+          uri: lb://moneyman
+          predicates:
+            - Path=/api/finance/**, /api/payments/**
+
+        - id: userservice-discovery-benchmark
+          uri: lb://userservice
+          predicates:
+            - Path=/api/v1/discovery/benchmark/**, /api/discovery/benchmark/**
+
+        - id: feedbackservice-discovery
+          uri: lb://feedbackservice
+          predicates:
+            - Path=/api/v1/discovery/**, /api/discovery/**
