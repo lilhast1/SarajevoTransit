@@ -1,6 +1,2 @@
-<<<<<<< HEAD
-otp-data
-otp-data/*
-=======
 .env
->>>>>>> main
+otp-data/
