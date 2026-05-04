@@ -18,9 +18,9 @@ import java.util.regex.Pattern;
 public class FeedbackserviceApplication {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(FeedbackserviceApplication.class);
-	private static final String DEFAULT_DB_URL = "jdbc:postgresql://localhost:5432/feedbackdb";
+	private static final String DEFAULT_DB_URL = "jdbc:postgresql://localhost:5434/feedbackdb";
 	private static final String DEFAULT_DB_USERNAME = "postgres";
-	private static final String DEFAULT_DB_PASSWORD = "mysecretpassword";
+	private static final String DEFAULT_DB_PASSWORD = "postgres";
 	private static final Pattern POSTGRES_JDBC_URL_PATTERN = Pattern.compile(
 			"^jdbc:postgresql://(?<host>[^:/?]+)(:(?<port>\\d+))?/(?<database>[^?]+)(\\?.*)?$");
 
