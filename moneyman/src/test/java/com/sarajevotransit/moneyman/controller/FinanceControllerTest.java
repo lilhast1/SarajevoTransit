@@ -4,17 +4,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sarajevotransit.moneyman.dto.TicketPurchaseRequest;
 import com.sarajevotransit.moneyman.dto.TicketResponseDTO;
 import com.sarajevotransit.moneyman.mapper.MoneymanMapper;
-import com.sarajevotransit.moneyman.mapper.MoneymanMapperImpl;
+// import com.sarajevotransit.moneyman.mapper.MoneymanMapperImpl;
 import com.sarajevotransit.moneyman.model.Ticket;
 import com.sarajevotransit.moneyman.model.Transaction;
 import com.sarajevotransit.moneyman.model.enums.TicketStatus;
 import com.sarajevotransit.moneyman.model.enums.TicketType;
 import com.sarajevotransit.moneyman.service.MoneymanService;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -23,6 +27,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -41,7 +46,7 @@ public class FinanceControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private MoneymanMapper moneymanMapperImpl;
+    private MoneymanMapper moneymanMapper;
 
     @Test
     void purchaseTicket_ValidRequest_ReturnsOk() throws Exception {
@@ -70,7 +75,7 @@ public class FinanceControllerTest {
         when(moneymanService.purchaseTicket(any())).thenReturn(ticket);
 
         // FIX: mapper converts → DTO
-        when(moneymanMapperImpl.toResponseDTO(ticket)).thenReturn(response);
+        when(moneymanMapper.toResponseDTO(ticket)).thenReturn(response);
 
         mockMvc.perform(post("/api/finance/purchase")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -100,10 +105,11 @@ public class FinanceControllerTest {
         t1.setId(UUID.randomUUID());
         t1.setQrCodeData("ST-123");
 
-        when(moneymanService.getUserWallet(1L)).thenReturn(List.of(t1));
+        Page<TicketResponseDTO> page = new PageImpl<>(List.of(t1));
+        when(moneymanService.getUserWallet(eq(1L), any(Pageable.class))).thenReturn(page);
 
         mockMvc.perform(get("/api/finance/wallet/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].qrCodeData").value("ST-123"));
+                .andExpect(jsonPath("$.content[0].qrCodeData").value("ST-123"));
     }
 }

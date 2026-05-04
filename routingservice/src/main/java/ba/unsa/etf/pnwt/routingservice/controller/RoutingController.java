@@ -4,7 +4,10 @@ import ba.unsa.etf.pnwt.routingservice.dto.DirectionRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.DirectionResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.DirectionStationRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.DirectionStationResponse;
+<<<<<<< HEAD
 import ba.unsa.etf.pnwt.routingservice.dto.GeoJsonFeatureResponse;
+=======
+>>>>>>> main
 import ba.unsa.etf.pnwt.routingservice.dto.LineRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.LineResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.RoutePointRequest;
@@ -212,12 +215,15 @@ public class RoutingController {
         return ResponseEntity.ok(routingCrudService.getRoutePointsByDirection(directionId));
     }
 
+<<<<<<< HEAD
     @GetMapping("/directions/{directionId}/geojson")
     @Operation(summary = "Get direction route as GeoJSON Feature")
     public ResponseEntity<GeoJsonFeatureResponse> getDirectionGeoJson(@PathVariable Integer directionId) {
         return ResponseEntity.ok(routingCrudService.getDirectionGeoJson(directionId));
     }
 
+=======
+>>>>>>> main
     @PostMapping("/route-points")
     @Operation(summary = "Create route point")
     public ResponseEntity<RoutePointResponse> createRoutePoint(@Valid @RequestBody RoutePointRequest request) {

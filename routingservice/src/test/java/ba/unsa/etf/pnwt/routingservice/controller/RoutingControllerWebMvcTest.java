@@ -4,6 +4,7 @@ import ba.unsa.etf.pnwt.routingservice.dto.LineResponse;
 import ba.unsa.etf.pnwt.routingservice.exception.GlobalExceptionHandler;
 import ba.unsa.etf.pnwt.routingservice.exception.ResourceNotFoundException;
 import ba.unsa.etf.pnwt.routingservice.service.RoutingCrudService;
+<<<<<<< HEAD
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -11,6 +12,17 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+=======
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+>>>>>>> main
 
 import java.util.List;
 
@@ -20,6 +32,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+<<<<<<< HEAD
 @WebMvcTest(RoutingController.class)
 @Import(GlobalExceptionHandler.class)
 class RoutingControllerWebMvcTest {
@@ -30,6 +43,27 @@ class RoutingControllerWebMvcTest {
     @MockitoBean
     private RoutingCrudService routingCrudService;
 
+=======
+@ExtendWith(MockitoExtension.class)
+class RoutingControllerWebMvcTest {
+
+    private MockMvc mockMvc;
+
+    @Mock
+    private RoutingCrudService routingCrudService;
+
+    @InjectMocks
+    private RoutingController routingController;
+
+    @BeforeEach
+    void setup() {
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(routingController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
+
+>>>>>>> main
     @Test
     void getLinesReturnsOk() throws Exception {
         LineResponse response = new LineResponse();

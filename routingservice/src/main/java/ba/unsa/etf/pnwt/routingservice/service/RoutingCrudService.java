@@ -4,9 +4,12 @@ import ba.unsa.etf.pnwt.routingservice.dto.DirectionRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.DirectionResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.DirectionStationRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.DirectionStationResponse;
+<<<<<<< HEAD
 import ba.unsa.etf.pnwt.routingservice.dto.GeoJsonFeatureResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.GeoJsonGeometryResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.GeoJsonPropertiesResponse;
+=======
+>>>>>>> main
 import ba.unsa.etf.pnwt.routingservice.dto.LineRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.LineResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.RoutePointRequest;
@@ -282,6 +285,7 @@ public class RoutingCrudService {
                 .toList();
     }
 
+<<<<<<< HEAD
     public GeoJsonFeatureResponse getDirectionGeoJson(Integer directionId) {
         Direction direction = findDirection(directionId);
         List<List<java.math.BigDecimal>> coordinates = routePointRepository.findByDirection_IdOrderBySequenceOrderAsc(directionId)
@@ -308,6 +312,8 @@ public class RoutingCrudService {
         return response;
     }
 
+=======
+>>>>>>> main
     public RoutePointResponse createRoutePoint(RoutePointRequest request) {
         Direction direction = findDirection(request.getDirectionId());
         ensureRoutePointSequenceUnique(direction.getId(), request.getSequenceOrder(), null);
