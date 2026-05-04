@@ -1,19 +1,26 @@
 package com.sarajevotransit.moneyman.repository;
 
 import com.sarajevotransit.moneyman.model.Ticket;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.PagingAndSortingRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-public interface TicketRepository extends JpaRepository<Ticket, UUID> {
+public interface TicketRepository extends JpaRepository<Ticket, UUID>, PagingAndSortingRepository<Ticket, UUID> {
 
     // N+1 Solution: Fetch transaction in the same query
     @Query("SELECT t FROM Ticket t JOIN FETCH t.transaction WHERE t.userId = :userId")
     List<Ticket> findAllByUserIdWithTransaction(Long userId);
+
+    @Query("SELECT t FROM Ticket t JOIN FETCH t.transaction WHERE t.userId = :userId")
+    Page<Ticket> findAllByUserIdWithTransaction(Long userId, Pageable pageable);
+
     @Modifying
     @Query("UPDATE Ticket t SET t.status = 'EXPIRED' WHERE t.status = 'ACTIVE' AND t.validUntil < :now")
     int deactivateExpiredTickets(LocalDateTime now);

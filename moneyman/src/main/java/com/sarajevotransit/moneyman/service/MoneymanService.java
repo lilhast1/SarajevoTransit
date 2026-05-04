@@ -1,5 +1,11 @@
 package com.sarajevotransit.moneyman.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fge.jsonpatch.JsonPatch;
+import com.github.fge.jsonpatch.JsonPatchException;
+import com.github.fge.jsonpatch.JsonPatchOperation;
 import com.sarajevotransit.moneyman.dto.TicketPurchaseRequest;
 import com.sarajevotransit.moneyman.dto.TicketResponseDTO;
 import com.sarajevotransit.moneyman.mapper.MoneymanMapper;
@@ -10,6 +16,8 @@ import com.sarajevotransit.moneyman.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,13 +35,15 @@ public class MoneymanService {
     private final TransactionRepository transactionRepository;
     private final PaymentMethodRepository paymentMethodRepository;
     private final MoneymanMapper mapper;
+    private final ObjectMapper objectMapper;
 
     public MoneymanService(TicketRepository ticketRepository, TransactionRepository transactionRepository,
-            PaymentMethodRepository paymentMethodRepository, MoneymanMapper mapper) {
+            PaymentMethodRepository paymentMethodRepository, MoneymanMapper mapper, ObjectMapper objectMapper) {
         this.ticketRepository = ticketRepository;
         this.transactionRepository = transactionRepository;
         this.paymentMethodRepository = paymentMethodRepository;
         this.mapper = mapper;
+        this.objectMapper = objectMapper;
     }
 
     private static final Logger logger = LoggerFactory.getLogger(MoneymanService.class);
@@ -115,5 +125,23 @@ public class MoneymanService {
                 .stream()
                 .map(mapper::toResponseDTO) // This "breaks" the cycle
                 .toList();
+    }
+
+    public Page<TicketResponseDTO> getUserWallet(Long userId, Pageable pageable) {
+        return ticketRepository.findAllByUserIdWithTransaction(userId, pageable)
+                .map(mapper::toResponseDTO);
+    }
+
+    @Transactional
+    public Ticket updateTicket(UUID ticketId, JsonPatch patch) throws JsonPatchException, IllegalArgumentException, JsonProcessingException {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+
+        // Apply patch
+        JsonNode ticketNode = objectMapper.valueToTree(ticket);
+        JsonNode patchedNode = patch.apply(ticketNode);
+        Ticket patchedTicket = objectMapper.treeToValue(patchedNode, Ticket.class);
+
+        return ticketRepository.save(patchedTicket);
     }
 }
