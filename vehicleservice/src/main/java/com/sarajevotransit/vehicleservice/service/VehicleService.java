@@ -8,8 +8,11 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.sarajevotransit.vehicleservice.dtos.VehicleStatusBatchItemDto;
 import com.sarajevotransit.vehicleservice.model.ServiceRecord;
 import com.sarajevotransit.vehicleservice.model.Vehicle;
 import com.sarajevotransit.vehicleservice.model.VehicleLocationHistory;
@@ -35,6 +38,10 @@ public class VehicleService {
         this.vRepository = vehicleRepository;
         this.locRepository = vehicleLocationRepository;
         this.sRepository = serviceRecordRepository;
+    }
+
+    public Page<Vehicle> getAllVehicles(Pageable pageable) {
+        return vRepository.findAll(pageable);
     }
 
     public List<Vehicle> getAllVehicles() {
@@ -120,8 +127,14 @@ public class VehicleService {
         return v.getId();
     }
 
-    public Vehicle updateVehicle(Vehicle v) {
-        return this.vRepository.save(v);
+    public List<Vehicle> batchUpdateStatus(List<VehicleStatusBatchItemDto> updates) {
+        List<Vehicle> updatedVehicles = new java.util.ArrayList<>();
+        for (VehicleStatusBatchItemDto update : updates) {
+            Vehicle vehicle = vRepository.getReferenceById(update.getId());
+            vehicle.setStatus(update.getStatus());
+            updatedVehicles.add(vRepository.save(vehicle));
+        }
+        return updatedVehicles;
     }
 
 }

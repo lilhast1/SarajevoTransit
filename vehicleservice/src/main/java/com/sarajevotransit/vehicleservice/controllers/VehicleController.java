@@ -1,5 +1,12 @@
 package com.sarajevotransit.vehicleservice.controllers;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sarajevotransit.vehicleservice.dtos.CreateServiceRecordRequestDto;
@@ -8,7 +15,9 @@ import com.sarajevotransit.vehicleservice.dtos.LocationHistoryResponseDto;
 import com.sarajevotransit.vehicleservice.dtos.LocationUpdateRequestDto;
 import com.sarajevotransit.vehicleservice.dtos.ServiceRecordResponseDto;
 import com.sarajevotransit.vehicleservice.dtos.UpdateVehicleRequestDto;
+import com.sarajevotransit.vehicleservice.dtos.VehicleBatchStatusUpdateDto;
 import com.sarajevotransit.vehicleservice.dtos.VehicleResponseDTO;
+import com.sarajevotransit.vehicleservice.dtos.VehicleStatusBatchItemDto;
 import com.sarajevotransit.vehicleservice.dtos.VehicleStatusUpdateDto;
 import com.sarajevotransit.vehicleservice.mappers.LocationHistoryMapper;
 import com.sarajevotransit.vehicleservice.mappers.ServiceRecordMapper;
@@ -24,16 +33,13 @@ import lombok.RequiredArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/api/vehicles")
@@ -48,11 +54,11 @@ public class VehicleController {
     // ── Vehicles ────────────────────────────────────────────────
 
     @GetMapping
-    public ResponseEntity<List<VehicleResponseDTO>> getAllVehicles() {
-        return ResponseEntity.ok(
-                vehicleService.getAllVehicles().stream()
-                        .map(vehicleMapper::toResponse)
-                        .toList());
+    public ResponseEntity<Page<VehicleResponseDTO>> getAllVehicles(
+            @PageableDefault(size = 50, sort = "manufactureDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<Vehicle> vehicles = vehicleService.getAllVehicles(pageable);
+        Page<VehicleResponseDTO> response = vehicles.map(vehicleMapper::toResponse);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
@@ -66,14 +72,15 @@ public class VehicleController {
         return ResponseEntity.status(HttpStatus.CREATED).body(vehicleService.addVehicle(vehicle));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<VehicleResponseDTO> updateVehicle(
-            @PathVariable Long id,
-            @RequestBody @Valid UpdateVehicleRequestDto dto) {
-        Vehicle existing = vehicleService.getVehicleById(id);
-        vehicleMapper.updateEntityFromDto(dto, existing);
-        return ResponseEntity.ok(vehicleMapper.toResponse(vehicleService.updateVehicle(existing)));
-    }
+    // @PutMapping("/{id}")
+    // public ResponseEntity<VehicleResponseDTO> updateVehicle(
+    // @PathVariable Long id,
+    // @RequestBody @Valid UpdateVehicleRequestDto dto) {
+    // Vehicle existing = vehicleService.getVehicleById(id);
+    // vehicleMapper.updateEntityFromDto(dto, existing);
+    // return
+    // ResponseEntity.ok(vehicleMapper.toResponse(vehicleService.updateVehicle(existing)));
+    // }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<VehicleResponseDTO> setVehicleStatus(
@@ -81,6 +88,16 @@ public class VehicleController {
             @RequestBody @Valid VehicleStatusUpdateDto dto) {
         return ResponseEntity.ok(
                 vehicleMapper.toResponse(vehicleService.setVehicleStatus(id, dto.getStatus())));
+    }
+
+    @PatchMapping("/status/batch")
+    public ResponseEntity<List<VehicleResponseDTO>> batchUpdateVehicleStatus(
+            @RequestBody @Valid VehicleBatchStatusUpdateDto dto) {
+        List<Vehicle> updatedVehicles = vehicleService.batchUpdateStatus(dto.getUpdates());
+        List<VehicleResponseDTO> response = updatedVehicles.stream()
+                .map(vehicleMapper::toResponse)
+                .toList();
+        return ResponseEntity.ok(response);
     }
 
     // ── Location ─────────────────────────────────────────────────
