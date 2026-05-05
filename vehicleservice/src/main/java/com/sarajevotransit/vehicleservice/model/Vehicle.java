@@ -41,4 +41,25 @@ public class Vehicle {
     // Optimistic Locking (standard in JPA to prevent concurrent update issues)
     @Version
     private Long version;
+
+    public Vehicle(
+            String registrationNumber,
+            String internalId,
+            VehicleType type,
+            Integer capacity,
+            LocalDate manufactureDate,
+            VehicleStatus status,
+            Double lastLat,
+            Double lastLon,
+            LocalDateTime lastGpsUpdate) {
+        this.registrationNumber = registrationNumber;
+        this.internalId = internalId;
+        this.type = type;
+        this.capacity = capacity;
+        this.manufactureDate = manufactureDate;
+        this.status = status;
+        this.lastLat = lastLat;
+        this.lastLon = lastLon;
+        this.lastGpsUpdate = lastGpsUpdate;
+    }
 }

@@ -19,5 +19,33 @@ public class PaymentMethod {
     private String lastFour; // To show the user: "Visa ending in 4242"
     private String cardType; // "VISA", "MASTERCARD"
 
+    public Long getId() {
+        return id;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public String getGatewayToken() {
+        return gatewayToken;
+    }
+
+    public String getLastFour() {
+        return lastFour;
+    }
+
+    public String getCardType() {
+        return cardType;
+    }
+
+    public boolean isDefault() {
+        return isDefault;
+    }
+
     private boolean isDefault;
 }

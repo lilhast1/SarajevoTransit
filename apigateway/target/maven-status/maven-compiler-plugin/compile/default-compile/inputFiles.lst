@@ -1,0 +1,5 @@
+/home/ali/Fakultet/M1/NWT/Projekat/SarajevoTransit/apigateway/src/main/java/com/sarajevotransit/apigateway/ApiGatewayApplication.java
+/home/ali/Fakultet/M1/NWT/Projekat/SarajevoTransit/apigateway/src/main/java/com/sarajevotransit/apigateway/config/CorsConfig.java
+/home/ali/Fakultet/M1/NWT/Projekat/SarajevoTransit/apigateway/src/main/java/com/sarajevotransit/apigateway/config/GatewayConfig.java
+/home/ali/Fakultet/M1/NWT/Projekat/SarajevoTransit/apigateway/src/main/java/com/sarajevotransit/apigateway/config/GatewayRouteConfig.java
+/home/ali/Fakultet/M1/NWT/Projekat/SarajevoTransit/apigateway/src/main/java/com/sarajevotransit/apigateway/controller/ApiDocsProxyController.java

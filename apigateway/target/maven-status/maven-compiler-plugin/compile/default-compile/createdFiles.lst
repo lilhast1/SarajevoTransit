@@ -1,0 +1,5 @@
+com/sarajevotransit/apigateway/config/CorsConfig.class
+com/sarajevotransit/apigateway/controller/ApiDocsProxyController.class
+com/sarajevotransit/apigateway/config/GatewayConfig.class
+com/sarajevotransit/apigateway/config/CorsConfig$1.class
+com/sarajevotransit/apigateway/config/GatewayRouteConfig.class

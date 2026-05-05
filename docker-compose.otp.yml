@@ -1,0 +1,17 @@
+services:
+  otp:
+    image: opentripplanner/opentripplanner:latest
+    container_name: otp
+    command: ["--load", "--serve"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./otp-data:/var/opentripplanner
+    restart: unless-stopped
+
+  otp-build:
+    image: opentripplanner/opentripplanner:latest
+    profiles: ["tools"]
+    command: ["--build", "--save"]
+    volumes:
+      - ./otp-data:/var/opentripplanner
