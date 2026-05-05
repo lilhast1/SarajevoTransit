@@ -71,6 +71,8 @@ public class UserService {
     private final TicketPurchaseMapper ticketPurchaseMapper;
     private final LoyaltyTransactionMapper loyaltyTransactionMapper;
     private final Validator validator;
+    private final com.sarajevotransit.userservice.client.NotificationClient notificationClient;
+    private final com.sarajevotransit.userservice.client.FinanceClient financeClient;
     private final JsonParser jsonParser = JsonParserFactory.getJsonParser();
 
     @Transactional
@@ -229,6 +231,15 @@ public class UserService {
         UserProfile user = findUserById(userId);
         user.setPasswordHash(hashPassword(request.newPassword()));
         userProfileRepository.save(user);
+
+        try {
+            com.sarajevotransit.userservice.dto.notification.CreateNotificationRequest notifReq = 
+                new com.sarajevotransit.userservice.dto.notification.CreateNotificationRequest(
+                    userId, user.getFullName(), user.getEmail(), "SECURITY", "Password Changed", "Your password has been changed successfully.");
+            notificationClient.createNotification(notifReq);
+        } catch (Exception e) {
+            // Ignored, notification shouldn't fail password update
+        }
     }
 
     @Transactional
@@ -295,6 +306,16 @@ public class UserService {
 
         user.addTicketPurchase(entry);
         ticketPurchaseHistoryRepository.save(entry);
+        
+        try {
+            com.sarajevotransit.userservice.dto.notification.CreateNotificationRequest notifReq = 
+                new com.sarajevotransit.userservice.dto.notification.CreateNotificationRequest(
+                    userId, user.getFullName(), user.getEmail(), "TICKET", "Ticket Purchased", "You have successfully purchased a new ticket.");
+            notificationClient.createNotification(notifReq);
+        } catch (Exception e) {
+            // Ignored
+        }
+
         return ticketPurchaseMapper.toResponse(entry);
     }
 

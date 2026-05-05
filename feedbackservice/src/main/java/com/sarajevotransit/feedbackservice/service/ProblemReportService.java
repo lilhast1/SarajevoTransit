@@ -38,6 +38,10 @@ public class ProblemReportService {
     private final ProblemReportMapper problemReportMapper;
     private final ObjectMapper objectMapper;
     private final Validator validator;
+    private final com.sarajevotransit.feedbackservice.client.UserClient userClient;
+    private final com.sarajevotransit.feedbackservice.client.RoutingClient routingClient;
+    private final com.sarajevotransit.feedbackservice.client.VehicleClient vehicleClient;
+    private final com.sarajevotransit.feedbackservice.client.NotificationClient notificationClient;
 
     @Transactional
     public ProblemReportResponse createReport(CreateProblemReportRequest request) {
@@ -122,6 +126,18 @@ public class ProblemReportService {
         ProblemReport report = findReportOrThrow(id);
         report.setStatus(status);
         ProblemReport saved = problemReportRepository.save(report);
+
+        try {
+            java.util.Map<String, Object> notifReq = new java.util.HashMap<>();
+            notifReq.put("userId", report.getReporterUserId());
+            notifReq.put("type", "STATUS_UPDATE");
+            notifReq.put("title", "Report Status Updated");
+            notifReq.put("content", "Your report #" + id + " has been updated to " + status);
+            notificationClient.createNotification(notifReq);
+        } catch (Exception e) {
+            // Ignored
+        }
+
         return problemReportMapper.toResponse(saved);
     }
 
@@ -137,6 +153,28 @@ public class ProblemReportService {
     }
 
     private ProblemReport buildEntityForCreate(CreateProblemReportRequest request) {
+        try {
+            userClient.getUserById(request.getReporterUserId());
+        } catch (Exception e) {
+            throw new BadRequestException("Invalid reporterUserId.");
+        }
+        
+        if (request.getLineId() != null) {
+            try {
+                routingClient.getLineById(request.getLineId());
+            } catch (Exception e) {
+                throw new BadRequestException("Invalid lineId.");
+            }
+        }
+        
+        if (request.getVehicleId() != null) {
+            try {
+                vehicleClient.getVehicleById(request.getVehicleId());
+            } catch (Exception e) {
+                throw new BadRequestException("Invalid vehicleId.");
+            }
+        }
+
         validateVehicleOrStationReference(request.getVehicleId(),
                 request.getVehicleRegistrationNumber(),
                 request.getVehicleInternalId(),

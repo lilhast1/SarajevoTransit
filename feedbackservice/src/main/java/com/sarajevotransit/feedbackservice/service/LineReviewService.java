@@ -27,9 +27,23 @@ public class LineReviewService {
 
     private final LineReviewRepository lineReviewRepository;
     private final LineReviewMapper lineReviewMapper;
+    private final com.sarajevotransit.feedbackservice.client.UserClient userClient;
+    private final com.sarajevotransit.feedbackservice.client.RoutingClient routingClient;
 
     @Transactional
     public LineReviewResponse createReview(CreateLineReviewRequest request) {
+        try {
+            userClient.getUserById(request.getReviewerUserId());
+        } catch (Exception e) {
+            throw new BadRequestException("Invalid reviewerUserId.");
+        }
+        
+        try {
+            routingClient.getLineById(request.getLineId());
+        } catch (Exception e) {
+            throw new BadRequestException("Invalid lineId.");
+        }
+
         LocalDate today = LocalDate.now();
         if (request.getRideDate().isAfter(today)) {
             throw new BadRequestException("rideDate cannot be in the future.");
