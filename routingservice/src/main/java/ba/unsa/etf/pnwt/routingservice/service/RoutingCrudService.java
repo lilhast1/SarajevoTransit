@@ -4,6 +4,9 @@ import ba.unsa.etf.pnwt.routingservice.dto.DirectionRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.DirectionResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.DirectionStationRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.DirectionStationResponse;
+import ba.unsa.etf.pnwt.routingservice.dto.GeoJsonFeatureResponse;
+import ba.unsa.etf.pnwt.routingservice.dto.GeoJsonGeometryResponse;
+import ba.unsa.etf.pnwt.routingservice.dto.GeoJsonPropertiesResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.LineRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.LineResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.RoutePointRequest;
@@ -279,6 +282,31 @@ public class RoutingCrudService {
                 .toList();
     }
 
+    public GeoJsonFeatureResponse getDirectionGeoJson(Integer directionId) {
+        Direction direction = findDirection(directionId);
+        List<List<java.math.BigDecimal>> coordinates = routePointRepository.findByDirection_IdOrderBySequenceOrderAsc(directionId)
+                .stream()
+                .map(point -> List.of(point.getLongitude(), point.getLatitude()))
+                .toList();
+
+        GeoJsonGeometryResponse geometry = new GeoJsonGeometryResponse();
+        geometry.setType("LineString");
+        geometry.setCoordinates(coordinates);
+
+        GeoJsonPropertiesResponse properties = new GeoJsonPropertiesResponse();
+        properties.setDirectionId(direction.getId());
+        properties.setDirectionExternalId(direction.getExternalId());
+        properties.setDirectionName(direction.getName());
+        properties.setLineId(direction.getLine().getId());
+        properties.setLineName(direction.getLine().getName());
+        properties.setPointCount(coordinates.size());
+
+        GeoJsonFeatureResponse response = new GeoJsonFeatureResponse();
+        response.setType("Feature");
+        response.setGeometry(geometry);
+        response.setProperties(properties);
+        return response;
+    }
     public RoutePointResponse createRoutePoint(RoutePointRequest request) {
         Direction direction = findDirection(request.getDirectionId());
         ensureRoutePointSequenceUnique(direction.getId(), request.getSequenceOrder(), null);

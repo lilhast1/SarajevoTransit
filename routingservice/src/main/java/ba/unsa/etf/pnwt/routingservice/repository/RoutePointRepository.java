@@ -15,6 +15,10 @@ import java.util.List;
 public interface RoutePointRepository extends JpaRepository<RoutePoint, Integer> {
     @EntityGraph(attributePaths = "direction")
     List<RoutePoint> findByDirection_IdOrderBySequenceOrderAsc(Integer directionId);
+
+    @EntityGraph(attributePaths = "direction")
+    List<RoutePoint> findByDirection_IdInOrderByDirection_IdAscSequenceOrderAsc(Collection<Integer> directionIds);
+
     void deleteByDirection_Id(Integer directionId);
 
     @Modifying

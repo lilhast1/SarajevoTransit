@@ -3,6 +3,7 @@ package ba.unsa.etf.pnwt.routingservice.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -51,6 +52,10 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, "conflict", ex.getMessage(), request.getRequestURI(), List.of());
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiErrorResponse> handleForbidden(ForbiddenException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, "forbidden", ex.getMessage(), request.getRequestURI(), List.of());
+    }
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.CONFLICT, "conflict", "Request conflicts with existing data", request.getRequestURI(), List.of());
@@ -81,6 +86,8 @@ public class GlobalExceptionHandler {
                 path,
                 details
         );
-        return ResponseEntity.status(status).body(response);
+        return ResponseEntity.status(status)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 }

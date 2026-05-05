@@ -1,3 +1,16 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "workbench.colorTheme": "Monokai",
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "loc",
+            "database": "sarajevo_transit_routing",
+            "username": "postgres",
+            "password": "postgres"
+        }
+    ]
 }

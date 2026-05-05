@@ -31,9 +31,3 @@ build/
 
 ### VS Code ###
 .vscode/
-.vscode/settings.json
-
-### Local snapshot data ###
-data/*.json
-
-**/postman
