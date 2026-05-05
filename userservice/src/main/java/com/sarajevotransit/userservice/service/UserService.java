@@ -17,6 +17,7 @@ import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.exception.DuplicateResourceException;
 import com.sarajevotransit.userservice.exception.ResourceNotFoundException;
 import com.sarajevotransit.userservice.mapper.LoyaltyTransactionMapper;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.sarajevotransit.userservice.mapper.TicketPurchaseMapper;
 import com.sarajevotransit.userservice.mapper.TravelHistoryMapper;
 import com.sarajevotransit.userservice.mapper.UserPreferenceMapper;
@@ -46,12 +47,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.Comparator;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +68,7 @@ public class UserService {
     private final TicketPurchaseMapper ticketPurchaseMapper;
     private final LoyaltyTransactionMapper loyaltyTransactionMapper;
     private final Validator validator;
+    private final PasswordEncoder passwordEncoder;
     private final JsonParser jsonParser = JsonParserFactory.getJsonParser();
 
     @Transactional
@@ -379,13 +377,7 @@ public class UserService {
     }
 
     private String hashPassword(String rawPassword) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hashBytes);
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("Password hashing algorithm is not available.", ex);
-        }
+        return passwordEncoder.encode(rawPassword);
     }
 
     private TravelHistoryEntry buildTravelHistoryEntry(AddTravelHistoryRequest request) {

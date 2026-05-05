@@ -1,6 +1,9 @@
 server:
   port: 8080
 
+jwt:
+  secret: ${JWT_SECRET:dev-sarajevo-transit-secret-key-min-256bits-change-in-prod}
+
 spring:
   application:
     name: apigateway
@@ -14,6 +17,11 @@ spring:
     gateway:
       mvc:
         routes:
+          - id: auth-route
+            uri: lb://userservice
+            predicates:
+              - Path=/api/auth/**
+
           - id: userservice-route
             uri: lb://userservice
             predicates:

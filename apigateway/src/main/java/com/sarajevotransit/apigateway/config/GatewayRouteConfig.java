@@ -14,6 +14,14 @@ import static org.springframework.web.servlet.function.RequestPredicates.path;
 public class GatewayRouteConfig {
 
     @Bean
+    public RouterFunction<ServerResponse> authRoutes() {
+        return GatewayRouterFunctions.route()
+                .route(path("/api/auth/**"), HandlerFunctions.http())
+                .filter(LoadBalancerFilterFunctions.lb("userservice"))
+                .build();
+    }
+
+    @Bean
     public RouterFunction<ServerResponse> userServiceRoutes() {
         return GatewayRouterFunctions.route()
                 .route(path("/api/v1/users/**").or(path("/api/users/**")),

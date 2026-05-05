@@ -9,6 +9,7 @@ import com.sarajevotransit.userservice.model.LanguageCode;
 import com.sarajevotransit.userservice.model.NotificationChannel;
 import com.sarajevotransit.userservice.model.ThemeMode;
 import com.sarajevotransit.userservice.model.TicketType;
+import com.sarajevotransit.userservice.model.UserRole;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
 import com.sarajevotransit.userservice.service.LoyaltyService;
 import com.sarajevotransit.userservice.service.UserService;
@@ -31,6 +32,19 @@ public class DataSeeder {
                         if (userProfileRepository.count() > 0) {
                                 return;
                         }
+
+                        // Admin user — upgrade role after creation
+                        var adminResponse = userService.createUser(new CreateUserRequest(
+                                        "Admin User",
+                                        "admin@sarajevotransit.ba",
+                                        "AdminPass123!",
+                                        LanguageCode.BS,
+                                        ThemeMode.LIGHT,
+                                        NotificationChannel.PUSH));
+                        userProfileRepository.findById(adminResponse.id()).ifPresent(admin -> {
+                                admin.setRole(UserRole.ADMIN);
+                                userProfileRepository.save(admin);
+                        });
 
                         var amina = userService.createUser(new CreateUserRequest(
                                         "Amina Hadzic",

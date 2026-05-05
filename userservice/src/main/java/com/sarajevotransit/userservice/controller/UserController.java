@@ -13,7 +13,9 @@ import com.sarajevotransit.userservice.dto.UpdateUserProfileRequest;
 import com.sarajevotransit.userservice.dto.UserPreferenceResponse;
 import com.sarajevotransit.userservice.dto.UserProfileResponse;
 import com.sarajevotransit.userservice.dto.UserSummaryResponse;
+import com.sarajevotransit.userservice.exception.ForbiddenException;
 import com.sarajevotransit.userservice.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -47,6 +49,7 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final HttpServletRequest httpRequest;
 
     @PostMapping
     public ResponseEntity<UserProfileResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
@@ -59,18 +62,20 @@ public class UserController {
     }
 
     @GetMapping
-    public Page<UserProfileResponse> getAllUsers(
-            @Valid PaginationRequest request) {
+    public Page<UserProfileResponse> getAllUsers(@Valid PaginationRequest request) {
+        requireAdmin();
         return userService.getAllUsers(request.getPage(), request.getSize(), request.getSort());
     }
 
     @GetMapping("/{userId}")
     public UserProfileResponse getUser(@PathVariable @Positive Long userId) {
+        requireOwnerOrAdmin(userId);
         return userService.getUser(userId);
     }
 
     @GetMapping("/{userId}/preferences")
     public UserPreferenceResponse getPreference(@PathVariable @Positive Long userId) {
+        requireOwnerOrAdmin(userId);
         return userService.getPreference(userId);
     }
 
@@ -78,6 +83,7 @@ public class UserController {
     public Page<TravelHistoryResponse> getTravelHistory(
             @PathVariable @Positive Long userId,
             @Valid PaginationRequest request) {
+        requireOwnerOrAdmin(userId);
         return userService.getTravelHistory(userId, request.getPage(), request.getSize(), request.getSort());
     }
 
@@ -85,6 +91,7 @@ public class UserController {
     public Page<TicketPurchaseResponse> getTicketPurchases(
             @PathVariable @Positive Long userId,
             @Valid PaginationRequest request) {
+        requireOwnerOrAdmin(userId);
         return userService.getTicketPurchases(userId, request.getPage(), request.getSize(), request.getSort());
     }
 
@@ -92,6 +99,7 @@ public class UserController {
     public UserProfileResponse updateUserProfile(
             @PathVariable @Positive Long userId,
             @Valid @RequestBody UpdateUserProfileRequest request) {
+        requireOwnerOrAdmin(userId);
         return userService.updateUserProfile(userId, request);
     }
 
@@ -99,6 +107,7 @@ public class UserController {
     public UserProfileResponse patchUserProfile(
             @PathVariable @Positive Long userId,
             @RequestBody String patchDocument) {
+        requireOwnerOrAdmin(userId);
         return userService.patchUserProfile(userId, patchDocument);
     }
 
@@ -107,6 +116,7 @@ public class UserController {
     public void updatePassword(
             @PathVariable @Positive Long userId,
             @Valid @RequestBody UpdatePasswordRequest request) {
+        requireOwnerOrAdmin(userId);
         userService.updatePassword(userId, request);
     }
 
@@ -114,6 +124,7 @@ public class UserController {
     public UserPreferenceResponse updatePreference(
             @PathVariable @Positive Long userId,
             @Valid @RequestBody UpdateUserPreferenceRequest request) {
+        requireOwnerOrAdmin(userId);
         return userService.updatePreference(userId, request);
     }
 
@@ -121,6 +132,7 @@ public class UserController {
     public ResponseEntity<TravelHistoryResponse> addTravelHistory(
             @PathVariable @Positive Long userId,
             @Valid @RequestBody AddTravelHistoryRequest request) {
+        requireOwnerOrAdmin(userId);
         TravelHistoryResponse created = userService.addTravelHistory(userId, request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{entryId}")
@@ -132,7 +144,8 @@ public class UserController {
     @PostMapping("/{userId}/travel-history/batch")
     public ResponseEntity<List<TravelHistoryResponse>> addTravelHistoryBatch(
             @PathVariable @Positive Long userId,
-            @RequestBody @Size(min = 1, max = 200, message = "Batch size must be between 1 and 200 entries") List<@Valid AddTravelHistoryRequest> requests) {
+            @RequestBody @Size(min = 1, max = 200) List<@Valid AddTravelHistoryRequest> requests) {
+        requireOwnerOrAdmin(userId);
         List<TravelHistoryResponse> created = userService.addTravelHistoryBatch(userId, requests);
         URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/api/v1/users/{userId}/travel-history")
@@ -145,6 +158,7 @@ public class UserController {
     public ResponseEntity<TicketPurchaseResponse> addTicketPurchase(
             @PathVariable @Positive Long userId,
             @Valid @RequestBody AddTicketPurchaseRequest request) {
+        requireOwnerOrAdmin(userId);
         TicketPurchaseResponse created = userService.addTicketPurchase(userId, request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{purchaseId}")
@@ -154,8 +168,8 @@ public class UserController {
     }
 
     @GetMapping("/{userId}/ticket-purchases/stats")
-    public List<TicketPurchaseStatsResponse> getTicketPurchaseStats(
-            @PathVariable @Positive Long userId) {
+    public List<TicketPurchaseStatsResponse> getTicketPurchaseStats(@PathVariable @Positive Long userId) {
+        requireOwnerOrAdmin(userId);
         return userService.getTicketPurchaseStats(userId);
     }
 
@@ -164,11 +178,13 @@ public class UserController {
     public void deleteTravelHistoryEntry(
             @PathVariable @Positive Long userId,
             @PathVariable @Positive Long entryId) {
+        requireOwnerOrAdmin(userId);
         userService.deleteTravelHistoryEntry(userId, entryId);
     }
 
     @GetMapping("/{userId}/summary")
     public UserSummaryResponse getSummary(@PathVariable @Positive Long userId) {
+        requireOwnerOrAdmin(userId);
         return userService.getUserSummary(userId);
     }
 
@@ -176,6 +192,23 @@ public class UserController {
     public List<String> getSuggestions(
             @PathVariable @Positive Long userId,
             @RequestParam(defaultValue = "3") @Min(1) @Max(10) int limit) {
+        requireOwnerOrAdmin(userId);
         return userService.getPersonalizedLineSuggestions(userId, limit);
+    }
+
+    private void requireOwnerOrAdmin(Long resourceUserId) {
+        String role = httpRequest.getHeader("X-User-Role");
+        if ("ADMIN".equals(role)) return;
+        String requestingUserId = httpRequest.getHeader("X-User-Id");
+        if (requestingUserId == null || !requestingUserId.equals(String.valueOf(resourceUserId))) {
+            throw new ForbiddenException("Access denied");
+        }
+    }
+
+    private void requireAdmin() {
+        String role = httpRequest.getHeader("X-User-Role");
+        if (!"ADMIN".equals(role)) {
+            throw new ForbiddenException("Admin access required");
+        }
     }
 }

@@ -12,12 +12,18 @@ import com.sarajevotransit.moneyman.model.Ticket;
 import com.sarajevotransit.moneyman.service.MoneymanService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+<<<<<<< Updated upstream
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+=======
+import org.springframework.http.HttpStatus;
+>>>>>>> Stashed changes
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -37,10 +43,14 @@ public class FinanceController {
 
     @PostMapping("/purchase")
     @Operation(summary = "Purchase ticket", description = "Buy a new ticket and add it to the user's digital wallet")
-    public ResponseEntity<TicketResponseDTO> purchase(@Valid @RequestBody TicketPurchaseRequest request) {
+    public ResponseEntity<TicketResponseDTO> purchase(
+            @Valid @RequestBody TicketPurchaseRequest request,
+            HttpServletRequest httpRequest) {
+        // Override userId from gateway-injected header — never trust request body for identity
+        Long requestingUserId = extractUserId(httpRequest);
+        request.setUserId(requestingUserId);
         Ticket ticket = moneymanService.purchaseTicket(request);
-        var response = moneymanMapper.toResponseDTO(ticket);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(moneymanMapper.toResponseDTO(ticket));
     }
 
     @GetMapping("/health")
@@ -49,6 +59,7 @@ public class FinanceController {
     }
 
     @GetMapping("/wallet/{userId}")
+<<<<<<< Updated upstream
     @Operation(summary = "Get user wallet", description = "Retrieve user's tickets with pagination and sorting")
     public ResponseEntity<Page<TicketResponseDTO>> getWallet(@PathVariable Long userId,
             @PageableDefault(size = 15) Pageable pageable) {
@@ -68,3 +79,30 @@ public class FinanceController {
         }
     }
 }
+=======
+    public ResponseEntity<List<TicketResponseDTO>> getWallet(
+            @PathVariable Long userId,
+            HttpServletRequest httpRequest) {
+        requireOwnerOrAdmin(httpRequest, userId);
+        List<TicketResponseDTO> wallet = moneymanService.getUserWallet(userId);
+        return ResponseEntity.ok(wallet);
+    }
+
+    private void requireOwnerOrAdmin(HttpServletRequest request, Long resourceUserId) {
+        String role = request.getHeader("X-User-Role");
+        if ("ADMIN".equals(role)) return;
+        String requestingUserId = request.getHeader("X-User-Id");
+        if (requestingUserId == null || !requestingUserId.equals(String.valueOf(resourceUserId))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+    }
+
+    private Long extractUserId(HttpServletRequest request) {
+        String userId = request.getHeader("X-User-Id");
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing user identity");
+        }
+        return Long.parseLong(userId);
+    }
+}
+>>>>>>> Stashed changes
