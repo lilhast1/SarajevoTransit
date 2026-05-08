@@ -56,10 +56,11 @@ public class FinanceController {
     }
 
     @GetMapping("/wallet/{userId}")
-<<<<<<< Updated upstream
     @Operation(summary = "Get user wallet", description = "Retrieve user's tickets with pagination and sorting")
     public ResponseEntity<Page<TicketResponseDTO>> getWallet(@PathVariable Long userId,
-            @PageableDefault(size = 15) Pageable pageable) {
+            @PageableDefault(size = 15) Pageable pageable,
+            HttpServletRequest httpRequest) {
+        requireOwnerOrAdmin(httpRequest, userId);
         Page<TicketResponseDTO> wallet = moneymanService.getUserWallet(userId, pageable);
         return ResponseEntity.ok(wallet);
     }
@@ -74,15 +75,6 @@ public class FinanceController {
         } catch (JsonPatchException | IllegalArgumentException | JsonProcessingException e) {
             return ResponseEntity.badRequest().build();
         }
-    }
-}
-=======
-    public ResponseEntity<List<TicketResponseDTO>> getWallet(
-            @PathVariable Long userId,
-            HttpServletRequest httpRequest) {
-        requireOwnerOrAdmin(httpRequest, userId);
-        List<TicketResponseDTO> wallet = moneymanService.getUserWallet(userId);
-        return ResponseEntity.ok(wallet);
     }
 
     private void requireOwnerOrAdmin(HttpServletRequest request, Long resourceUserId) {
@@ -102,4 +94,3 @@ public class FinanceController {
         return Long.parseLong(userId);
     }
 }
->>>>>>> Stashed changes

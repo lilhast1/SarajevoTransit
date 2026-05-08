@@ -8,13 +8,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-<<<<<<< Updated upstream
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-=======
 import org.springframework.http.HttpStatus;
->>>>>>> Stashed changes
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -34,22 +31,12 @@ public class PaymentMethodController {
     }
 
     @GetMapping("/{userId}")
-<<<<<<< Updated upstream
     @Operation(summary = "List payment methods", description = "Retrieve saved payment methods for a user with pagination and sorting")
-    public Page<PaymentMethodResponse> getMethods(@PathVariable Long userId, @PageableDefault(size = 15) Pageable pageable) {
-        return repository.findByUserId(userId, pageable)
-                .map(this::toResponse);
-=======
-    @Operation(summary = "List payment methods", description = "Retrieve saved payment methods for a user")
-    public List<PaymentMethodResponse> getMethods(
-            @PathVariable Long userId,
+    public Page<PaymentMethodResponse> getMethods(@PathVariable Long userId, @PageableDefault(size = 15) Pageable pageable,
             HttpServletRequest httpRequest) {
         requireOwnerOrAdmin(httpRequest, userId);
-        return repository.findByUserId(userId)
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
->>>>>>> Stashed changes
+        return repository.findByUserId(userId, pageable)
+                .map(this::toResponse);
     }
 
     @PostMapping
