@@ -199,7 +199,13 @@ public class RoutingSnapshotImporter {
                 directionIdsByLine.computeIfAbsent(line.getExternalId(), key -> new HashSet<>()).add(direction.getExternalId());
                 summary.incrementDirectionsProcessed();
 
-                List<DirectionStation> directionStations = rebuildDirectionStations(direction, scrapedDirection, existingStations, summary);
+                List<DirectionStation> directionStations = rebuildDirectionStations(
+                        direction,
+                        scrapedDirection,
+                        scrapedDirection.getRoutePoints(),
+                        existingStations,
+                        summary
+                );
                 List<RoutePoint> routePoints = buildRoutePoints(direction, scrapedDirection, summary);
                 interpolateTravelTimes(directionStations, scrapedDirection.getRoutePoints(), line.getVehicleType());
                 directionStationsToSave.addAll(directionStations);
@@ -307,12 +313,18 @@ public class RoutingSnapshotImporter {
     private List<DirectionStation> rebuildDirectionStations(
             Direction direction,
             ScrapedDirection scrapedDirection,
+            List<ScrapedRoutePoint> routePoints,
             Map<Integer, Station> existingStations,
             ImportSummary summary
     ) {
         List<DirectionStation> directionStations = new ArrayList<>();
-            int sequence = 1;
-        for (ScrapedStation scrapedStation : safeList(scrapedDirection.getStations())) {
+        List<ScrapedStation> orderedStations = orderStationsByRoutePoints(
+                safeList(scrapedDirection.getStations()),
+                safeList(routePoints)
+        );
+
+        int sequence = 1;
+        for (ScrapedStation scrapedStation : orderedStations) {
             if (scrapedStation.getId() == null || scrapedStation.getLatitude() == null || scrapedStation.getLongitude() == null) {
                 summary.addWarning("Skipped station for direction " + direction.getId() + " due to missing id/coordinates");
                 continue;
@@ -334,6 +346,58 @@ public class RoutingSnapshotImporter {
         }
 
         return directionStations;
+    }
+
+    List<ScrapedStation> orderStationsByRoutePoints(List<ScrapedStation> stations, List<ScrapedRoutePoint> routePoints) {
+        if (stations.size() < 2) {
+            return stations;
+        }
+
+        List<ScrapedRoutePoint> validRoutePoints = routePoints.stream()
+                .filter(point -> point.getLatitude() != null && point.getLongitude() != null)
+                .toList();
+
+        if (validRoutePoints.size() < 2) {
+            return stations;
+        }
+
+        record StationOrderCandidate(ScrapedStation station, int originalIndex, int routePointIndex, double nearestDistanceMeters) {
+        }
+
+        List<StationOrderCandidate> candidates = new ArrayList<>();
+        for (int i = 0; i < stations.size(); i++) {
+            ScrapedStation station = stations.get(i);
+            if (station.getLatitude() == null || station.getLongitude() == null) {
+                candidates.add(new StationOrderCandidate(station, i, Integer.MAX_VALUE, Double.MAX_VALUE));
+                continue;
+            }
+
+            int nearestIndex = nearestRoutePointIndex(
+                    station.getLatitude().doubleValue(),
+                    station.getLongitude().doubleValue(),
+                    validRoutePoints,
+                    0
+            );
+
+            ScrapedRoutePoint nearestRoutePoint = validRoutePoints.get(nearestIndex);
+            double nearestDistanceMeters = haversineMeters(
+                    station.getLatitude().doubleValue(),
+                    station.getLongitude().doubleValue(),
+                    nearestRoutePoint.getLatitude().doubleValue(),
+                    nearestRoutePoint.getLongitude().doubleValue()
+            );
+
+            candidates.add(new StationOrderCandidate(station, i, nearestIndex, nearestDistanceMeters));
+        }
+
+        return candidates.stream()
+                .sorted(
+                        Comparator.comparingInt(StationOrderCandidate::routePointIndex)
+                                .thenComparingDouble(StationOrderCandidate::nearestDistanceMeters)
+                                .thenComparingInt(StationOrderCandidate::originalIndex)
+                )
+                .map(StationOrderCandidate::station)
+                .toList();
     }
 
     private List<RoutePoint> buildRoutePoints(Direction direction, ScrapedDirection scrapedDirection, ImportSummary summary) {
