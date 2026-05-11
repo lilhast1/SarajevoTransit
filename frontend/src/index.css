@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent: oklch(0.61 0.19 23);
+  --accent-soft: oklch(0.93 0.03 22);
+  --accent-strong: oklch(0.54 0.2 22);
+  --surface: oklch(0.98 0.003 228);
+  --surface-soft: oklch(0.95 0.008 228);
+  --surface-alt: oklch(0.92 0.012 228);
+  --surface-ink: oklch(0.2 0.015 235);
+  --border: oklch(0.86 0.015 232);
+  --ink: oklch(0.23 0.02 240);
+  --muted: oklch(0.5 0.02 240);
+  --line: oklch(0.88 0.02 230);
+  --success: oklch(0.65 0.17 155);
+  --warning: oklch(0.72 0.17 63);
+}
+
+.dark {
+  --accent: oklch(0.67 0.16 22);
+  --accent-soft: oklch(0.25 0.04 20);
+  --accent-strong: oklch(0.59 0.19 22);
+  --surface: oklch(0.18 0.02 240);
+  --surface-soft: oklch(0.22 0.02 240);
+  --surface-alt: oklch(0.27 0.02 240);
+  --surface-ink: oklch(0.19 0.02 236);
+  --border: oklch(0.35 0.02 238);
+  --ink: oklch(0.93 0.015 235);
+  --muted: oklch(0.74 0.018 236);
+  --line: oklch(0.32 0.02 236);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+#root {
+  min-height: 100vh;
+  background-color: var(--surface-soft);
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 52px 52px, 52px 52px;
+  background-position: -1px -1px, -1px -1px;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-radius: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: 'Manrope', 'IBM Plex Sans', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 767px) {
+  #root {
+    background-size: 36px 36px, 36px 36px;
+  }
+}
