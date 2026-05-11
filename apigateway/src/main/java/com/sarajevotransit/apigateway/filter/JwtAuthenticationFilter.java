@@ -38,7 +38,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/swagger-ui.html",
             "/actuator/**",
             "/api/v1/discovery/**",
-            "/api/discovery/**"
+            "/api/discovery/**",
+            "/api/v1/test/**"
     );
 
     // Public for GET requests only (public data reads)
@@ -49,6 +50,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/v1/directions/**",
             "/api/v1/route-points/**",
             "/api/v1/direction-stations/**",
+            "/api/v1/routes/**",
             "/api/vehicles/**",
             "/api/v1/reviews/**"
     );
