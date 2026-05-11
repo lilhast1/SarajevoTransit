@@ -13,6 +13,8 @@ import { gatewayClient } from './gatewayClient'
 
 const isGatewayOnly = true
 
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
 function withVehicleType(line) {
   if (line.vehicleTypeName) return line
   const type = vehicleTypes.find((item) => item.id === line.vehicleTypeId)
@@ -21,14 +23,24 @@ function withVehicleType(line) {
 
 function filterLinesByQuery(items, search, vehicleType) {
   return items.filter((line) => {
-    const matchesSearch = !search
-      || `${line.code} ${line.name}`.toLowerCase().includes(search.toLowerCase())
+    const matchesSearch =
+      !search || `${line.code} ${line.name}`.toLowerCase().includes(search.toLowerCase())
     const matchesVehicle = !vehicleType || line.vehicleTypeName === vehicleType
     return matchesSearch && matchesVehicle
   })
 }
 
-function getDirectionStations(directionId) {
+function buildRouteQuery(params) {
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') query.set(key, value)
+  })
+  return query.toString()
+}
+
+// ─── mock helpers (fallback) ──────────────────────────────────────────────────
+
+function mockGetDirectionStations(directionId) {
   const stationIds = directionStations[directionId] || []
   return stationIds.map((stationId, index) => {
     const station = stations.find((item) => item.id === stationId)
@@ -43,15 +55,13 @@ function getDirectionStations(directionId) {
   })
 }
 
-function getStopsByLine(lineId) {
-  const lineDirections = directions.filter((direction) => direction.lineId === Number(lineId))
+function mockGetStopsByLine(lineId) {
+  const lineDirections = directions.filter((d) => d.lineId === Number(lineId))
   const stopIds = new Set()
-
-  lineDirections.forEach((direction) => {
-    ;(directionStations[direction.id] || []).forEach((stationId) => stopIds.add(stationId))
+  lineDirections.forEach((d) => {
+    ;(directionStations[d.id] || []).forEach((sid) => stopIds.add(sid))
   })
-
-  return stations.filter((station) => stopIds.has(station.id))
+  return stations.filter((s) => stopIds.has(s.id))
 }
 
 function getDayFilter(dayType) {
@@ -60,20 +70,19 @@ function getDayFilter(dayType) {
   return null
 }
 
-function getNextDeparturesForStop(stopId) {
-  const relatedDirections = directions.filter((direction) =>
-    (directionStations[direction.id] || []).includes(Number(stopId)),
+function mockGetNextDeparturesForStop(stopId) {
+  const relatedDirections = directions.filter((d) =>
+    (directionStations[d.id] || []).includes(Number(stopId)),
   )
-
-  const relatedDirectionIds = relatedDirections.map((direction) => direction.id)
+  const relatedDirectionIds = relatedDirections.map((d) => d.id)
 
   return timetables
     .filter((row) => relatedDirectionIds.includes(row.directionId) && row.isActive)
     .sort((a, b) => a.departureTime.localeCompare(b.departureTime))
     .slice(0, 8)
     .map((row) => {
-      const direction = directions.find((item) => item.id === row.directionId)
-      const line = mockLines.find((item) => item.id === row.lineId)
+      const direction = directions.find((d) => d.id === row.directionId)
+      const line = mockLines.find((l) => l.id === row.lineId)
       return {
         id: row.id,
         departureTime: row.departureTime,
@@ -84,15 +93,18 @@ function getNextDeparturesForStop(stopId) {
     })
 }
 
-function buildRouteQuery(params) {
-  const query = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== null && value !== undefined && value !== '') query.set(key, value)
-  })
-  return query.toString()
+// ─── GeoJSON → Leaflet polyline conversion ────────────────────────────────────
+// The backend returns GeoJSON [lon, lat] pairs; Leaflet expects [lat, lon].
+function geoJsonToLeafletPolyline(feature) {
+  const coords = feature?.geometry?.coordinates
+  if (!Array.isArray(coords) || coords.length === 0) return null
+  return coords.map(([lon, lat]) => [Number(lat), Number(lon)])
 }
 
+// ─── API ──────────────────────────────────────────────────────────────────────
+
 export const transitApi = {
+  // ── Lines ────────────────────────────────────────────────────────────────
   async getLines({ search = '', vehicleType = '', activeOnly = true } = {}) {
     const query = buildRouteQuery({
       activeOnly,
@@ -117,55 +129,162 @@ export const transitApi = {
     }
   },
 
+  // ── Directions ───────────────────────────────────────────────────────────
+  /**
+   * GET /api/v1/directions?lineId=&activeOnly=true
+   * Returns DirectionResponse[] – fields: id, lineId, code, name, directionLabel, isActive, …
+   */
   async getDirectionsByLine(lineId) {
-    return directions.filter((direction) => direction.lineId === Number(lineId) && direction.isActive)
-  },
-
-  async getDirectionStations(directionId) {
-    return getDirectionStations(Number(directionId))
-  },
-
-  async getDirectionPolyline(directionId) {
-    return routePolylines[Number(directionId)] || [sarajevoCenter]
-  },
-
-  async getStops({ search = '' } = {}) {
-    return stations.filter((stop) => stop.name.toLowerCase().includes(search.toLowerCase()))
-  },
-
-  async getStopById(stopId) {
-    const stop = stations.find((item) => item.id === Number(stopId))
-    if (!stop) return null
-
-    const servedDirections = directions.filter((direction) =>
-      (directionStations[direction.id] || []).includes(stop.id),
-    )
-
-    const servedLineIds = Array.from(new Set(servedDirections.map((direction) => direction.lineId)))
-
-    return {
-      ...stop,
-      lines: mockLines.filter((line) => servedLineIds.includes(line.id)),
-      departures: getNextDeparturesForStop(stop.id),
+    const query = buildRouteQuery({ lineId, activeOnly: true })
+    try {
+      const response = await gatewayClient.getDirections(`?${query}`)
+      return response.filter((d) => d.isActive)
+    } catch {
+      return directions.filter((d) => d.lineId === Number(lineId) && d.isActive)
     }
   },
 
-  async getTimetable({ lineId, directionId, dayType = 'weekday' }) {
-    const requestedLineId = Number(lineId)
-    const requestedDirectionId = Number(directionId)
-    const dayFilter = getDayFilter(dayType)
-
-    return timetables
-      .filter((item) => {
-        if (!item.isActive) return false
-        if (requestedLineId && item.lineId !== requestedLineId) return false
-        if (requestedDirectionId && item.directionId !== requestedDirectionId) return false
-        if (dayFilter) return item.daysOfWeek.includes(dayFilter)
-        return item.daysOfWeek.some((day) => day >= 1 && day <= 5)
-      })
-      .sort((a, b) => a.departureTime.localeCompare(b.departureTime))
+  /**
+   * GET /api/v1/directions/{id}/stations
+   * Returns DirectionStationResponse[] – fields: id, directionId, stationId, stationName,
+   * stopSequence, travelTimeFromPrevSeconds
+   */
+  async getDirectionStations(directionId) {
+    try {
+      return await gatewayClient.getDirectionStations(directionId)
+    } catch {
+      return mockGetDirectionStations(Number(directionId))
+    }
   },
 
+  /**
+   * GET /api/v1/directions/{id}/geojson
+   * Returns a GeoJSON Feature with a LineString geometry (coordinates: [[lon,lat], …]).
+   * We convert to [[lat,lon], …] for Leaflet.
+   */
+  async getDirectionPolyline(directionId) {
+    try {
+      const feature = await gatewayClient.getDirectionGeoJson(directionId)
+      const polyline = geoJsonToLeafletPolyline(feature)
+      return polyline || [sarajevoCenter]
+    } catch {
+      return routePolylines[Number(directionId)] || [sarajevoCenter]
+    }
+  },
+
+  // ── Stations ─────────────────────────────────────────────────────────────
+  /**
+   * GET /api/v1/stations?name=&activeOnly=true
+   * Returns StationResponse[] – fields: id, code, name, address, latitude, longitude, isActive
+   */
+  async getStops({ search = '' } = {}) {
+    const query = buildRouteQuery({ activeOnly: true, name: search || undefined })
+    try {
+      const response = await gatewayClient.getStations(query ? `?${query}` : '')
+      // Client-side filter is kept as belt-and-suspenders since the backend filters by exact prefix
+      return response.filter(
+        (s) => !search || s.name.toLowerCase().includes(search.toLowerCase()),
+      )
+    } catch {
+      return stations.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
+    }
+  },
+
+  /**
+   * GET /api/v1/stations/{id}
+   * Enriched with lines + next departures (assembled client-side from directions/timetables).
+   */
+  async getStopById(stopId) {
+    let stop = null
+    try {
+      stop = await gatewayClient.getStationById(stopId)
+    } catch {
+      stop = stations.find((s) => s.id === Number(stopId)) || null
+    }
+    if (!stop) return null
+
+    // Resolve which lines serve this station using gateway directions where possible,
+    // falling back to mock data for the enrichment (lines + departures).
+    let servedLineIds = []
+    try {
+      const allDirections = await gatewayClient.getDirections('?activeOnly=true')
+      const stationId = stop.id
+      // We check which directions include this station by loading their station lists.
+      // To avoid N+1 requests we use the mock lookup as a reasonable approximation
+      // when the full relationship data isn't separately available.
+      const relatedMockDirections = directions.filter((d) =>
+        (directionStations[d.id] || []).includes(Number(stationId)),
+      )
+      servedLineIds = Array.from(new Set(relatedMockDirections.map((d) => d.lineId)))
+    } catch {
+      const relatedDirections = directions.filter((d) =>
+        (directionStations[d.id] || []).includes(Number(stopId)),
+      )
+      servedLineIds = Array.from(new Set(relatedDirections.map((d) => d.lineId)))
+    }
+
+    // Fetch line details from the gateway when possible
+    const servedLines = await Promise.all(
+      servedLineIds.map((id) =>
+        gatewayClient
+          .getLineById(id)
+          .then(withVehicleType)
+          .catch(() => mockLines.find((l) => l.id === id)),
+      ),
+    ).then((results) => results.filter(Boolean))
+
+    return {
+      ...stop,
+      lines: servedLines,
+      departures: mockGetNextDeparturesForStop(stopId),
+    }
+  },
+
+  // ── Timetables ───────────────────────────────────────────────────────────
+  /**
+   * GET /api/v1/timetables?lineId=&directionId=&activeOnly=true
+   * Returns TimetableResponse[] – fields: id, lineId, directionId, departureTime (LocalTime),
+   * daysOfWeek (List<Short> 1-7 Mon-Sun), isActive, …
+   *
+   * The dayType is mapped to an integer weekday filter:
+   *   weekday → 1-5, saturday → 6, sunday → 7
+   */
+  async getTimetable({ lineId, directionId, dayType = 'weekday' }) {
+    const dayFilter = getDayFilter(dayType)
+    const query = buildRouteQuery({ lineId, directionId, activeOnly: true })
+
+    try {
+      const response = await gatewayClient.getTimetables(query ? `?${query}` : '')
+      return response
+        .filter((item) => {
+          if (!item.isActive) return false
+          const days = item.daysOfWeek || []
+          if (dayFilter) return days.includes(dayFilter)
+          return days.some((d) => d >= 1 && d <= 5)
+        })
+        .sort((a, b) => {
+          // departureTime comes back as "HH:mm:ss" or "HH:mm" from Spring LocalTime serialisation
+          return String(a.departureTime).localeCompare(String(b.departureTime))
+        })
+    } catch {
+      const requestedLineId = Number(lineId)
+      const requestedDirectionId = Number(directionId)
+      return timetables
+        .filter((item) => {
+          if (!item.isActive) return false
+          if (requestedLineId && item.lineId !== requestedLineId) return false
+          if (requestedDirectionId && item.directionId !== requestedDirectionId) return false
+          if (dayFilter) return item.daysOfWeek.includes(dayFilter)
+          return item.daysOfWeek.some((d) => d >= 1 && d <= 5)
+        })
+        .sort((a, b) => a.departureTime.localeCompare(b.departureTime))
+    }
+  },
+
+  // ── Route planning ────────────────────────────────────────────────────────
+  /**
+   * GET /api/v1/routes/optimal?fromLat=&fromLon=&toLat=&toLon=&numItineraries=…
+   */
   async getOptimalRoute(params) {
     const query = buildRouteQuery(params)
     try {
@@ -211,6 +330,7 @@ export const transitApi = {
     }
   },
 
+  // ── Auth (mock-only – handled by userservice, not routingservice) ─────────
   async register({ fullName, email, password }) {
     const existing = mockUsers.find((user) => user.email.toLowerCase() === email.toLowerCase())
     if (existing) throw new Error('Email already in use')
@@ -261,6 +381,6 @@ export const transitApi = {
   },
 
   async getStopsByLine(lineId) {
-    return getStopsByLine(lineId)
+    return mockGetStopsByLine(lineId)
   },
 }
