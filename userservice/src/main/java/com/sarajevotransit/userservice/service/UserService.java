@@ -452,4 +452,46 @@ public class UserService {
         }
         throw new IllegalArgumentException("Unsupported patch path: " + path);
     }
+
+    /**
+     * Atomically records a ticket purchase history entry AND earns loyalty points in a single transaction.
+     * Used by the ticket purchase saga so that both writes succeed or both are rolled back.
+     *
+     * @return loyalty points earned
+     */
+    @Transactional
+    public int recordTicketPurchaseSaga(Long userId, String ticketType,
+            java.math.BigDecimal amount, String externalTransactionId, int loyaltyPoints) {
+        UserProfile user = findUserById(userId);
+
+        TicketPurchaseHistoryEntry entry = new TicketPurchaseHistoryEntry();
+        entry.setTicketType(com.sarajevotransit.userservice.model.TicketType.valueOf(ticketType));
+        entry.setAmount(amount);
+        entry.setPaymentMethod("CARD");
+        entry.setExternalTransactionId(externalTransactionId);
+        entry.setPurchasedAt(LocalDateTime.now());
+        user.addTicketPurchase(entry);
+        ticketPurchaseHistoryRepository.save(entry);
+
+        com.sarajevotransit.userservice.model.DigitalWallet wallet = user.getWallet();
+        if (wallet == null) {
+            wallet = new com.sarajevotransit.userservice.model.DigitalWallet();
+            user.setWallet(wallet);
+        }
+        if (wallet.getLoyaltyPointsTotal() == null) {
+            wallet.setLoyaltyPointsTotal(0);
+        }
+        wallet.setLoyaltyPointsTotal(wallet.getLoyaltyPointsTotal() + loyaltyPoints);
+
+        com.sarajevotransit.userservice.model.LoyaltyTransaction lt = new com.sarajevotransit.userservice.model.LoyaltyTransaction();
+        lt.setPointsEarned(loyaltyPoints);
+        lt.setPointsSpent(0);
+        lt.setDescription("Ticket purchase — " + ticketType);
+        lt.setReferenceType("TICKET_PURCHASE");
+        user.addLoyaltyTransaction(lt);
+        loyaltyTransactionRepository.save(lt);
+
+        userProfileRepository.save(user);
+        return loyaltyPoints;
+    }
 }

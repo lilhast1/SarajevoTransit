@@ -3,6 +3,7 @@ package com.sarajevotransit.moneyman.service;
 import com.sarajevotransit.moneyman.dto.TicketPurchaseRequest;
 import com.sarajevotransit.moneyman.mapper.MoneymanMapper;
 import com.sarajevotransit.moneyman.model.PaymentMethod;
+import com.sarajevotransit.moneyman.saga.TicketSagaPublisher;
 import com.sarajevotransit.moneyman.model.Ticket;
 import com.sarajevotransit.moneyman.model.Transaction;
 import com.sarajevotransit.moneyman.model.enums.TicketStatus;
@@ -40,6 +41,9 @@ public class MoneymanServiceTest {
     @Mock
     private MoneymanMapper mapper;
 
+    @Mock
+    private TicketSagaPublisher sagaPublisher;
+
     @InjectMocks
     private MoneymanService moneymanService;
 
@@ -64,7 +68,7 @@ public class MoneymanServiceTest {
         Ticket savedTicket = moneymanService.purchaseTicket(request);
 
         assertNotNull(savedTicket);
-        assertEquals(TicketStatus.ACTIVE, savedTicket.getStatus());
+        assertEquals(TicketStatus.PENDING, savedTicket.getStatus());
         assertNotNull(savedTicket.getTransaction());
         assertEquals(new BigDecimal("1.80"), savedTicket.getTransaction().getAmount());
     }

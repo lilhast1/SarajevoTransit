@@ -27,6 +27,9 @@ public class Transaction {
     private String externalTransactionId;
     private LocalDateTime createdAt;
 
+    @Column(unique = true)
+    private String sagaId;
+
     // Optional: bidirectional link so you can see the ticket from the transaction
     @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL)
     private Ticket ticket;
@@ -85,6 +88,14 @@ public class Transaction {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getSagaId() {
+        return sagaId;
+    }
+
+    public void setSagaId(String sagaId) {
+        this.sagaId = sagaId;
     }
 
     public Ticket getTicket() {
