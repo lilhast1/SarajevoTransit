@@ -1,4 +1,8 @@
 {
+<<<<<<< HEAD
+=======
+    "workbench.colorTheme": "Monokai Pro (Filter Octagon)",
+>>>>>>> a8ef17dcf3fbef7ead8118d8321b80730337c726
     "sqltools.connections": [
         {
             "ssh": "Disabled",

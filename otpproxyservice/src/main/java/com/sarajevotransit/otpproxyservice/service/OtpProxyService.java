@@ -128,6 +128,7 @@ public class OtpProxyService {
                         mappedLeg.setStartTime(toEpochMillis(leg.getStart() != null ? leg.getStart().getScheduledTime() : null));
                         mappedLeg.setEndTime(toEpochMillis(leg.getEnd() != null ? leg.getEnd().getScheduledTime() : null));
                         mappedLeg.setDistanceMeters(leg.getDistance());
+                        mappedLeg.setPoints(leg.getLegGeometry() != null ? leg.getLegGeometry().getPoints() : null);
                         legs.add(mappedLeg);
                     }
                 }
@@ -167,11 +168,12 @@ public class OtpProxyService {
                 + "maxWalkDistance:" + maxWalkDistance + ","
                 + "maxTransfers:" + maxTransfers + ","
                 + "wheelchair:" + wheelchair + ","
-                + "numItineraries:" + numItineraries
+                + "numItineraries:" + numItineraries + ","
+                + "searchWindow: 86400"
                 + ") {"
                 + " itineraries {"
                 + " duration walkDistance numberOfTransfers"
-                + " legs { mode from { name } to { name } start { scheduledTime } end { scheduledTime } distance }"
+                + " legs { mode from { name } to { name } start { scheduledTime } end { scheduledTime } distance legGeometry { points } }"
                 + " }"
                 + " }"
                 + "}";

@@ -75,6 +75,7 @@ public class OtpPlanResponse {
         private LegTime start;
         private LegTime end;
         private Double distance;
+        private LegGeometry legGeometry;
 
         public String getMode() {
             return mode;
@@ -122,6 +123,26 @@ public class OtpPlanResponse {
 
         public void setDistance(Double distance) {
             this.distance = distance;
+        }
+
+        public LegGeometry getLegGeometry() {
+            return legGeometry;
+        }
+
+        public void setLegGeometry(LegGeometry legGeometry) {
+            this.legGeometry = legGeometry;
+        }
+    }
+
+    public static class LegGeometry {
+        private String points;
+
+        public String getPoints() {
+            return points;
+        }
+
+        public void setPoints(String points) {
+            this.points = points;
         }
     }
 
