@@ -1,12 +1,17 @@
 package com.sarajevotransit.vehicleservice.dtos;
 
+
 import java.util.List;
+
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
-import lombok.Value;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Value
+
+@Data
+@NoArgsConstructor
 public class VehicleBatchStatusUpdateDto {
     @NotEmpty
     @Valid

@@ -27,8 +27,8 @@ import com.sarajevotransit.vehicleservice.model.Vehicle;
 import com.sarajevotransit.vehicleservice.service.VehicleService;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.springframework.web.bind.annotation.RequestBody;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -72,9 +72,11 @@ public class VehicleController {
     }
 
     @PostMapping
-    public ResponseEntity<Long> addVehicle(@RequestBody @Valid CreateVehicleRequestDto dto) {
+    public ResponseEntity<VehicleResponseDTO> addVehicle(@RequestBody @Valid CreateVehicleRequestDto dto) {
         Vehicle vehicle = vehicleMapper.toEntity(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(vehicleService.addVehicle(vehicle));
+        Long id = vehicleService.addVehicle(vehicle);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(vehicleMapper.toResponse(vehicleService.getVehicleById(id)));
     }
 
     // @PutMapping("/{id}")

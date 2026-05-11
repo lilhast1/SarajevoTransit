@@ -31,6 +31,10 @@ public class LoadDatabase {
                 43.22,
                 LocalDateTime.now());
         return args -> {
+            if (vehicleRepository.count() > 0) {
+                logger.info("Vehicles already seeded, skipping");
+                return;
+            }
             logger.info("Preloading vehicle");
             vehicleRepository.save(v);
         };

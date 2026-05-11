@@ -1,12 +1,17 @@
 package com.sarajevotransit.vehicleservice.dtos;
 
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import jakarta.validation.constraints.NotNull;
-import lombok.Value;
 
-@Value
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+
+@Data
+@NoArgsConstructor
 public class CreateServiceRecordRequestDto {
     @NotNull
     LocalDateTime serviceStart;

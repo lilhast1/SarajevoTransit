@@ -1,14 +1,20 @@
 package com.sarajevotransit.vehicleservice.dtos;
 
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
 
 import com.sarajevotransit.vehicleservice.model.enums.VehicleStatus;
 import com.sarajevotransit.vehicleservice.model.enums.VehicleType;
 
-import lombok.Value;
 
-@Value
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+
+@Data
+@NoArgsConstructor
 public class UpdateVehicleRequestDto {
     String registrationNumber;
     String internalId;
