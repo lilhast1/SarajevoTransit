@@ -23,6 +23,8 @@ Open `.env` and change the values if needed:
 ```
 DB_PASSWORD=mysecretpassword   # PostgreSQL password (used by all services)
 NOTIF_DB_PASSWORD=notif_pass   # MySQL password (notification service only)
+OTP_HOST_PORT=18080            # Host port mapped to OTP container port 8080
+OTP_BASE_URL=http://localhost:18080  # URL used by otp-proxy to call OTP
 ```
 
 All services read `DB_PASSWORD` from the environment. If you change it in `.env`, also export it in each terminal before running services:

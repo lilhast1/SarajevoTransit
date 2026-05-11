@@ -2,6 +2,7 @@
 setlocal
 
 for %%I in ("%~dp0..") do set "ROOT_DIR=%%~fI"
+if "%OTP_HOST_PORT%"=="" set "OTP_HOST_PORT=18080"
 
 echo [INFO] SarajevoTransit one-command startup
 echo [INFO] Root: %ROOT_DIR%
@@ -43,7 +44,7 @@ timeout /t 20 /nobreak >nul
 echo.
 echo [INFO] Quick checks (may still be warming up):
 curl -fsS "http://localhost:8761" >nul 2>&1 && echo [OK] Eureka: http://localhost:8761 || echo [WARN] Eureka not ready yet
-curl -fsS "http://localhost:8080" >nul 2>&1 && echo [OK] OTP: http://localhost:8080 || echo [WARN] OTP not ready yet
+curl -fsS "http://localhost:%OTP_HOST_PORT%" >nul 2>&1 && echo [OK] OTP: http://localhost:%OTP_HOST_PORT% || echo [WARN] OTP not ready yet
 curl -fsS "http://localhost:8082/api/v1/proxy/stops-count" >nul 2>&1 && echo [OK] OTP Proxy endpoint || echo [WARN] OTP Proxy endpoint not ready yet
 curl -fsS "http://localhost:9999/api/v1/test/otp-stops-count" >nul 2>&1 && echo [OK] Routing discovery endpoint || echo [WARN] Routing endpoint not ready yet
 

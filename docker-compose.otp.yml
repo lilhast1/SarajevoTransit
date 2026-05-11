@@ -4,7 +4,7 @@ services:
     container_name: otp
     command: ["--load", "--serve"]
     ports:
-      - "8080:8080"
+      - "${OTP_HOST_PORT:-18080}:8080"
     volumes:
       - ./otp-data:/var/opentripplanner
     restart: unless-stopped
