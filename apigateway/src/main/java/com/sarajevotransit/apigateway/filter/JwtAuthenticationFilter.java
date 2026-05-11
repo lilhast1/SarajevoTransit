@@ -42,15 +42,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     );
 
     // Public for GET requests only (public data reads)
+    // Both exact paths and /** variants needed: AntPathMatcher does not match /foo/** against /foo (no trailing slash)
     private static final List<String> PUBLIC_GET = List.of(
-            "/api/v1/lines/**",
-            "/api/v1/stations/**",
-            "/api/v1/timetables/**",
-            "/api/v1/directions/**",
-            "/api/v1/route-points/**",
-            "/api/v1/direction-stations/**",
-            "/api/vehicles/**",
-            "/api/v1/reviews/**"
+            "/api/v1/lines",       "/api/v1/lines/**",
+            "/api/v1/stations",    "/api/v1/stations/**",
+            "/api/v1/timetables",  "/api/v1/timetables/**",
+            "/api/v1/directions",  "/api/v1/directions/**",
+            "/api/v1/route-points","/api/v1/route-points/**",
+            "/api/v1/direction-stations", "/api/v1/direction-stations/**",
+            "/api/vehicles",       "/api/vehicles/**",
+            "/api/v1/reviews",     "/api/v1/reviews/**"
     );
 
     // Public for POST only (registration)
@@ -61,27 +62,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     // ADMIN required for ANY method on these paths
     private static final List<String> ADMIN_ANY = List.of(
-            "/api/v1/workflows/**"
+            "/api/v1/workflows", "/api/v1/workflows/**"
     );
 
     // ADMIN required for write methods (POST/PUT/DELETE/PATCH) on these paths
     private static final List<String> ADMIN_WRITE = List.of(
-            "/api/v1/lines/**",
-            "/api/v1/stations/**",
-            "/api/v1/timetables/**",
-            "/api/v1/directions/**",
-            "/api/v1/route-points/**",
-            "/api/v1/direction-stations/**",
-            "/api/vehicles/**"
+            "/api/v1/lines",       "/api/v1/lines/**",
+            "/api/v1/stations",    "/api/v1/stations/**",
+            "/api/v1/timetables",  "/api/v1/timetables/**",
+            "/api/v1/directions",  "/api/v1/directions/**",
+            "/api/v1/route-points","/api/v1/route-points/**",
+            "/api/v1/direction-stations", "/api/v1/direction-stations/**",
+            "/api/vehicles",       "/api/vehicles/**"
     );
 
     // ADMIN required for specific methods on feedback paths
     private static final List<String> ADMIN_PATCH = List.of(
-            "/api/v1/reviews/**"      // moderation
+            "/api/v1/reviews", "/api/v1/reviews/**"
     );
 
     private static final List<String> ADMIN_DELETE_OR_PATCH_REPORTS = List.of(
-            "/api/v1/reports/**"
+            "/api/v1/reports", "/api/v1/reports/**"
     );
 
     private static final Set<String> WRITE_METHODS = Set.of("POST", "PUT", "DELETE", "PATCH");

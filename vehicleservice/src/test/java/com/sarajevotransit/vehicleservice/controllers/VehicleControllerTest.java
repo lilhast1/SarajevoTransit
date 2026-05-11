@@ -108,15 +108,21 @@ class VehicleControllerTest {
                 LocalDate.of(2020, 1, 1), VehicleStatus.OPERATIONAL,
                 43.8563, 18.4131, LocalDateTime.now());
 
+        VehicleResponseDTO responseDto = new VehicleResponseDTO(
+                1L, "ABC-123", null, null, null, null, null, null, null, null, null);
+
         when(vehicleMapper.toEntity(requestDto)).thenReturn(testVehicle);
         when(vehicleService.addVehicle(testVehicle)).thenReturn(1L);
+        when(vehicleService.getVehicleById(1L)).thenReturn(testVehicle);
+        when(vehicleMapper.toResponse(testVehicle)).thenReturn(responseDto);
 
         // When
-        ResponseEntity<Long> response = vehicleController.addVehicle(requestDto);
+        ResponseEntity<VehicleResponseDTO> response = vehicleController.addVehicle(requestDto);
 
         // Then
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertEquals(1L, response.getBody());
+        assertNotNull(response.getBody());
+        assertEquals(1L, response.getBody().getId());
     }
 
 
