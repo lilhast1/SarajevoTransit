@@ -1,12 +1,10 @@
 package com.sarajevotransit.userservice.config;
 
 import com.sarajevotransit.userservice.dto.LoyaltyTransactionResponse;
-import com.sarajevotransit.userservice.dto.TicketPurchaseResponse;
 import com.sarajevotransit.userservice.dto.TravelHistoryResponse;
 import com.sarajevotransit.userservice.dto.UserPreferenceResponse;
 import com.sarajevotransit.userservice.dto.UserProfileResponse;
 import com.sarajevotransit.userservice.model.LoyaltyTransaction;
-import com.sarajevotransit.userservice.model.TicketPurchaseHistoryEntry;
 import com.sarajevotransit.userservice.model.TravelHistoryEntry;
 import com.sarajevotransit.userservice.model.UserPreference;
 import com.sarajevotransit.userservice.model.UserProfile;
@@ -75,21 +73,7 @@ public class ModelMapperConfig {
                             source.getDurationMinutes());
                 });
 
-        modelMapper.createTypeMap(TicketPurchaseHistoryEntry.class, TicketPurchaseResponse.class)
-                .setConverter(context -> {
-                    TicketPurchaseHistoryEntry source = context.getSource();
-                    if (source == null) {
-                        return null;
-                    }
-                    return new TicketPurchaseResponse(
-                            source.getId(),
-                            source.getTicketType(),
-                            source.getAmount(),
-                            source.getPaymentMethod(),
-                            source.getExternalTransactionId(),
-                            source.getLineCode(),
-                            source.getPurchasedAt());
-                });
+
 
         modelMapper.createTypeMap(LoyaltyTransaction.class, LoyaltyTransactionResponse.class)
                 .setConverter(context -> {

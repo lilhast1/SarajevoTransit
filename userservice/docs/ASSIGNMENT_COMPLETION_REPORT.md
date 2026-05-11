@@ -14,7 +14,7 @@ Ovaj dokument opisuje kako je implementiran zadatak:
 
 Opseg ovog izvjestaja je userservice modul.
 
-## 2. Web servisi bez poziva drugih mikroservisa
+## 2. Web servisi i integracije
 
 ### Sta je implementirano
 
@@ -23,7 +23,7 @@ Implementirana su dva glavna REST kontrolera:
 - User profile API: [../src/main/java/com/sarajevotransit/userservice/controller/UserController.java](../src/main/java/com/sarajevotransit/userservice/controller/UserController.java)
 - Loyalty API: [../src/main/java/com/sarajevotransit/userservice/controller/LoyaltyController.java](../src/main/java/com/sarajevotransit/userservice/controller/LoyaltyController.java)
 
-Servisi rade lokalno nad vlastitom bazom i internim repository slojem:
+Servisi rade lokalno nad vlastitom bazom i internim repository slojem, uz ciljanu integraciju s drugim servisima:
 
 - [../src/main/java/com/sarajevotransit/userservice/service/UserService.java](../src/main/java/com/sarajevotransit/userservice/service/UserService.java)
 - [../src/main/java/com/sarajevotransit/userservice/service/LoyaltyService.java](../src/main/java/com/sarajevotransit/userservice/service/LoyaltyService.java)
@@ -31,16 +31,17 @@ Servisi rade lokalno nad vlastitom bazom i internim repository slojem:
 ### Kako je implementirano
 
 - Endpointi su izlozeni preko @RestController i mapirani pod /api/users i /api/v1/users varijantama.
-- CRUD i domena operacije (travel history, ticket purchases, loyalty earn/redeem) izvrsavaju se direktno kroz JPA repozitorije.
+- CRUD i domena operacije (user profile, travel history, loyalty earn/redeem) izvrsavaju se direktno kroz JPA repozitorije.
+- Ticket purchase istorija se ne cuva lokalno; u summary odgovoru se povlaci iz Moneyman servisa putem `MoneymanClient`.
 - Za kreiranje resursa koristi se HTTP 201 Created sa Location headerom.
 - List endpointi imaju paginaciju i sortiranje (page, size, sort).
 
 ### Zasto je ovako implementirano
 
-- Arhitektura je namjerno self-contained za userservice: manja sprega, jednostavniji deploy, lakse testiranje.
-- Ovim je ispunjen zahtjev da servis ne zavisi od komunikacije sa drugim mikroservisima.
+- Jezgro userservice-a ostaje lokalno i izolovano, dok se ticket purchase podaci delegiraju na Moneyman servis.
+- Time se izbjegava redundantan ticket purchase sloj u userservice-u i postuje podjela odgovornosti po mikroservisima.
 
-Napomena: U userservice kodu nema RestTemplate/WebClient/Feign klijenata za pozive drugih servisa.
+Napomena: Userservice koristi `RestClient` i `LoadBalancerClient` za pozive ka Moneyman servisu (wallet) i benchmark ping ka Feedback servisu.
 
 ## 3. DTO sloj (Request/Response modeli)
 
@@ -267,7 +268,7 @@ Implementiran je PATCH endpoint za parcijalnu izmjenu profila korisnika putem JS
 
 Paginacija/sort su dostupni na list endpointima kroz `page`, `size`, `sort` parametre i `Page<T>` odgovore:
 
-- User list, travel history, ticket purchases, loyalty transactions.
+- User list, travel history, loyalty transactions.
 - Implementacija helpera:
   - [../src/main/java/com/sarajevotransit/userservice/service/PaginationUtils.java](../src/main/java/com/sarajevotransit/userservice/service/PaginationUtils.java)
 
@@ -279,8 +280,7 @@ Custom JPQL upiti su implementirani u repozitorijima:
   - [../src/main/java/com/sarajevotransit/userservice/repository/TravelHistoryRepository.java](../src/main/java/com/sarajevotransit/userservice/repository/TravelHistoryRepository.java)
 - Ownership check za delete:
   - [../src/main/java/com/sarajevotransit/userservice/repository/TravelHistoryRepository.java](../src/main/java/com/sarajevotransit/userservice/repository/TravelHistoryRepository.java)
-- Ticket purchase agregacija (group by ticketType):
-  - [../src/main/java/com/sarajevotransit/userservice/repository/TicketPurchaseHistoryRepository.java](../src/main/java/com/sarajevotransit/userservice/repository/TicketPurchaseHistoryRepository.java)
+- Ticket purchase agregacija nije dio userservice-a; pripada Moneyman servisu.
 
 ### 13.4 Batch unos
 

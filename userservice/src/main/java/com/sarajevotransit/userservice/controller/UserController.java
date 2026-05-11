@@ -1,11 +1,8 @@
 package com.sarajevotransit.userservice.controller;
 
-import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.dto.PaginationRequest;
-import com.sarajevotransit.userservice.dto.TicketPurchaseResponse;
-import com.sarajevotransit.userservice.dto.TicketPurchaseStatsResponse;
 import com.sarajevotransit.userservice.dto.TravelHistoryResponse;
 import com.sarajevotransit.userservice.dto.UpdatePasswordRequest;
 import com.sarajevotransit.userservice.dto.UpdateUserPreferenceRequest;
@@ -91,13 +88,7 @@ public class UserController {
         return userService.getTravelHistory(userId, request.getPage(), request.getSize(), request.getSort());
     }
 
-    @GetMapping("/{userId}/ticket-purchases")
-    public Page<TicketPurchaseResponse> getTicketPurchases(
-            @PathVariable @Positive Long userId,
-            @Valid PaginationRequest request) {
-        requireOwnerOrAdmin(userId);
-        return userService.getTicketPurchases(userId, request.getPage(), request.getSize(), request.getSort());
-    }
+
 
     @PutMapping("/{userId}")
     public UserProfileResponse updateUserProfile(
@@ -158,24 +149,7 @@ public class UserController {
         return ResponseEntity.created(location).body(created);
     }
 
-    @PostMapping("/{userId}/ticket-purchases")
-    public ResponseEntity<TicketPurchaseResponse> addTicketPurchase(
-            @PathVariable @Positive Long userId,
-            @Valid @RequestBody AddTicketPurchaseRequest request) {
-        requireOwnerOrAdmin(userId);
-        TicketPurchaseResponse created = userService.addTicketPurchase(userId, request);
-        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{purchaseId}")
-                .buildAndExpand(created.id())
-                .toUri();
-        return ResponseEntity.created(location).body(created);
-    }
 
-    @GetMapping("/{userId}/ticket-purchases/stats")
-    public List<TicketPurchaseStatsResponse> getTicketPurchaseStats(@PathVariable @Positive Long userId) {
-        requireOwnerOrAdmin(userId);
-        return userService.getTicketPurchaseStats(userId);
-    }
 
     @DeleteMapping("/{userId}/travel-history/{entryId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

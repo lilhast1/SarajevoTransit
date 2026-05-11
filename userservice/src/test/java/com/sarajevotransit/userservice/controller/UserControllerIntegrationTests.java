@@ -1,11 +1,9 @@
 package com.sarajevotransit.userservice.controller;
 
-import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.model.LanguageCode;
 import com.sarajevotransit.userservice.model.NotificationChannel;
-import com.sarajevotransit.userservice.model.TicketType;
 import com.sarajevotransit.userservice.model.ThemeMode;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
 import com.sarajevotransit.userservice.service.UserService;
@@ -47,7 +45,9 @@ class UserControllerIntegrationTests {
 
         @BeforeEach
         void setUp() {
-                mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+                mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+                                .defaultRequest(get("/").header("X-User-Role", "ADMIN"))
+                                .build();
                 userProfileRepository.deleteAll();
         }
 
@@ -221,59 +221,6 @@ class UserControllerIntegrationTests {
                                 .andExpect(jsonPath("$.message").value("Validation failed"));
         }
 
-        @Test
-        void getTicketPurchases_shouldReturnPaginatedContent() throws Exception {
-                var user = userService.createUser(new CreateUserRequest(
-                                "Purchase User",
-                                "purchase.user@sarajevotransit.ba",
-                                "PurchasePass123",
-                                LanguageCode.BS,
-                                ThemeMode.SYSTEM,
-                                NotificationChannel.PUSH));
-
-                userService.addTicketPurchase(user.id(), new AddTicketPurchaseRequest(
-                                TicketType.MONTHLY,
-                                new BigDecimal("53.00"),
-                                "CARD",
-                                "TXN-PURCHASE-1",
-                                "TRAM-3",
-                                LocalDateTime.now()));
-
-                mockMvc.perform(get("/api/v1/users/{userId}/ticket-purchases", user.id())
-                                .queryParam("page", "0")
-                                .queryParam("size", "10")
-                                .queryParam("sort", "purchasedAt,desc"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.content.length()").value(1))
-                                .andExpect(jsonPath("$.content[0].ticketType").value("MONTHLY"));
-        }
-
-        @Test
-        void addTicketPurchase_withInvalidAmount_shouldReturnBadRequest() throws Exception {
-                var user = userService.createUser(new CreateUserRequest(
-                                "Invalid Purchase",
-                                "invalid.purchase@sarajevotransit.ba",
-                                "InvalidPass123",
-                                LanguageCode.BS,
-                                ThemeMode.SYSTEM,
-                                NotificationChannel.PUSH));
-
-                String payload = """
-                                {
-                                        "ticketType": "MONTHLY",
-                                        "amount": 0.00,
-                                        "paymentMethod": "CARD",
-                                        "externalTransactionId": "TXN-INVALID-001",
-                                        "lineCode": "TRAM-3"
-                                }
-                                """;
-
-                mockMvc.perform(post("/api/v1/users/{userId}/ticket-purchases", user.id())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(payload))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$.message").value("Validation failed"));
-        }
 
         @Test
         void updateUserProfile_shouldReturnUpdatedFields() throws Exception {
@@ -555,44 +502,6 @@ class UserControllerIntegrationTests {
                                 .andExpect(jsonPath("$.totalElements").value(2));
         }
 
-        @Test
-        void ticketPurchaseStats_shouldReturnCustomAggregates() throws Exception {
-                var user = userService.createUser(new CreateUserRequest(
-                                "Stats User",
-                                "stats.user@sarajevotransit.ba",
-                                "StatsPass123",
-                                LanguageCode.BS,
-                                ThemeMode.SYSTEM,
-                                NotificationChannel.PUSH));
-
-                userService.addTicketPurchase(user.id(), new AddTicketPurchaseRequest(
-                                TicketType.MONTHLY,
-                                new BigDecimal("53.00"),
-                                "CARD",
-                                "TXN-STATS-001",
-                                "TRAM-3",
-                                LocalDateTime.now().minusDays(1)));
-                userService.addTicketPurchase(user.id(), new AddTicketPurchaseRequest(
-                                TicketType.DAILY,
-                                new BigDecimal("2.00"),
-                                "CARD",
-                                "TXN-STATS-002",
-                                "BUS-31E",
-                                LocalDateTime.now()));
-
-                mockMvc.perform(get("/api/v1/users/{userId}/ticket-purchases/stats", user.id()))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.length()").value(2))
-                                .andExpect(jsonPath("$[0].ticketType").value("MONTHLY"))
-                                .andExpect(jsonPath("$[0].purchaseCount").value(1));
-        }
-
-        @Test
-        void ticketPurchaseStats_forMissingUser_shouldReturnNotFound() throws Exception {
-                mockMvc.perform(get("/api/v1/users/999/ticket-purchases/stats"))
-                                .andExpect(status().isNotFound())
-                                .andExpect(jsonPath("$.message").value("User with id 999 not found."));
-        }
 
         @Test
         void deleteTravelHistoryEntry_shouldReturnNoContent() throws Exception {

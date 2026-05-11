@@ -6,7 +6,6 @@ import com.sarajevotransit.userservice.config.ModelMapperConfig;
 import com.sarajevotransit.userservice.exception.DuplicateResourceException;
 import com.sarajevotransit.userservice.exception.ResourceNotFoundException;
 import com.sarajevotransit.userservice.mapper.LoyaltyTransactionMapper;
-import com.sarajevotransit.userservice.mapper.TicketPurchaseMapper;
 import com.sarajevotransit.userservice.mapper.TravelHistoryMapper;
 import com.sarajevotransit.userservice.mapper.UserPreferenceMapper;
 import com.sarajevotransit.userservice.mapper.UserProfileMapper;
@@ -18,7 +17,6 @@ import com.sarajevotransit.userservice.model.TravelHistoryEntry;
 import com.sarajevotransit.userservice.model.UserPreference;
 import com.sarajevotransit.userservice.model.UserProfile;
 import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
-import com.sarajevotransit.userservice.repository.TicketPurchaseHistoryRepository;
 import com.sarajevotransit.userservice.repository.TravelHistoryRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
 import jakarta.validation.Validator;
@@ -52,14 +50,15 @@ class UserServiceTest {
     @Mock
     private TravelHistoryRepository travelHistoryRepository;
 
-    @Mock
-    private TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository;
 
     @Mock
     private LoyaltyTransactionRepository loyaltyTransactionRepository;
 
     @Mock
     private Validator validator;
+
+    @Mock
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Spy
     private UserPreferenceMapper userPreferenceMapper = new UserPreferenceMapper(modelMapper);
@@ -70,8 +69,6 @@ class UserServiceTest {
     @Spy
     private TravelHistoryMapper travelHistoryMapper = new TravelHistoryMapper(modelMapper);
 
-    @Spy
-    private TicketPurchaseMapper ticketPurchaseMapper = new TicketPurchaseMapper(modelMapper);
 
     @Spy
     private LoyaltyTransactionMapper loyaltyTransactionMapper = new LoyaltyTransactionMapper(modelMapper);
@@ -109,6 +106,7 @@ class UserServiceTest {
                 null);
 
         when(userProfileRepository.existsByEmailIgnoreCase("lejla.music@sarajevotransit.ba")).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("hashed_password");
         when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(invocation -> {
             UserProfile user = invocation.getArgument(0);
             user.setId(55L);
@@ -130,7 +128,7 @@ class UserServiceTest {
         UserProfile saved = userCaptor.getValue();
         assertThat(saved.getFirstName()).isEqualTo("Lejla");
         assertThat(saved.getLastName()).isEqualTo("Music");
-        assertThat(saved.getPasswordHash()).matches("[0-9a-f]{64}");
+        assertThat(saved.getPasswordHash()).isEqualTo("hashed_password");
     }
 
     @Test

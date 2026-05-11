@@ -1,13 +1,11 @@
 package com.sarajevotransit.userservice.controller;
 
-import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
 import com.sarajevotransit.userservice.model.LanguageCode;
 import com.sarajevotransit.userservice.model.NotificationChannel;
 import com.sarajevotransit.userservice.model.ThemeMode;
-import com.sarajevotransit.userservice.model.TicketType;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
 import com.sarajevotransit.userservice.service.LoyaltyService;
 import com.sarajevotransit.userservice.service.UserService;
@@ -86,34 +84,6 @@ class WebServiceIntegrationTests {
                 .andExpect(jsonPath("$.screenReaderEnabled").value(true));
     }
 
-    @Test
-    void addTicketPurchase_shouldReturnCreatedEntry() throws Exception {
-        var user = userService.createUser(new CreateUserRequest(
-                "Tarik Kovac",
-                "tarik.kovac@sarajevotransit.ba",
-                "TarikPass123",
-                LanguageCode.EN,
-                ThemeMode.DARK,
-                NotificationChannel.EMAIL));
-
-        String payload = """
-                {
-                  "ticketType": "MONTHLY",
-                  "amount": 53.00,
-                  "paymentMethod": "CARD",
-                  "externalTransactionId": "TXN-TARIK-0099",
-                  "lineCode": "TRAM-3"
-                }
-                """;
-
-        mockMvc.perform(post("/api/v1/users/{userId}/ticket-purchases", user.id())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.ticketType").value("MONTHLY"))
-                .andExpect(jsonPath("$.paymentMethod").value("CARD"))
-                .andExpect(jsonPath("$.externalTransactionId").value("TXN-TARIK-0099"));
-    }
 
     @Test
     void getUserSummary_shouldReturnAggregatedData() throws Exception {
@@ -132,14 +102,6 @@ class WebServiceIntegrationTests {
                 LocalDateTime.now().minusHours(5),
                 16));
 
-        userService.addTicketPurchase(user.id(), new AddTicketPurchaseRequest(
-                TicketType.DAILY,
-                new BigDecimal("2.00"),
-                "CARD",
-                "TXN-LEJLA-0001",
-                "TRAM-3",
-                LocalDateTime.now().minusHours(4)));
-
         loyaltyService.earnPoints(user.id(), new LoyaltyEarnRequest(
                 15,
                 "Daily ticket bonus",
@@ -149,7 +111,7 @@ class WebServiceIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.profile.id").value(user.id()))
                 .andExpect(jsonPath("$.travelHistory.length()").value(1))
-                .andExpect(jsonPath("$.ticketPurchases.length()").value(1))
+                .andExpect(jsonPath("$.ticketPurchases.length()").value(0))
                 .andExpect(jsonPath("$.loyaltyTransactions.length()").value(1));
     }
 

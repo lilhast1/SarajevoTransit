@@ -1,5 +1,4 @@
 {
-    "workbench.colorTheme": "Monokai",
     "sqltools.connections": [
         {
             "ssh": "Disabled",
