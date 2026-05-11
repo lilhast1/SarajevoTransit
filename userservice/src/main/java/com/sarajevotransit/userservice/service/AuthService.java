@@ -27,6 +27,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserProfileRepository userProfileRepository;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Value("${jwt.access-token.expiration}")
     private long accessTokenExpirationSeconds;
@@ -87,8 +88,26 @@ public class AuthService {
     }
 
     @Transactional
-    public void logout(String rawRefreshToken) {
+    public void logout(String rawRefreshToken, String rawAccessToken) {
         refreshTokenRepository.deleteByToken(rawRefreshToken);
+        if (rawAccessToken != null && jwtService.isTokenValid(rawAccessToken)) {
+            tokenBlacklistService.blacklistJti(
+                    jwtService.extractJti(rawAccessToken),
+                    jwtService.extractExpiration(rawAccessToken).toInstant());
+        }
+    }
+
+    @Transactional
+    public void logoutAll(String rawAccessToken) {
+        if (!jwtService.isTokenValid(rawAccessToken)) {
+            throw new InvalidCredentialsException("Invalid access token");
+        }
+        Long userId = jwtService.extractUserId(rawAccessToken);
+        refreshTokenRepository.deleteByUserId(userId);
+        tokenBlacklistService.recordLogoutAll(userId);
+        tokenBlacklistService.blacklistJti(
+                jwtService.extractJti(rawAccessToken),
+                jwtService.extractExpiration(rawAccessToken).toInstant());
     }
 
     private String createRefreshToken(Long userId) {

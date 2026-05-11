@@ -1,16 +1,13 @@
 package com.sarajevotransit.moneyman.exception;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.List;
 
-import java.util.Map;
-
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class ApiErrorResponse {
-    private String error;
-    private String message;
-    private Map<String, String> fieldErrors;
-}
+public record ApiErrorResponse(
+        LocalDateTime timestamp,
+        int status,
+        String error,
+        String message,
+        String path,
+        List<String> validationErrors
+) {}

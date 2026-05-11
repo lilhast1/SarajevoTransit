@@ -11,6 +11,7 @@ import com.sarajevotransit.moneyman.mapper.MoneymanMapper;
 import com.sarajevotransit.moneyman.model.Ticket;
 import com.sarajevotransit.moneyman.service.MoneymanService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -28,6 +29,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/finance")
 @Tag(name = "Finance", description = "Endpoints for ticket purchases and wallet management")
+@SecurityRequirement(name = "bearerAuth")
 public class FinanceController {
 
     private final MoneymanMapper moneymanMapper;
@@ -51,6 +53,7 @@ public class FinanceController {
     }
 
     @GetMapping("/health")
+    @Operation(security = {})
     public String health() {
         return "Finance service is up!";
     }

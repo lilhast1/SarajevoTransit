@@ -2,3 +2,4 @@
 .idea
 .vscode
 otp-data/
+**/keys/rsa-private-key.pem

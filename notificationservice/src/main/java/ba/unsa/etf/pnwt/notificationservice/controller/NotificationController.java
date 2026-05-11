@@ -10,6 +10,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -19,6 +20,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/notifications")
+@SecurityRequirement(name = "bearerAuth")
 public class NotificationController {
 
     private final NotificationService notificationService;

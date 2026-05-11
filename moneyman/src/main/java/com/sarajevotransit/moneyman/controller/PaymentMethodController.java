@@ -5,6 +5,7 @@ import com.sarajevotransit.moneyman.dto.PaymentMethodResponse;
 import com.sarajevotransit.moneyman.model.PaymentMethod;
 import com.sarajevotransit.moneyman.repository.PaymentMethodRepository;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/payments/methods")
 @Tag(name = "Payment Methods", description = "Endpoints to manage user payment methods")
+@SecurityRequirement(name = "bearerAuth")
 public class PaymentMethodController {
 
     private final PaymentMethodRepository repository;

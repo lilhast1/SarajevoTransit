@@ -5,6 +5,8 @@ import ba.unsa.etf.pnwt.notificationservice.dto.PagedResponse;
 import ba.unsa.etf.pnwt.notificationservice.dto.SubscriptionResponse;
 import ba.unsa.etf.pnwt.notificationservice.dto.UpdateSubscriptionRequest;
 import ba.unsa.etf.pnwt.notificationservice.service.SubscriptionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +23,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/subscriptions")
+@SecurityRequirement(name = "bearerAuth")
 public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
@@ -55,6 +58,7 @@ public class SubscriptionController {
     }
 
     @GetMapping("/line/{lineId}")
+    @Operation(security = {})
     public ResponseEntity<PagedResponse<SubscriptionResponse>> getByLineId(
             @PathVariable Long lineId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -70,11 +74,13 @@ public class SubscriptionController {
     }
 
     @GetMapping("/line/{lineId}/active/count")
+    @Operation(security = {})
     public ResponseEntity<Map<String, Long>> countActiveByLine(@PathVariable Long lineId) {
         return ResponseEntity.ok(Map.of("count", subscriptionService.countActiveByLineId(lineId)));
     }
 
     @GetMapping("/line/{lineId}/active-at")
+    @Operation(security = {})
     public ResponseEntity<List<SubscriptionResponse>> getActiveAtTime(
             @PathVariable Long lineId,
             @RequestParam LocalTime time,

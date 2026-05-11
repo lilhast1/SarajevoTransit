@@ -8,6 +8,8 @@ import com.sarajevotransit.feedbackservice.service.LineReviewService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +35,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/reviews")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class LineReviewController {
 
     private final LineReviewService lineReviewService;
@@ -52,6 +55,7 @@ public class LineReviewController {
     }
 
     @GetMapping
+    @Operation(security = {})
     public Page<LineReviewResponse> getReviews(
             @RequestParam @Positive Long lineId,
             @RequestParam(defaultValue = "false") boolean includeHidden,
@@ -60,11 +64,13 @@ public class LineReviewController {
     }
 
     @GetMapping("/{id}")
+    @Operation(security = {})
     public LineReviewResponse getReview(@PathVariable @Positive Long id) {
         return lineReviewService.getReview(id);
     }
 
     @GetMapping("/line/{lineId}/latest")
+    @Operation(security = {})
     public LineReviewResponse getLatestVisibleReviewByLine(@PathVariable @Positive Long lineId) {
         return lineReviewService.getLatestVisibleReviewByLine(lineId);
     }
@@ -97,11 +103,13 @@ public class LineReviewController {
     }
 
     @GetMapping("/summary")
+    @Operation(security = {})
     public List<LineRatingSummaryResponse> getVisibleSummaries() {
         return lineReviewService.getAllVisibleSummaries();
     }
 
     @GetMapping("/summary/{lineId}")
+    @Operation(security = {})
     public LineRatingSummaryResponse getVisibleSummaryByLine(@PathVariable @Positive Long lineId) {
         return lineReviewService.getVisibleSummaryByLineId(lineId);
     }

@@ -27,7 +27,7 @@ OTP_HOST_PORT=18080            # Host port mapped to OTP container port 8080
 OTP_BASE_URL=http://localhost:18080  # URL used by otp-proxy to call OTP
 ```
 
-All services read `DB_PASSWORD` from the environment. If you change it in `.env`, also export it in each terminal before running services:
+All services read `DB_PASSWORD` from the <environment. If you change it in `.env`, also export it in each terminal before running services:
 
 ```bash
 export DB_PASSWORD=yourpassword
@@ -38,7 +38,27 @@ export NOTIF_DB_PASSWORD=yourpassword
 
 ---
 
-### 2. Start Databases
+### 2. Generate RSA Keys (first time only)
+
+JWT tokens are signed with an RSA key pair. The private key lives only in the User Service; the API Gateway uses the public key to verify tokens.
+
+Run this once from the project root:
+
+```bash
+mkdir -p userservice/src/main/resources/keys apigateway/src/main/resources/keys
+
+openssl genrsa -out tmp-rsa.pem 2048
+openssl pkcs8 -topk8 -inform PEM -in tmp-rsa.pem -out userservice/src/main/resources/keys/rsa-private-key.pem -nocrypt
+openssl rsa -in tmp-rsa.pem -pubout -out userservice/src/main/resources/keys/rsa-public-key.pem
+cp userservice/src/main/resources/keys/rsa-public-key.pem apigateway/src/main/resources/keys/rsa-public-key.pem
+rm tmp-rsa.pem
+```
+
+> The private key is gitignored and never committed. You must regenerate it after a fresh clone.
+
+---
+
+### 3. Start Databases
 
 From the project root:
 
@@ -60,7 +80,7 @@ docker compose down -v
 
 ---
 
-### 2. Start Services
+### 4. Start Services
 
 Open a separate terminal for each service and run them **in this order**. Each service must be started from its own directory.
 
@@ -108,7 +128,7 @@ cd apigateway && mvn spring-boot:run
 
 ---
 
-### 3. Verify
+### 5. Verify
 
 - **Eureka dashboard** — http://localhost:8761 — all 7 services should show as UP
 - **Swagger UI** — http://localhost:8080/swagger-ui/index.html — browse and test all APIs

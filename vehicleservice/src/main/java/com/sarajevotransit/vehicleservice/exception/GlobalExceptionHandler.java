@@ -1,5 +1,6 @@
-package ba.unsa.etf.pnwt.notificationservice.exception;
+package com.sarajevotransit.vehicleservice.exception;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -22,9 +23,10 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleNotFound(NotFoundException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.NOT_FOUND, "not_found", ex.getMessage(), request.getRequestURI(), List.of());
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleEntityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
+        String message = ex.getMessage() != null ? ex.getMessage() : "Resource not found";
+        return buildResponse(HttpStatus.NOT_FOUND, "not_found", message, request.getRequestURI(), List.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

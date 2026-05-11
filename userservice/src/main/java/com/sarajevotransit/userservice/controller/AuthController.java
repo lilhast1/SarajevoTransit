@@ -2,6 +2,8 @@ package com.sarajevotransit.userservice.controller;
 
 import com.sarajevotransit.userservice.dto.LoginRequest;
 import com.sarajevotransit.userservice.dto.LoginResponse;
+import com.sarajevotransit.userservice.dto.LogoutAllRequest;
+import com.sarajevotransit.userservice.dto.LogoutRequest;
 import com.sarajevotransit.userservice.dto.RefreshTokenRequest;
 import com.sarajevotransit.userservice.service.AuthService;
 import jakarta.validation.Valid;
@@ -30,8 +32,14 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        authService.logout(request.refreshToken());
+    public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request) {
+        authService.logout(request.refreshToken(), request.accessToken());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/logout-all")
+    public ResponseEntity<Void> logoutAll(@Valid @RequestBody LogoutAllRequest request) {
+        authService.logoutAll(request.accessToken());
         return ResponseEntity.noContent().build();
     }
 }

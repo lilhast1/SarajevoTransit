@@ -3,26 +3,27 @@ package com.sarajevotransit.apigateway.service;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.security.converter.RsaKeyConverters;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 
 @Service
 public class JwtService {
 
-    private final SecretKey signingKey;
+    private final RSAPublicKey publicKey;
 
-    public JwtService(@Value("${jwt.secret}") String secret) {
-        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    public JwtService(@Value("${jwt.public-key}") Resource publicKeyResource) throws IOException {
+        this.publicKey = RsaKeyConverters.x509().convert(publicKeyResource.getInputStream());
     }
 
     public Claims extractClaims(String token) {
         return Jwts.parser()
-                .verifyWith(signingKey)
+                .verifyWith(publicKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

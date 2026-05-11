@@ -1,18 +1,13 @@
 package ba.unsa.etf.pnwt.notificationservice.exception;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.List;
 
-@Getter
-@AllArgsConstructor
-public class ApiErrorResponse {
-
-    private LocalDateTime timestamp;
-    private int status;
-    private String error;
-    private String message;
-    private Map<String, String> validationErrors;
-}
+public record ApiErrorResponse(
+        LocalDateTime timestamp,
+        int status,
+        String error,
+        String message,
+        String path,
+        List<String> validationErrors
+) {}

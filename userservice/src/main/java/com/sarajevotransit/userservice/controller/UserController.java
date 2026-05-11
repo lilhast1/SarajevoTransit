@@ -21,6 +21,8 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -46,12 +48,14 @@ import java.util.List;
 @Validated
 @RequiredArgsConstructor
 @RequestMapping({ "/api/users", "/api/v1/users" })
+@SecurityRequirement(name = "bearerAuth")
 public class UserController {
 
     private final UserService userService;
     private final HttpServletRequest httpRequest;
 
     @PostMapping
+    @Operation(security = {})
     public ResponseEntity<UserProfileResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         UserProfileResponse created = userService.createUser(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()

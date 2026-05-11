@@ -1,4 +1,4 @@
-package ba.unsa.etf.pnwt.routingservice.exception;
+package com.sarajevotransit.vehicleservice.exception;
 
 import java.time.LocalDateTime;
 import java.util.List;

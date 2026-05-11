@@ -26,7 +26,9 @@ import com.sarajevotransit.vehicleservice.model.ServiceRecord;
 import com.sarajevotransit.vehicleservice.model.Vehicle;
 import com.sarajevotransit.vehicleservice.service.VehicleService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -44,6 +46,7 @@ import org.springframework.http.ResponseEntity;
 @RestController
 @RequestMapping("/api/vehicles")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class VehicleController {
 
     private final VehicleService vehicleService;
@@ -54,6 +57,7 @@ public class VehicleController {
     // ── Vehicles ────────────────────────────────────────────────
 
     @GetMapping
+    @Operation(security = {})
     public ResponseEntity<Page<VehicleResponseDTO>> getAllVehicles(
             @PageableDefault(size = 50, sort = "manufactureDate", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<Vehicle> vehicles = vehicleService.getAllVehicles(pageable);
@@ -62,6 +66,7 @@ public class VehicleController {
     }
 
     @GetMapping("/{id}")
+    @Operation(security = {})
     public ResponseEntity<VehicleResponseDTO> getVehicleById(@PathVariable Long id) {
         return ResponseEntity.ok(vehicleMapper.toResponse(vehicleService.getVehicleById(id)));
     }

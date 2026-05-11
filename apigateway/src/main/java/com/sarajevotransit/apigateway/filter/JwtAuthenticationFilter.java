@@ -2,11 +2,13 @@ package com.sarajevotransit.apigateway.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sarajevotransit.apigateway.service.JwtService;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -24,6 +26,9 @@ import java.util.Set;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final String BLACKLIST_PREFIX = "jti:blacklist:";
+    private static final String USER_LOGOUT_ALL_KEY = "user:logout-all:";
 
     // Always public — no token needed regardless of HTTP method
     private static final List<String> PUBLIC_ALWAYS = List.of(
@@ -83,11 +88,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final ObjectMapper objectMapper;
+    private final StringRedisTemplate redisTemplate;
     private final AntPathMatcher matcher = new AntPathMatcher();
 
-    public JwtAuthenticationFilter(JwtService jwtService, ObjectMapper objectMapper) {
+    public JwtAuthenticationFilter(JwtService jwtService, ObjectMapper objectMapper,
+                                   StringRedisTemplate redisTemplate) {
         this.jwtService = jwtService;
         this.objectMapper = objectMapper;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -115,7 +123,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 4. Validate JWT
+        // 4. Validate JWT structure and signature
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             sendError(response, HttpStatus.UNAUTHORIZED, "unauthorized", "Missing or malformed Authorization header");
@@ -128,10 +136,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String userId = jwtService.extractUserId(token);
-        String role = jwtService.extractRole(token);
+        // 5. Check revocation via Redis
+        Claims claims = jwtService.extractClaims(token);
+        String jti = claims.getId();
 
-        // 5. Role-based checks
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + jti))) {
+            sendError(response, HttpStatus.UNAUTHORIZED, "unauthorized", "Token has been revoked");
+            return;
+        }
+
+        String userId = claims.getSubject();
+        String fenceVal = redisTemplate.opsForValue().get(USER_LOGOUT_ALL_KEY + userId);
+        if (fenceVal != null) {
+            long issuedAt = claims.getIssuedAt().getTime() / 1000;
+            if (issuedAt < Long.parseLong(fenceVal)) {
+                sendError(response, HttpStatus.UNAUTHORIZED, "unauthorized", "Token has been revoked");
+                return;
+            }
+        }
+
+        String role = claims.get("role", String.class);
+
+        // 6. Role-based checks
         if (requiresAdmin(path, method) && !"ADMIN".equals(role)) {
             sendError(response, HttpStatus.FORBIDDEN, "forbidden", "Admin access required");
             return;

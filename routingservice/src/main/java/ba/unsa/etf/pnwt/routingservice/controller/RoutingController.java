@@ -15,6 +15,7 @@ import ba.unsa.etf.pnwt.routingservice.dto.TimetableRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.TimetableResponse;
 import ba.unsa.etf.pnwt.routingservice.service.RoutingCrudService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -61,18 +62,21 @@ public class RoutingController {
 
     @PostMapping("/lines")
     @Operation(summary = "Create line")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<LineResponse> createLine(@Valid @RequestBody LineRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(routingCrudService.createLine(request));
     }
 
     @PutMapping("/lines/{id}")
     @Operation(summary = "Update line")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<LineResponse> updateLine(@PathVariable Integer id, @Valid @RequestBody LineRequest request) {
         return ResponseEntity.ok(routingCrudService.updateLine(id, request));
     }
 
     @DeleteMapping("/lines/{id}")
     @Operation(summary = "Delete line")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Void> deleteLine(@PathVariable Integer id) {
         routingCrudService.deleteLine(id);
         return ResponseEntity.noContent().build();
@@ -95,18 +99,21 @@ public class RoutingController {
 
     @PostMapping("/directions")
     @Operation(summary = "Create direction")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<DirectionResponse> createDirection(@Valid @RequestBody DirectionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(routingCrudService.createDirection(request));
     }
 
     @PutMapping("/directions/{id}")
     @Operation(summary = "Update direction")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<DirectionResponse> updateDirection(@PathVariable Integer id, @Valid @RequestBody DirectionRequest request) {
         return ResponseEntity.ok(routingCrudService.updateDirection(id, request));
     }
 
     @DeleteMapping("/directions/{id}")
     @Operation(summary = "Delete direction")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Void> deleteDirection(@PathVariable Integer id) {
         routingCrudService.deleteDirection(id);
         return ResponseEntity.noContent().build();
@@ -129,18 +136,21 @@ public class RoutingController {
 
     @PostMapping("/stations")
     @Operation(summary = "Create station")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<StationResponse> createStation(@Valid @RequestBody StationRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(routingCrudService.createStation(request));
     }
 
     @PutMapping("/stations/{id}")
     @Operation(summary = "Update station")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<StationResponse> updateStation(@PathVariable Integer id, @Valid @RequestBody StationRequest request) {
         return ResponseEntity.ok(routingCrudService.updateStation(id, request));
     }
 
     @DeleteMapping("/stations/{id}")
     @Operation(summary = "Delete station")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Void> deleteStation(@PathVariable Integer id) {
         routingCrudService.deleteStation(id);
         return ResponseEntity.noContent().build();
@@ -164,18 +174,21 @@ public class RoutingController {
 
     @PostMapping("/timetables")
     @Operation(summary = "Create timetable")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<TimetableResponse> createTimetable(@Valid @RequestBody TimetableRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(routingCrudService.createTimetable(request));
     }
 
     @PutMapping("/timetables/{id}")
     @Operation(summary = "Update timetable")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<TimetableResponse> updateTimetable(@PathVariable Integer id, @Valid @RequestBody TimetableRequest request) {
         return ResponseEntity.ok(routingCrudService.updateTimetable(id, request));
     }
 
     @DeleteMapping("/timetables/{id}")
     @Operation(summary = "Delete timetable")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Void> deleteTimetable(@PathVariable Integer id) {
         routingCrudService.deleteTimetable(id);
         return ResponseEntity.noContent().build();
@@ -189,18 +202,21 @@ public class RoutingController {
 
     @PostMapping("/direction-stations")
     @Operation(summary = "Create direction station relation")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<DirectionStationResponse> createDirectionStation(@Valid @RequestBody DirectionStationRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(routingCrudService.createDirectionStation(request));
     }
 
     @PutMapping("/direction-stations/{id}")
     @Operation(summary = "Update direction station relation")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<DirectionStationResponse> updateDirectionStation(@PathVariable Integer id, @Valid @RequestBody DirectionStationRequest request) {
         return ResponseEntity.ok(routingCrudService.updateDirectionStation(id, request));
     }
 
     @DeleteMapping("/direction-stations/{id}")
     @Operation(summary = "Delete direction station relation")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Void> deleteDirectionStation(@PathVariable Integer id) {
         routingCrudService.deleteDirectionStation(id);
         return ResponseEntity.noContent().build();
@@ -219,18 +235,21 @@ public class RoutingController {
     }
     @PostMapping("/route-points")
     @Operation(summary = "Create route point")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<RoutePointResponse> createRoutePoint(@Valid @RequestBody RoutePointRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(routingCrudService.createRoutePoint(request));
     }
 
     @PutMapping("/route-points/{id}")
     @Operation(summary = "Update route point")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<RoutePointResponse> updateRoutePoint(@PathVariable Integer id, @Valid @RequestBody RoutePointRequest request) {
         return ResponseEntity.ok(routingCrudService.updateRoutePoint(id, request));
     }
 
     @DeleteMapping("/route-points/{id}")
     @Operation(summary = "Delete route point")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Void> deleteRoutePoint(@PathVariable Integer id) {
         routingCrudService.deleteRoutePoint(id);
         return ResponseEntity.noContent().build();

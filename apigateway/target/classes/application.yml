@@ -2,11 +2,15 @@ server:
   port: 8080
 
 jwt:
-  secret: ${JWT_SECRET:dev-sarajevo-transit-secret-key-min-256bits-change-in-prod}
+  public-key: classpath:keys/rsa-public-key.pem
 
 spring:
   application:
     name: apigateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   profiles:
     default: dev
   config:

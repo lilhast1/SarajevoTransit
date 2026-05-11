@@ -8,6 +8,7 @@ import com.sarajevotransit.userservice.dto.PaginationRequest;
 import com.sarajevotransit.userservice.service.LoyaltyService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,7 @@ import java.net.URI;
 @Validated
 @RequiredArgsConstructor
 @RequestMapping({ "/api/users/{userId}/loyalty", "/api/v1/users/{userId}/loyalty" })
+@SecurityRequirement(name = "bearerAuth")
 public class LoyaltyController {
 
     private final LoyaltyService loyaltyService;

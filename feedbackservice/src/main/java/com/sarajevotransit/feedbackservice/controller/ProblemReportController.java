@@ -12,6 +12,8 @@ import com.sarajevotransit.feedbackservice.service.ProblemReportService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +38,7 @@ import java.net.URI;
 @RestController
 @RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class ProblemReportController {
 
     private final ProblemReportService problemReportService;
@@ -117,6 +120,7 @@ public class ProblemReportController {
     }
 
     @GetMapping("/line/{lineId}/count")
+    @Operation(security = {})
     public LineReportCountResponse countReportsByLine(@PathVariable @Positive Long lineId) {
         return problemReportService.countReportsByLine(lineId);
     }

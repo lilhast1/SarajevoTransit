@@ -5,6 +5,7 @@ import com.sarajevotransit.feedbackservice.dto.LineModerationResponse;
 import com.sarajevotransit.feedbackservice.service.FeedbackWorkflowService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/workflows")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class FeedbackWorkflowController {
 
     private final FeedbackWorkflowService feedbackWorkflowService;

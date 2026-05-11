@@ -2,6 +2,7 @@ package ba.unsa.etf.pnwt.routingservice.gtfs;
 
 import ba.unsa.etf.pnwt.routingservice.exception.ForbiddenException;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/admin/gtfs")
 @Tag(name = "GTFS Export", description = "Admin endpoints for GTFS generation")
+@SecurityRequirement(name = "bearerAuth")
 public class GtfsExportController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GtfsExportController.class);
