@@ -369,45 +369,55 @@ export const transitApi = {
     }
   },
 
-  // ── Auth (mock-only – handled by userservice, not routingservice) ─────────
+  // ── Auth (attempts real backend, falls back to mock) ─────────────────────
   async register({ fullName, email, password }) {
-    const existing = mockUsers.find((user) => user.email.toLowerCase() === email.toLowerCase())
-    if (existing) throw new Error('Email already in use')
+    try {
+      // Try to call real backend
+      return await gatewayClient.register({ fullName, email, password })
+    } catch (error) {
+      // Fallback to mock data if backend unavailable
+      const existing = mockUsers.find((user) => user.email.toLowerCase() === email.toLowerCase())
+      if (existing) throw new Error('Email already in use')
 
-    const nextId = mockUsers.length + 1
-    mockUsers.push({ id: nextId, fullName, email, password })
+      const nextId = mockUsers.length + 1
+      mockUsers.push({ id: nextId, fullName, email, password })
 
-    return {
-      accessToken: 'mock-access-token',
-      refreshToken: 'mock-refresh-token',
-      tokenType: 'Bearer',
-      expiresIn: 3600,
-      userId: nextId,
-      email,
-      fullName,
-      role: 'USER',
-      gatewayOnly: isGatewayOnly,
+      return {
+        accessToken: 'mock-access-token',
+        refreshToken: 'mock-refresh-token',
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        userId: nextId,
+        email,
+        fullName,
+        role: 'USER',
+      }
     }
   },
 
   async login({ email, password }) {
-    const user = mockUsers.find(
-      (candidate) =>
-        candidate.email.toLowerCase() === email.toLowerCase() && candidate.password === password,
-    )
+    try {
+      // Try to call real backend
+      return await gatewayClient.login({ email, password })
+    } catch (error) {
+      // Fallback to mock data if backend unavailable
+      const user = mockUsers.find(
+        (candidate) =>
+          candidate.email.toLowerCase() === email.toLowerCase() && candidate.password === password,
+      )
 
-    if (!user) throw new Error('Invalid email or password')
+      if (!user) throw new Error('Invalid email or password')
 
-    return {
-      accessToken: 'mock-access-token',
-      refreshToken: 'mock-refresh-token',
-      tokenType: 'Bearer',
-      expiresIn: 3600,
-      userId: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      role: 'USER',
-      gatewayOnly: isGatewayOnly,
+      return {
+        accessToken: 'mock-access-token',
+        refreshToken: 'mock-refresh-token',
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        userId: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: 'USER',
+      }
     }
   },
 

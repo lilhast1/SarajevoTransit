@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { saveAuthSession, getAuthSession, clearAuthSession, enrichSessionWithMetadata } from '../utils/authStorage'
 
 const STORAGE_KEYS = {
   theme: 'sarajevo-transit-theme',
-  session: 'sarajevo-transit-session',
   favorites: 'sarajevo-transit-favorites',
   history: 'sarajevo-transit-history',
 }
@@ -27,7 +27,7 @@ function readStorage(key, fallback) {
 
 export function AppProvider({ children }) {
   const [theme, setTheme] = useState(getInitialTheme)
-  const [session, setSession] = useState(() => readStorage(STORAGE_KEYS.session, null))
+  const [session, setSession] = useState(() => getAuthSession())
   const [favorites, setFavorites] = useState(() => readStorage(STORAGE_KEYS.favorites, { lines: [], stops: [] }))
   const [tripHistory, setTripHistory] = useState(() => readStorage(STORAGE_KEYS.history, []))
 
@@ -38,9 +38,9 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     if (session) {
-      window.localStorage.setItem(STORAGE_KEYS.session, JSON.stringify(session))
+      saveAuthSession(enrichSessionWithMetadata(session))
     } else {
-      window.localStorage.removeItem(STORAGE_KEYS.session)
+      clearAuthSession()
     }
   }, [session])
 
