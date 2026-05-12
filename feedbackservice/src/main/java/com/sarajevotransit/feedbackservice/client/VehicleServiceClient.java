@@ -35,9 +35,13 @@ public class VehicleServiceClient {
                     .uri(url)
                     .retrieve()
                     .onStatus(status -> status.value() == 404,
-                            (request, response) -> { throw new NotFoundException("Vehicle with id " + vehicleId + " not found."); })
+                            (request, clientResponse) -> {
+                                throw new NotFoundException("Vehicle with id " + vehicleId + " not found.");
+                            })
                     .onStatus(status -> status.is5xxServerError(),
-                            (request, response) -> { throw new ServiceUnavailableException("Vehicle service is unavailable."); })
+                            (request, clientResponse) -> {
+                                throw new ServiceUnavailableException("Vehicle service is unavailable.");
+                            })
                     .body(VehicleSnapshot.class);
             if (response == null) {
                 throw new ServiceUnavailableException("Vehicle service returned an empty response.");

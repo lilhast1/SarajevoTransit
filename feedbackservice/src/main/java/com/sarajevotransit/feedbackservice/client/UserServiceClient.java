@@ -39,9 +39,13 @@ public class UserServiceClient {
                     .uri(url)
                     .retrieve()
                     .onStatus(status -> status.value() == 404,
-                            (request, response) -> { throw new NotFoundException("User with id " + userId + " not found."); })
+                            (request, clientResponse) -> {
+                                throw new NotFoundException("User with id " + userId + " not found.");
+                            })
                     .onStatus(status -> status.is5xxServerError(),
-                            (request, response) -> { throw new ServiceUnavailableException("User service is unavailable."); })
+                            (request, clientResponse) -> {
+                                throw new ServiceUnavailableException("User service is unavailable.");
+                            })
                     .body(UserProfileSnapshot.class);
             if (response == null) {
                 throw new ServiceUnavailableException("User service returned an empty response.");

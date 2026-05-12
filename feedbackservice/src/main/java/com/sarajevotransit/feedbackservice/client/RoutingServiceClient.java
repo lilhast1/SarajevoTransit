@@ -35,9 +35,13 @@ public class RoutingServiceClient {
                     .uri(url)
                     .retrieve()
                     .onStatus(status -> status.value() == 404,
-                            (request, response) -> { throw new NotFoundException("Line with id " + lineId + " not found."); })
+                            (request, clientResponse) -> {
+                                throw new NotFoundException("Line with id " + lineId + " not found.");
+                            })
                     .onStatus(status -> status.is5xxServerError(),
-                            (request, response) -> { throw new ServiceUnavailableException("Routing service is unavailable."); })
+                            (request, clientResponse) -> {
+                                throw new ServiceUnavailableException("Routing service is unavailable.");
+                            })
                     .body(LineSnapshot.class);
             if (response == null) {
                 throw new ServiceUnavailableException("Routing service returned an empty response.");

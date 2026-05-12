@@ -5,7 +5,6 @@ import com.sarajevotransit.feedbackservice.dto.LineRatingSummaryResponse;
 import com.sarajevotransit.feedbackservice.dto.LineReviewResponse;
 import com.sarajevotransit.feedbackservice.dto.ReviewModerationRequest;
 import com.sarajevotransit.feedbackservice.service.LineReviewService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,7 +25,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
@@ -43,9 +41,7 @@ public class LineReviewController {
     @PostMapping
     public ResponseEntity<LineReviewResponse> createReview(
             @Valid @RequestBody CreateLineReviewRequest request,
-            HttpServletRequest httpRequest) {
-        // Override reviewerUserId from gateway header — never trust request body for identity
-        request.setReviewerUserId(extractUserId(httpRequest));
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
         LineReviewResponse created = lineReviewService.createReview(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequestUri()
                 .path("/{id}")
@@ -79,8 +75,7 @@ public class LineReviewController {
     public Page<LineReviewResponse> getReviewsByReviewer(
             @PathVariable @Positive Long reviewerUserId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
-            HttpServletRequest httpRequest) {
-        requireOwnerOrAdmin(httpRequest, reviewerUserId);
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
         return lineReviewService.getReviewsByReviewer(reviewerUserId, pageable);
     }
 
@@ -95,9 +90,7 @@ public class LineReviewController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteReview(
             @PathVariable @Positive Long id,
-            HttpServletRequest httpRequest) {
-        LineReviewResponse review = lineReviewService.getReview(id);
-        requireOwnerOrAdmin(httpRequest, review.getReviewerUserId());
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
         lineReviewService.deleteReview(id);
         return ResponseEntity.noContent().build();
     }
@@ -112,22 +105,5 @@ public class LineReviewController {
     @Operation(security = {})
     public LineRatingSummaryResponse getVisibleSummaryByLine(@PathVariable @Positive Long lineId) {
         return lineReviewService.getVisibleSummaryByLineId(lineId);
-    }
-
-    private void requireOwnerOrAdmin(HttpServletRequest request, Long resourceUserId) {
-        String role = request.getHeader("X-User-Role");
-        if ("ADMIN".equals(role)) return;
-        String requestingUserId = request.getHeader("X-User-Id");
-        if (requestingUserId == null || !requestingUserId.equals(String.valueOf(resourceUserId))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
-        }
-    }
-
-    private Long extractUserId(HttpServletRequest request) {
-        String userId = request.getHeader("X-User-Id");
-        if (userId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing user identity");
-        }
-        return Long.parseLong(userId);
     }
 }

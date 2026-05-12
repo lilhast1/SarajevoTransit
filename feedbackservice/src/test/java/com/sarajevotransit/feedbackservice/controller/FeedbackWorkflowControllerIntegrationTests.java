@@ -13,9 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import com.sarajevotransit.feedbackservice.config.FeedbackServiceTestClientsConfig;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,114 +29,115 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(FeedbackServiceTestClientsConfig.class)
 class FeedbackWorkflowControllerIntegrationTests {
 
-    private MockMvc mockMvc;
+        private MockMvc mockMvc;
 
-    @Autowired
-    private WebApplicationContext webApplicationContext;
+        @Autowired
+        private WebApplicationContext webApplicationContext;
 
-    @Autowired
-    private ProblemReportRepository problemReportRepository;
+        @Autowired
+        private ProblemReportRepository problemReportRepository;
 
-    @Autowired
-    private LineReviewRepository lineReviewRepository;
+        @Autowired
+        private LineReviewRepository lineReviewRepository;
 
-    @BeforeEach
-    void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-        lineReviewRepository.deleteAll();
-        problemReportRepository.deleteAll();
-    }
+        @BeforeEach
+        void setUp() {
+                mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+                lineReviewRepository.deleteAll();
+                problemReportRepository.deleteAll();
+        }
 
-    @Test
-    void moderateLineFeedback_shouldUpdateReportsAndReviews() throws Exception {
-        ProblemReport report = new ProblemReport();
-        report.setReporterUserId(5001L);
-        report.setLineId(88L);
-        report.setStationId(901L);
-        report.setCategory(ProblemCategory.DELAY);
-        report.setDescription("Workflow report");
-        report.setPhotoUrls(List.of("https://example.com/workflow-report.png"));
-        report.setStatus(ReportStatus.RECEIVED);
-        problemReportRepository.saveAndFlush(report);
+        @Test
+        void moderateLineFeedback_shouldUpdateReportsAndReviews() throws Exception {
+                ProblemReport report = new ProblemReport();
+                report.setReporterUserId(5001L);
+                report.setLineId(88L);
+                report.setStationId(901L);
+                report.setCategory(ProblemCategory.DELAY);
+                report.setDescription("Workflow report");
+                report.setPhotoUrls(List.of("https://example.com/workflow-report.png"));
+                report.setStatus(ReportStatus.RECEIVED);
+                problemReportRepository.saveAndFlush(report);
 
-        LineReview review = new LineReview();
-        review.setReviewerUserId(6001L);
-        review.setLineId(88L);
-        review.setRating(3);
-        review.setReviewText("Workflow review");
-        review.setRideDate(LocalDate.now().minusDays(1));
-        review.setModerationStatus(ModerationStatus.VISIBLE);
-        lineReviewRepository.saveAndFlush(review);
+                LineReview review = new LineReview();
+                review.setReviewerUserId(6001L);
+                review.setLineId(88L);
+                review.setRating(3);
+                review.setReviewText("Workflow review");
+                review.setRideDate(LocalDate.now().minusDays(1));
+                review.setModerationStatus(ModerationStatus.VISIBLE);
+                lineReviewRepository.saveAndFlush(review);
 
-        String payload = """
-                {
-                  "reportStatus": "RESOLVED",
-                  "moderationStatus": "HIDDEN"
-                }
-                """;
+                String payload = """
+                                {
+                                  "reportStatus": "RESOLVED",
+                                  "moderationStatus": "HIDDEN"
+                                }
+                                """;
 
-        mockMvc.perform(post("/api/v1/workflows/lines/88/moderation")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.lineId").value(88))
-                .andExpect(jsonPath("$.reportStatus").value("RESOLVED"))
-                .andExpect(jsonPath("$.moderationStatus").value("HIDDEN"))
-                .andExpect(jsonPath("$.updatedReports").value(1))
-                .andExpect(jsonPath("$.updatedReviews").value(1));
+                mockMvc.perform(post("/api/v1/workflows/lines/88/moderation")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.lineId").value(88))
+                                .andExpect(jsonPath("$.reportStatus").value("RESOLVED"))
+                                .andExpect(jsonPath("$.moderationStatus").value("HIDDEN"))
+                                .andExpect(jsonPath("$.updatedReports").value(1))
+                                .andExpect(jsonPath("$.updatedReviews").value(1));
 
-        ProblemReport updatedReport = problemReportRepository.findByLineIdOrderByCreatedAtDesc(88L).getFirst();
-        LineReview updatedReview = lineReviewRepository.findByLineIdOrderByCreatedAtDesc(88L).getFirst();
+                ProblemReport updatedReport = problemReportRepository.findByLineIdOrderByCreatedAtDesc(88L).getFirst();
+                LineReview updatedReview = lineReviewRepository.findByLineIdOrderByCreatedAtDesc(88L).getFirst();
 
-        assertThat(updatedReport.getStatus()).isEqualTo(ReportStatus.RESOLVED);
-        assertThat(updatedReview.getModerationStatus()).isEqualTo(ModerationStatus.HIDDEN);
-    }
+                assertThat(updatedReport.getStatus()).isEqualTo(ReportStatus.RESOLVED);
+                assertThat(updatedReview.getModerationStatus()).isEqualTo(ModerationStatus.HIDDEN);
+        }
 
-    @Test
-    void moderateLineFeedback_whenNoFeedbackExists_shouldReturnNotFound() throws Exception {
-        String payload = """
-                {
-                  "reportStatus": "RESOLVED",
-                  "moderationStatus": "HIDDEN"
-                }
-                """;
+        @Test
+        void moderateLineFeedback_whenNoFeedbackExists_shouldReturnNotFound() throws Exception {
+                String payload = """
+                                {
+                                  "reportStatus": "RESOLVED",
+                                  "moderationStatus": "HIDDEN"
+                                }
+                                """;
 
-        mockMvc.perform(post("/api/v1/workflows/lines/999/moderation")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("not_found"));
-    }
+                mockMvc.perform(post("/api/v1/workflows/lines/999/moderation")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isNotFound())
+                                .andExpect(jsonPath("$.error").value("not_found"));
+        }
 
-    @Test
-    void moderateLineFeedback_withMissingBodyFields_shouldReturnBadRequest() throws Exception {
-        String payload = """
-                {
-                }
-                """;
+        @Test
+        void moderateLineFeedback_withMissingBodyFields_shouldReturnBadRequest() throws Exception {
+                String payload = """
+                                {
+                                }
+                                """;
 
-        mockMvc.perform(post("/api/v1/workflows/lines/88/moderation")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("bad_request"));
-    }
+                mockMvc.perform(post("/api/v1/workflows/lines/88/moderation")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("bad_request"));
+        }
 
-    @Test
-    void moderateLineFeedback_withInvalidPathVariable_shouldReturnBadRequest() throws Exception {
-        String payload = """
-                {
-                  "reportStatus": "RESOLVED",
-                  "moderationStatus": "HIDDEN"
-                }
-                """;
+        @Test
+        void moderateLineFeedback_withInvalidPathVariable_shouldReturnBadRequest() throws Exception {
+                String payload = """
+                                {
+                                  "reportStatus": "RESOLVED",
+                                  "moderationStatus": "HIDDEN"
+                                }
+                                """;
 
-        mockMvc.perform(post("/api/v1/workflows/lines/0/moderation")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("bad_request"));
-    }
+                mockMvc.perform(post("/api/v1/workflows/lines/0/moderation")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("bad_request"));
+        }
 }

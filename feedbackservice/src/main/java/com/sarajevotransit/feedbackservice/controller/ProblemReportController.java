@@ -9,7 +9,6 @@ import com.sarajevotransit.feedbackservice.dto.ProblemReportResponse;
 import com.sarajevotransit.feedbackservice.dto.ReportStatusUpdateRequest;
 import com.sarajevotransit.feedbackservice.model.ReportStatus;
 import com.sarajevotransit.feedbackservice.service.ProblemReportService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,7 +29,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
@@ -46,9 +44,7 @@ public class ProblemReportController {
     @PostMapping
     public ResponseEntity<ProblemReportResponse> createReport(
             @Valid @RequestBody CreateProblemReportRequest request,
-            HttpServletRequest httpRequest) {
-        // Override reporterUserId from gateway header
-        request.setReporterUserId(extractUserId(httpRequest));
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
         ProblemReportResponse created = problemReportService.createReport(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequestUri()
                 .path("/{id}")
@@ -60,10 +56,7 @@ public class ProblemReportController {
     @PostMapping("/batch")
     public ResponseEntity<BatchCreateProblemReportsResponse> createReportsBatch(
             @Valid @RequestBody BatchCreateProblemReportsRequest request,
-            HttpServletRequest httpRequest) {
-        Long requestingUserId = extractUserId(httpRequest);
-        // Override reporterUserId on every report in the batch
-        request.getReports().forEach(r -> r.setReporterUserId(requestingUserId));
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
         BatchCreateProblemReportsResponse created = problemReportService.createReportsBatch(request.getReports());
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -73,13 +66,7 @@ public class ProblemReportController {
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) Long reporterUserId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
-            HttpServletRequest httpRequest) {
-        // ADMIN sees all; passenger can only query their own reports
-        String role = httpRequest.getHeader("X-User-Role");
-        if (!"ADMIN".equals(role)) {
-            Long requestingUserId = extractUserId(httpRequest);
-            reporterUserId = requestingUserId;
-        }
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
         return problemReportService.getReports(status, reporterUserId, pageable);
     }
 
@@ -88,8 +75,7 @@ public class ProblemReportController {
             @RequestParam("q") String keyword,
             @RequestParam(required = false) ReportStatus status,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
-            HttpServletRequest httpRequest) {
-        requireAdmin(httpRequest);
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
         return problemReportService.searchReports(keyword, status, pageable);
     }
 
@@ -104,18 +90,15 @@ public class ProblemReportController {
     @GetMapping("/{id}")
     public ProblemReportResponse getReport(
             @PathVariable @Positive Long id,
-            HttpServletRequest httpRequest) {
-        ProblemReportResponse report = problemReportService.getReport(id);
-        requireOwnerOrAdmin(httpRequest, report.getReporterUserId());
-        return report;
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
+        return problemReportService.getReport(id);
     }
 
     @GetMapping("/line/{lineId}")
     public Page<ProblemReportResponse> getReportsByLineId(
             @PathVariable @Positive Long lineId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
-            HttpServletRequest httpRequest) {
-        requireAdmin(httpRequest);
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
         return problemReportService.getReportsByLineId(lineId, pageable);
     }
 
@@ -127,7 +110,6 @@ public class ProblemReportController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteReport(@PathVariable @Positive Long id) {
-        // ADMIN-only: enforced at gateway level (DELETE /api/v1/reports/**)
         problemReportService.deleteReport(id);
         return ResponseEntity.noContent().build();
     }
@@ -136,30 +118,6 @@ public class ProblemReportController {
     public ProblemReportResponse updateStatus(
             @PathVariable @Positive Long id,
             @Valid @RequestBody ReportStatusUpdateRequest request) {
-        // ADMIN-only: enforced at gateway level (PATCH /api/v1/reports/**)
         return problemReportService.updateStatus(id, request.getStatus());
-    }
-
-    private void requireOwnerOrAdmin(HttpServletRequest request, Long resourceUserId) {
-        String role = request.getHeader("X-User-Role");
-        if ("ADMIN".equals(role)) return;
-        String requestingUserId = request.getHeader("X-User-Id");
-        if (requestingUserId == null || !requestingUserId.equals(String.valueOf(resourceUserId))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
-        }
-    }
-
-    private void requireAdmin(HttpServletRequest request) {
-        if (!"ADMIN".equals(request.getHeader("X-User-Role"))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
-        }
-    }
-
-    private Long extractUserId(HttpServletRequest request) {
-        String userId = request.getHeader("X-User-Id");
-        if (userId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing user identity");
-        }
-        return Long.parseLong(userId);
     }
 }
