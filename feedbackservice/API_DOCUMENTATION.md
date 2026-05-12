@@ -19,6 +19,28 @@ Common error envelope:
 }
 ```
 
+## Service boundaries and dependencies
+
+Feedbackservice provides:
+
+- Problem reporting (create, view, search, update) for line/vehicle issues at `/api/v1/reports`.
+- Report lifecycle management via PATCH status updates at `/api/v1/reports/:id/status`.
+- Line reviews and ratings at `/api/v1/reviews`.
+- Review summaries and aggregation at `/api/v1/reviews/summary` and `/api/v1/reviews/summary/:lineId`.
+- Moderation for reviews (and line-level workflows) at `/api/v1/reviews/:id/moderation-status` and
+  `/api/v1/workflows/lines/:lineId/moderation`.
+
+Conceptual dependencies (future integrations):
+
+- UserService: validate `reporterUserId`/`reviewerUserId` and optionally fetch user name/email for admin dashboards.
+- RoutingService: validate `lineId` and resolve line names for display.
+- VehicleService: validate `vehicleId`/`vehicleRegistrationNumber`/`vehicleInternalId`.
+- NotificationService: notify submitters on status changes and alert admins on moderation flags.
+
+Notes:
+
+- For this assignment iteration, feedbackservice runs standalone and does not call other services.
+
 ## 1) Create Problem Report
 
 Title
@@ -113,6 +135,7 @@ curl -X POST "http://localhost:8080/api/v1/reports" \
 Notes
 
 - 2026-04-12 (Copilot): At least one vehicle reference field or stationId must be provided.
+- 2026-05-12 (Copilot): If `X-User-Id` is present, it overrides `reporterUserId` from the body.
 
 ## 2) Show All Problem Reports
 
@@ -419,6 +442,7 @@ curl -X POST "http://localhost:8080/api/v1/reviews" \
 Notes
 
 - 2026-04-12 (Copilot): rideDate cannot be future and must be within last 30 days.
+- 2026-05-12 (Copilot): If `X-User-Id` is present, it overrides `reviewerUserId` from the body.
 
 ## 7) Show Line Reviews by Line
 
@@ -740,6 +764,179 @@ curl "http://localhost:8080/api/v1/reviews/summary/6"
 Notes
 
 - 2026-04-12 (Copilot): If no visible reviews exist, returns averageRating=0.0 and totalReviews=0.
+
+## 13) Search Problem Reports
+
+Title
+
+- Search Problem Reports
+
+URL
+
+- /api/v1/reports/search
+
+Method
+
+- GET
+
+URL Params
+
+- Required:
+  - q=[string, not blank]
+- Optional:
+  - status=[enum: RECEIVED|IN_PROGRESS|RESOLVED]
+
+Data Params
+
+- none
+
+Success Response
+
+```text
+Code: 200 OK
+Content: [ { "id": 101, "description": "Tram delay", "status": "RECEIVED" } ]
+```
+
+Error Response
+
+```text
+Code: 400 Bad Request
+Content: { "message": "Search keyword must not be blank." }
+```
+
+Sample Call
+
+```bash
+curl "http://localhost:8080/api/v1/reports/search?q=delay&status=RECEIVED"
+```
+
+Notes
+
+- 2026-05-12 (Copilot): Intended for admin dashboards; gateway typically restricts access.
+
+## 14) Patch Problem Report (JSON Patch)
+
+Title
+
+- Patch Problem Report (JSON Patch)
+
+URL
+
+- /api/v1/reports/:id
+
+Method
+
+- PATCH
+
+URL Params
+
+- Required:
+  - id=[integer]
+  - example: id=101
+- Optional: none
+
+Headers
+
+- Content-Type: application/json-patch+json
+
+Data Params
+
+```json
+[
+  { "op": "replace", "path": "/description", "value": "Updated description" },
+  { "op": "replace", "path": "/status", "value": "IN_PROGRESS" }
+]
+```
+
+Success Response
+
+```text
+Code: 200 OK
+Content: { "id": 101, "status": "IN_PROGRESS" }
+```
+
+Error Response
+
+```text
+Code: 400 Bad Request
+Content: { "message": "Invalid JSON Patch payload." }
+```
+
+OR
+
+```text
+Code: 404 Not Found
+Content: { "message": "Problem report not found: id=101" }
+```
+
+Sample Call
+
+```bash
+curl -X PATCH "http://localhost:8080/api/v1/reports/101" \
+  -H "Content-Type: application/json-patch+json" \
+  -d '[{"op":"replace","path":"/description","value":"Updated description"}]'
+```
+
+Notes
+
+- 2026-05-12 (Copilot): Supported paths include `/lineId`, `/vehicleId`, `/vehicleRegistrationNumber`,
+  `/vehicleInternalId`, `/vehicleType`, `/stationId`, `/category`, `/description`, `/photoUrls`, `/status`.
+
+## 15) Moderate Line Feedback (Workflow)
+
+Title
+
+- Moderate Line Feedback (Workflow)
+
+URL
+
+- /api/v1/workflows/lines/:lineId/moderation
+
+Method
+
+- POST
+
+URL Params
+
+- Required:
+  - lineId=[integer, > 0]
+  - example: lineId=6
+- Optional: none
+
+Data Params
+
+```json
+{
+  "reportStatus": "RESOLVED",
+  "moderationStatus": "HIDDEN"
+}
+```
+
+Success Response
+
+```text
+Code: 200 OK
+Content: { "lineId": 6, "reportStatus": "RESOLVED", "moderationStatus": "HIDDEN", "updatedReports": 4, "updatedReviews": 2 }
+```
+
+Error Response
+
+```text
+Code: 404 Not Found
+Content: { "message": "No feedback entries found for lineId=6" }
+```
+
+Sample Call
+
+```bash
+curl -X POST "http://localhost:8080/api/v1/workflows/lines/6/moderation" \
+  -H "Content-Type: application/json" \
+  -d '{"reportStatus":"RESOLVED","moderationStatus":"HIDDEN"}'
+```
+
+Notes
+
+- 2026-05-12 (Copilot): Updates all reports and reviews for the line in a single workflow action.
 
 ## Assignment artifacts
 

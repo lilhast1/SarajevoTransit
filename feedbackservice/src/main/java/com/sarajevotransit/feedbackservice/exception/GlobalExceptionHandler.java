@@ -33,6 +33,13 @@ public class GlobalExceptionHandler {
                 List.of());
     }
 
+        @ExceptionHandler(ServiceUnavailableException.class)
+        public ResponseEntity<ApiErrorResponse> handleServiceUnavailable(ServiceUnavailableException exception,
+            HttpServletRequest request) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "service_unavailable", exception.getMessage(),
+            request.getRequestURI(), List.of());
+        }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationError(MethodArgumentNotValidException exception,
             HttpServletRequest request) {

@@ -1,6 +1,8 @@
 package com.sarajevotransit.feedbackservice.service;
 
 import com.sarajevotransit.feedbackservice.dto.LineModerationResponse;
+import com.sarajevotransit.feedbackservice.client.NotificationServiceClient;
+import com.sarajevotransit.feedbackservice.client.RoutingServiceClient;
 import com.sarajevotransit.feedbackservice.exception.NotFoundException;
 import com.sarajevotransit.feedbackservice.model.LineReview;
 import com.sarajevotransit.feedbackservice.model.ModerationStatus;
@@ -20,12 +22,16 @@ public class FeedbackWorkflowService {
 
     private final ProblemReportRepository problemReportRepository;
     private final LineReviewRepository lineReviewRepository;
+    private final RoutingServiceClient routingServiceClient;
+    private final NotificationServiceClient notificationServiceClient;
 
     @Transactional
     public LineModerationResponse moderateLineFeedback(
             Long lineId,
             ReportStatus targetReportStatus,
             ModerationStatus targetModerationStatus) {
+        routingServiceClient.validateLine(lineId);
+
         List<ProblemReport> reports = problemReportRepository.findByLineIdOrderByCreatedAtDesc(lineId);
         List<LineReview> reviews = lineReviewRepository.findByLineIdOrderByCreatedAtDesc(lineId);
 
@@ -55,6 +61,21 @@ public class FeedbackWorkflowService {
         if (!reviews.isEmpty()) {
             lineReviewRepository.saveAll(reviews);
         }
+
+        reports.stream()
+            .filter(report -> report.getReporterUserId() != null)
+            .forEach(report -> notificationServiceClient.notifyReportStatusChange(
+                report.getId(),
+                lineId,
+                report.getReporterUserId(),
+                targetReportStatus.name()));
+
+        reviews.stream()
+            .filter(review -> review.getReviewerUserId() != null)
+            .forEach(review -> notificationServiceClient.notifyModerationFlag(
+                review.getId(),
+                lineId,
+                review.getReviewerUserId()));
 
         return new LineModerationResponse(
                 lineId,
