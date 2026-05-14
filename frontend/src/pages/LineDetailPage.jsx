@@ -1,4 +1,4 @@
-import { Heart, RefreshCw, AlertCircle } from 'lucide-react'
+import { Heart, AlertCircle } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { LineBadge } from '../components/common/LineBadge'
@@ -240,71 +240,6 @@ export function LineDetailPage() {
         >
           ← Back to all lines
         </Link>
-      </div>
-    </div>
-  )
-}
-
-          <button
-            type="button"
-            onClick={() => toggleFavoriteLine(lineId)}
-            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
-              favorite
-                ? 'border-accent bg-accent text-white'
-                : 'border-border text-ink hover:bg-surface-alt'
-            }`}
-          >
-            <Heart size={16} />
-            {favorite ? 'Favorited' : 'Add to favourites'}
-          </button>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          {directions.map((direction) => (
-            <button
-              key={direction.id}
-              type="button"
-              onClick={() => setSelectedDirectionId(direction.id)}
-              className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                selectedDirectionId === direction.id
-                  ? 'border-accent bg-accent text-white'
-                  : 'border-border text-ink hover:bg-surface-alt'
-              }`}
-            >
-              {direction.directionLabel} · {direction.name}
-            </button>
-          ))}
-
-          <Link
-            to="/lines"
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-muted transition hover:bg-surface-alt"
-          >
-            <RefreshCw size={15} />
-            Change line
-          </Link>
-        </div>
-      </PanelCard>
-
-      <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr]">
-        <PanelCard>
-          <h3 className="text-base font-semibold text-ink">Stops</h3>
-          <ol className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
-            {stops.map((stop) => (
-              <li
-                key={stop.id}
-                className="px-3 py-2 text-sm text-ink"
-              >
-                <span className="mr-2 text-xs font-semibold text-muted">#{stop.stopSequence}</span>
-                {stop.stationName}
-              </li>
-            ))}
-          </ol>
-        </PanelCard>
-
-        <PanelCard>
-          <h3 className="mb-3 text-base font-semibold text-ink">Route map</h3>
-          <TransitMap polyline={polyline} className="h-[380px]" />
-        </PanelCard>
       </div>
     </div>
   )

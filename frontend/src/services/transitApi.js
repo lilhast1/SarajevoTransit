@@ -55,11 +55,28 @@ function mockGetDirectionStations(directionId) {
   })
 }
 
+function mockGetDirectionPolyline(directionId) {
+  const polyline = routePolylines[Number(directionId)]
+  if (Array.isArray(polyline) && polyline.length > 1) return polyline
+
+  const stationIds = directionStations[Number(directionId)] || []
+  const fallbackPolyline = stationIds
+    .map((stationId) => {
+      const station = stations.find((item) => item.id === stationId)
+      return station ? [station.latitude, station.longitude] : null
+    })
+    .filter(Boolean)
+
+  if (fallbackPolyline.length > 1) return fallbackPolyline
+
+  return [sarajevoCenter]
+}
+
 function mockGetStopsByLine(lineId) {
   const lineDirections = directions.filter((d) => d.lineId === Number(lineId))
   const stopIds = new Set()
   lineDirections.forEach((d) => {
-    ;(directionStations[d.id] || []).forEach((sid) => stopIds.add(sid))
+    ; (directionStations[d.id] || []).forEach((sid) => stopIds.add(sid))
   })
   return stations.filter((s) => stopIds.has(s.id))
 }
@@ -196,7 +213,7 @@ export const transitApi = {
       const polyline = geoJsonToLeafletPolyline(feature)
       return polyline || [sarajevoCenter]
     } catch {
-      return routePolylines[Number(directionId)] || [sarajevoCenter]
+      return mockGetDirectionPolyline(directionId)
     }
   },
 

@@ -4,6 +4,7 @@ spring:
 
 eureka:
   instance:
+    ip-address: 127.0.0.1
     instance-id: ${spring.application.name}:${spring.cloud.client.hostname}:${server.port}
 
 benchmark:
