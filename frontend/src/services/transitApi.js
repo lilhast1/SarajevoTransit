@@ -2,7 +2,6 @@ import {
   directionStations,
   directions,
   lines as mockLines,
-  mockUsers,
   routePolylines,
   sarajevoCenter,
   stations,
@@ -10,8 +9,6 @@ import {
   vehicleTypes,
 } from '../data/mockTransitData'
 import { gatewayClient } from './gatewayClient'
-
-const isGatewayOnly = true
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -369,46 +366,14 @@ export const transitApi = {
     }
   },
 
-  // ── Auth (mock-only – handled by userservice, not routingservice) ─────────
+  // ── Auth ───────────────────────────────────────────────────────────────────
   async register({ fullName, email, password }) {
-    const existing = mockUsers.find((user) => user.email.toLowerCase() === email.toLowerCase())
-    if (existing) throw new Error('Email already in use')
-
-    const nextId = mockUsers.length + 1
-    mockUsers.push({ id: nextId, fullName, email, password })
-
-    return {
-      accessToken: 'mock-access-token',
-      refreshToken: 'mock-refresh-token',
-      tokenType: 'Bearer',
-      expiresIn: 3600,
-      userId: nextId,
-      email,
-      fullName,
-      role: 'USER',
-      gatewayOnly: isGatewayOnly,
-    }
+    await gatewayClient.register({ fullName, email, password })
+    return gatewayClient.login({ email, password })
   },
 
   async login({ email, password }) {
-    const user = mockUsers.find(
-      (candidate) =>
-        candidate.email.toLowerCase() === email.toLowerCase() && candidate.password === password,
-    )
-
-    if (!user) throw new Error('Invalid email or password')
-
-    return {
-      accessToken: 'mock-access-token',
-      refreshToken: 'mock-refresh-token',
-      tokenType: 'Bearer',
-      expiresIn: 3600,
-      userId: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      role: 'USER',
-      gatewayOnly: isGatewayOnly,
-    }
+    return gatewayClient.login({ email, password })
   },
 
   async getProfileSnapshot(favorites) {
