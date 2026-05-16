@@ -32,6 +32,7 @@ import com.sarajevotransit.userservice.model.TravelHistoryEntry;
 import com.sarajevotransit.userservice.model.UserPreference;
 import com.sarajevotransit.userservice.model.UserProfile;
 import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
+import com.sarajevotransit.userservice.repository.RefreshTokenRepository;
 import com.sarajevotransit.userservice.repository.TicketPurchaseHistoryRepository;
 import com.sarajevotransit.userservice.repository.TravelHistoryRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
@@ -62,6 +63,7 @@ public class UserService {
     private final TravelHistoryRepository travelHistoryRepository;
     private final TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final UserProfileMapper userProfileMapper;
     private final UserPreferenceMapper userPreferenceMapper;
     private final TravelHistoryMapper travelHistoryMapper;
@@ -493,5 +495,12 @@ public class UserService {
 
         userProfileRepository.save(user);
         return loyaltyPoints;
+    }
+
+    @Transactional
+    public void deleteUser(Long userId) {
+        findUserById(userId);
+        refreshTokenRepository.deleteByUserId(userId);
+        userProfileRepository.deleteById(userId);
     }
 }

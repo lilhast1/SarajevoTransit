@@ -1,0 +1,80 @@
+@startuml Ticket Purchase Saga — Choreography with RabbitMQ
+
+skinparam sequenceArrowThickness 2
+skinparam sequenceBoxBorderColor #444
+skinparam noteBorderColor #888
+
+title Ticket Purchase Saga (Saga Choreography Pattern)
+
+actor      Client            as C
+participant "Moneyman\n:8081" as M   #LightBlue
+queue      "RabbitMQ\nticket.saga.exchange" as Q  #Orange
+participant "UserService\n:8082" as U  #LightGreen
+participant "NotificationService\n:8086" as N  #LightYellow
+
+== Happy Path ==
+
+C -> M : POST /api/finance/purchase\n{userId, paymentMethodId, ticketType}
+activate M
+
+M -> M : Validate payment method
+M -> M : **Local TX 1**\nCreate Transaction(PENDING)\nCreate Ticket(PENDING)\ngenerate sagaId
+
+M -> Q : **ticket.purchase.initiated**\n{sagaId, userId, ticketId,\ntransactionId, ticketType, amount}
+M --> C : 202 Accepted\n{sagaId, ticketId, status=PENDING}
+deactivate M
+
+Q -> U : ticket.purchase.initiated
+activate U
+
+U -> U : **Local TX 2 (atomic)**\nRecord TicketPurchaseHistoryEntry\nEarn LoyaltyPoints (2/5/20/50 pts)
+
+U -> Q : **ticket.user.updated**\n{sagaId, loyaltyPointsEarned}
+deactivate U
+
+Q -> M : ticket.user.updated
+activate M
+
+M -> M : **Local TX 1 finalization**\nTransaction → COMPLETED\nTicket → ACTIVE\n**SAGA FINALIZED ✓**
+
+M -> Q : **ticket.purchase.completed**\n{sagaId, userId, ticketId, ticketType}
+deactivate M
+
+Q -> N : ticket.purchase.completed
+activate N
+N -> N : **Local TX 3**\nCreate Notification\n"Ticket activated!"
+deactivate N
+
+== Compensation Path (UserService fails) ==
+
+|||
+C -> M : POST /api/finance/purchase\n{userId, paymentMethodId, ticketType}
+activate M
+M -> M : **Local TX 1**\nCreate Transaction(PENDING)\nCreate Ticket(PENDING)
+M -> Q : **ticket.purchase.initiated**
+M --> C : 202 Accepted {status=PENDING}
+deactivate M
+
+Q -> U : ticket.purchase.initiated
+activate U
+U -> U : Local TX 2 — FAILS\n(user not found / DB error)\nTransaction rolled back
+U -> Q : **ticket.user.failed**\n{sagaId, reason}
+deactivate U
+
+Q -> M : ticket.user.failed
+activate M
+M -> M : **Compensating TX**\nTransaction → FAILED\nTicket → CANCELLED\n**SAGA COMPENSATED ✓**
+M -> Q : **ticket.purchase.cancelled**\n{sagaId, userId, reason}
+deactivate M
+
+Q -> N : ticket.purchase.cancelled
+activate N
+N -> N : **Local TX 3 (alt)**\nCreate Notification\n"Purchase failed"
+deactivate N
+
+note over M, U
+  **Invariant:** Both DB writes (Moneyman TX1 + UserService TX2) are
+  always consistent — either both finalize or both are rolled back.
+end note
+
+@enduml
