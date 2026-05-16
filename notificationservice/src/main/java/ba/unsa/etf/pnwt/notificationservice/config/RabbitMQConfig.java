@@ -15,9 +15,30 @@ public class RabbitMQConfig {
     public static final String QUEUE_TICKET_COMPLETED  = "ticket-notification-completed-queue";
     public static final String QUEUE_TICKET_CANCELLED  = "ticket-notification-cancelled-queue";
 
+    public static final String TIMETABLE_EXCHANGE            = "timetable.exchange";
+    public static final String ROUTING_TIMETABLE_CHANGED     = "timetable.changed";
+    public static final String ROUTING_NOTIFICATION_SENT     = "timetable.notification.sent";
+    public static final String ROUTING_NOTIFICATION_FAILED   = "timetable.notification.failed";
+    public static final String QUEUE_TIMETABLE_CHANGED       = "timetable-notification-changed-queue";
+
     @Bean
     public TopicExchange ticketSagaExchange() {
         return ExchangeBuilder.topicExchange(EXCHANGE).durable(true).build();
+    }
+
+    @Bean
+    public TopicExchange timetableExchange() {
+        return ExchangeBuilder.topicExchange(TIMETABLE_EXCHANGE).durable(true).build();
+    }
+
+    @Bean
+    public Queue timetableChangedQueue() {
+        return QueueBuilder.durable(QUEUE_TIMETABLE_CHANGED).build();
+    }
+
+    @Bean
+    public Binding bindTimetableChanged(Queue timetableChangedQueue, TopicExchange timetableExchange) {
+        return BindingBuilder.bind(timetableChangedQueue).to(timetableExchange).with(ROUTING_TIMETABLE_CHANGED);
     }
 
     @Bean

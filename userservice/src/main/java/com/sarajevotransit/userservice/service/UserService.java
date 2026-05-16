@@ -30,7 +30,6 @@ import com.sarajevotransit.userservice.model.UserPreference;
 import com.sarajevotransit.userservice.model.UserProfile;
 import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
 import com.sarajevotransit.userservice.repository.RefreshTokenRepository;
-import com.sarajevotransit.userservice.repository.TicketPurchaseHistoryRepository;
 import com.sarajevotransit.userservice.repository.TravelHistoryRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
 import jakarta.validation.ConstraintViolation;
@@ -413,15 +412,6 @@ public class UserService {
     public int recordTicketPurchaseSaga(Long userId, String ticketType,
             java.math.BigDecimal amount, String externalTransactionId, int loyaltyPoints) {
         UserProfile user = findUserById(userId);
-
-        TicketPurchaseHistoryEntry entry = new TicketPurchaseHistoryEntry();
-        entry.setTicketType(com.sarajevotransit.userservice.model.TicketType.valueOf(ticketType));
-        entry.setAmount(amount);
-        entry.setPaymentMethod("CARD");
-        entry.setExternalTransactionId(externalTransactionId);
-        entry.setPurchasedAt(LocalDateTime.now());
-        user.addTicketPurchase(entry);
-        ticketPurchaseHistoryRepository.save(entry);
 
         com.sarajevotransit.userservice.model.DigitalWallet wallet = user.getWallet();
         if (wallet == null) {

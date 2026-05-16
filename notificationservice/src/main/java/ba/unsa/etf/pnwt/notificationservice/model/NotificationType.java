@@ -5,5 +5,6 @@ public enum NotificationType {
     ROUTE_CHANGE,
     DISRUPTION,
     UPCOMING_DEPARTURE,
-    GENERAL
+    GENERAL,
+    TIMETABLE_CHANGE
 }

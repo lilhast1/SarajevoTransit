@@ -5,6 +5,7 @@ import ba.unsa.etf.pnwt.routingservice.dto.LineResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.TimetableRequest;
 import ba.unsa.etf.pnwt.routingservice.exception.ConflictException;
 import ba.unsa.etf.pnwt.routingservice.mapper.RoutingMapper;
+import ba.unsa.etf.pnwt.routingservice.messaging.TimetableEventPublisher;
 import ba.unsa.etf.pnwt.routingservice.model.Direction;
 import ba.unsa.etf.pnwt.routingservice.model.Line;
 import ba.unsa.etf.pnwt.routingservice.model.VehicleType;
@@ -43,6 +44,7 @@ class RoutingCrudServiceTest {
     @Mock private RoutePointRepository routePointRepository;
     @Mock private VehicleTypeRepository vehicleTypeRepository;
     @Mock private RoutingMapper mapper;
+    @Mock private TimetableEventPublisher timetableEventPublisher;
 
     private RoutingCrudService service;
 
@@ -56,7 +58,8 @@ class RoutingCrudServiceTest {
                 directionStationRepository,
                 routePointRepository,
                 vehicleTypeRepository,
-                mapper
+                mapper,
+                timetableEventPublisher
         );
     }
 
