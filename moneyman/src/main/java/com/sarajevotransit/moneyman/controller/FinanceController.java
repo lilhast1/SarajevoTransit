@@ -49,7 +49,7 @@ public class FinanceController {
         Long requestingUserId = extractUserId(httpRequest);
         request.setUserId(requestingUserId);
         Ticket ticket = moneymanService.purchaseTicket(request);
-        return ResponseEntity.ok(moneymanMapper.toResponseDTO(ticket));
+        return ResponseEntity.accepted().body(moneymanMapper.toResponseDTO(ticket));
     }
 
     @GetMapping("/health")

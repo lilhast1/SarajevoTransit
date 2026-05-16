@@ -151,6 +151,13 @@ public class UserController {
 
 
 
+    @DeleteMapping("/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteUser(@PathVariable @Positive Long userId) {
+        requireAdmin();
+        userService.deleteUser(userId);
+    }
+
     @DeleteMapping("/{userId}/travel-history/{entryId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteTravelHistoryEntry(

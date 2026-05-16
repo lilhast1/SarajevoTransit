@@ -29,6 +29,8 @@ import com.sarajevotransit.userservice.model.TravelHistoryEntry;
 import com.sarajevotransit.userservice.model.UserPreference;
 import com.sarajevotransit.userservice.model.UserProfile;
 import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
+import com.sarajevotransit.userservice.repository.RefreshTokenRepository;
+import com.sarajevotransit.userservice.repository.TicketPurchaseHistoryRepository;
 import com.sarajevotransit.userservice.repository.TravelHistoryRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
 import jakarta.validation.ConstraintViolation;
@@ -57,6 +59,7 @@ public class UserService {
     private final UserProfileRepository userProfileRepository;
     private final TravelHistoryRepository travelHistoryRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final UserProfileMapper userProfileMapper;
     private final UserPreferenceMapper userPreferenceMapper;
     private final TravelHistoryMapper travelHistoryMapper;
@@ -398,5 +401,54 @@ public class UserService {
             return;
         }
         throw new IllegalArgumentException("Unsupported patch path: " + path);
+    }
+
+    /**
+     * Atomically records a ticket purchase history entry AND earns loyalty points in a single transaction.
+     * Used by the ticket purchase saga so that both writes succeed or both are rolled back.
+     *
+     * @return loyalty points earned
+     */
+    @Transactional
+    public int recordTicketPurchaseSaga(Long userId, String ticketType,
+            java.math.BigDecimal amount, String externalTransactionId, int loyaltyPoints) {
+        UserProfile user = findUserById(userId);
+
+        TicketPurchaseHistoryEntry entry = new TicketPurchaseHistoryEntry();
+        entry.setTicketType(com.sarajevotransit.userservice.model.TicketType.valueOf(ticketType));
+        entry.setAmount(amount);
+        entry.setPaymentMethod("CARD");
+        entry.setExternalTransactionId(externalTransactionId);
+        entry.setPurchasedAt(LocalDateTime.now());
+        user.addTicketPurchase(entry);
+        ticketPurchaseHistoryRepository.save(entry);
+
+        com.sarajevotransit.userservice.model.DigitalWallet wallet = user.getWallet();
+        if (wallet == null) {
+            wallet = new com.sarajevotransit.userservice.model.DigitalWallet();
+            user.setWallet(wallet);
+        }
+        if (wallet.getLoyaltyPointsTotal() == null) {
+            wallet.setLoyaltyPointsTotal(0);
+        }
+        wallet.setLoyaltyPointsTotal(wallet.getLoyaltyPointsTotal() + loyaltyPoints);
+
+        com.sarajevotransit.userservice.model.LoyaltyTransaction lt = new com.sarajevotransit.userservice.model.LoyaltyTransaction();
+        lt.setPointsEarned(loyaltyPoints);
+        lt.setPointsSpent(0);
+        lt.setDescription("Ticket purchase — " + ticketType);
+        lt.setReferenceType("TICKET_PURCHASE");
+        user.addLoyaltyTransaction(lt);
+        loyaltyTransactionRepository.save(lt);
+
+        userProfileRepository.save(user);
+        return loyaltyPoints;
+    }
+
+    @Transactional
+    public void deleteUser(Long userId) {
+        findUserById(userId);
+        refreshTokenRepository.deleteByUserId(userId);
+        userProfileRepository.deleteById(userId);
     }
 }
