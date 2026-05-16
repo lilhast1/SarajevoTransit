@@ -1,6 +1,5 @@
 package com.sarajevotransit.userservice.repository;
 
-import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
@@ -8,8 +7,6 @@ import com.sarajevotransit.userservice.dto.LoyaltyRedeemRequest;
 import com.sarajevotransit.userservice.model.LanguageCode;
 import com.sarajevotransit.userservice.model.NotificationChannel;
 import com.sarajevotransit.userservice.model.ThemeMode;
-import com.sarajevotransit.userservice.model.TicketPurchaseHistoryEntry;
-import com.sarajevotransit.userservice.model.TicketType;
 import com.sarajevotransit.userservice.model.TravelHistoryEntry;
 import com.sarajevotransit.userservice.model.UserProfile;
 import com.sarajevotransit.userservice.service.LoyaltyService;
@@ -39,8 +36,6 @@ class RepositoryQueryPerformanceTests {
     @Autowired
     private TravelHistoryRepository travelHistoryRepository;
 
-    @Autowired
-    private TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository;
 
     @Autowired
     private LoyaltyTransactionRepository loyaltyTransactionRepository;
@@ -95,18 +90,6 @@ class RepositoryQueryPerformanceTests {
                 .isLessThanOrEqualTo(1);
     }
 
-    @Test
-    void findByUserIdOrderByPurchasedAtDesc_shouldExecuteSingleStatement() {
-        statistics.clear();
-
-        List<TicketPurchaseHistoryEntry> entries = ticketPurchaseHistoryRepository
-                .findByUserIdOrderByPurchasedAtDesc(primaryUserId);
-
-        assertThat(entries).hasSize(2);
-        assertThat(statistics.getPrepareStatementCount())
-                .as("Ticket purchase repository query should use one select")
-                .isLessThanOrEqualTo(1);
-    }
 
     @Test
     void findByUserIdOrderByCreatedAtDesc_shouldExecuteSingleStatement() {
@@ -168,21 +151,6 @@ class RepositoryQueryPerformanceTests {
                 LocalDateTime.now().minusDays(1),
                 17));
 
-        userService.addTicketPurchase(primaryUserId, new AddTicketPurchaseRequest(
-                TicketType.MONTHLY,
-                new BigDecimal("53.00"),
-                "CARD",
-                "TXN-AMINA-0001",
-                "TRAM-3",
-                LocalDateTime.now().minusDays(4)));
-
-        userService.addTicketPurchase(primaryUserId, new AddTicketPurchaseRequest(
-                TicketType.DAILY,
-                new BigDecimal("2.00"),
-                "CARD",
-                "TXN-AMINA-0002",
-                "BUS-31E",
-                LocalDateTime.now().minusDays(1)));
 
         loyaltyService.earnPoints(primaryUserId, new LoyaltyEarnRequest(
                 120,

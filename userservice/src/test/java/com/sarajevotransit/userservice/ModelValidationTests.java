@@ -1,11 +1,9 @@
 package com.sarajevotransit.userservice;
 
 import com.sarajevotransit.userservice.model.LoyaltyTransaction;
-import com.sarajevotransit.userservice.model.TicketPurchaseHistoryEntry;
 import com.sarajevotransit.userservice.model.TravelHistoryEntry;
 import com.sarajevotransit.userservice.model.UserProfile;
 import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
-import com.sarajevotransit.userservice.repository.TicketPurchaseHistoryRepository;
 import com.sarajevotransit.userservice.repository.TravelHistoryRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
 import jakarta.validation.ConstraintViolationException;
@@ -29,8 +27,6 @@ class ModelValidationTests {
     @Autowired
     private TravelHistoryRepository travelHistoryRepository;
 
-    @Autowired
-    private TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository;
 
     @Autowired
     private LoyaltyTransactionRepository loyaltyTransactionRepository;
@@ -64,17 +60,6 @@ class ModelValidationTests {
                 .isInstanceOf(ConstraintViolationException.class);
     }
 
-    @Test
-    void shouldRejectInvalidTicketPurchaseModel() {
-        TicketPurchaseHistoryEntry entry = new TicketPurchaseHistoryEntry();
-        entry.setAmount(new BigDecimal("0.00"));
-        entry.setPaymentMethod(" ");
-        entry.setExternalTransactionId("");
-        entry.setLineCode("X".repeat(41));
-
-        assertThatThrownBy(() -> ticketPurchaseHistoryRepository.saveAndFlush(entry))
-                .isInstanceOf(ConstraintViolationException.class);
-    }
 
     @Test
     void shouldRejectInvalidLoyaltyTransactionModel() {

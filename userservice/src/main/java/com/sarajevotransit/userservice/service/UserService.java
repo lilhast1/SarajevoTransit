@@ -1,11 +1,10 @@
 package com.sarajevotransit.userservice.service;
 
-import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyTransactionResponse;
 import com.sarajevotransit.userservice.dto.PatchUserProfileRequest;
 import com.sarajevotransit.userservice.dto.TicketPurchaseResponse;
-import com.sarajevotransit.userservice.dto.TicketPurchaseStatsResponse;
+import com.sarajevotransit.userservice.client.MoneymanClient;
 import com.sarajevotransit.userservice.dto.TravelHistoryResponse;
 import com.sarajevotransit.userservice.dto.UpdatePasswordRequest;
 import com.sarajevotransit.userservice.dto.UpdateUserPreferenceRequest;
@@ -18,7 +17,6 @@ import com.sarajevotransit.userservice.exception.DuplicateResourceException;
 import com.sarajevotransit.userservice.exception.ResourceNotFoundException;
 import com.sarajevotransit.userservice.mapper.LoyaltyTransactionMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import com.sarajevotransit.userservice.mapper.TicketPurchaseMapper;
 import com.sarajevotransit.userservice.mapper.TravelHistoryMapper;
 import com.sarajevotransit.userservice.mapper.UserPreferenceMapper;
 import com.sarajevotransit.userservice.mapper.UserProfileMapper;
@@ -27,7 +25,6 @@ import com.sarajevotransit.userservice.model.NotificationChannel;
 import com.sarajevotransit.userservice.model.ThemeMode;
 import com.sarajevotransit.userservice.model.LanguageCode;
 import com.sarajevotransit.userservice.model.DigitalWallet;
-import com.sarajevotransit.userservice.model.TicketPurchaseHistoryEntry;
 import com.sarajevotransit.userservice.model.TravelHistoryEntry;
 import com.sarajevotransit.userservice.model.UserPreference;
 import com.sarajevotransit.userservice.model.UserProfile;
@@ -61,13 +58,12 @@ public class UserService {
 
     private final UserProfileRepository userProfileRepository;
     private final TravelHistoryRepository travelHistoryRepository;
-    private final TicketPurchaseHistoryRepository ticketPurchaseHistoryRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserProfileMapper userProfileMapper;
     private final UserPreferenceMapper userPreferenceMapper;
     private final TravelHistoryMapper travelHistoryMapper;
-    private final TicketPurchaseMapper ticketPurchaseMapper;
+    private final MoneymanClient moneymanClient;
     private final LoyaltyTransactionMapper loyaltyTransactionMapper;
     private final Validator validator;
     private final PasswordEncoder passwordEncoder;
@@ -160,30 +156,7 @@ public class UserService {
                 .map(travelHistoryMapper::toResponse);
     }
 
-    @Transactional(readOnly = true)
-    public List<TicketPurchaseResponse> getTicketPurchases(Long userId) {
-        findUserById(userId);
-        return ticketPurchaseHistoryRepository.findByUserIdOrderByPurchasedAtDesc(userId)
-                .stream()
-                .map(ticketPurchaseMapper::toResponse)
-                .toList();
-    }
 
-    @Transactional(readOnly = true)
-    public Page<TicketPurchaseResponse> getTicketPurchases(Long userId, int page, int size, String sort) {
-        findUserById(userId);
-        Pageable pageable = PaginationUtils.buildPageable(
-                page,
-                size,
-                sort,
-                "purchasedAt",
-                Sort.Direction.DESC,
-                Set.of("id", "ticketType", "amount", "paymentMethod", "externalTransactionId", "lineCode",
-                        "purchasedAt"));
-
-        return ticketPurchaseHistoryRepository.findByUserId(userId, pageable)
-                .map(ticketPurchaseMapper::toResponse);
-    }
 
     @Transactional
     public UserProfileResponse updateUserProfile(Long userId, UpdateUserProfileRequest request) {
@@ -281,28 +254,7 @@ public class UserService {
                 .toList();
     }
 
-    @Transactional
-    public TicketPurchaseResponse addTicketPurchase(Long userId, AddTicketPurchaseRequest request) {
-        UserProfile user = findUserById(userId);
 
-        TicketPurchaseHistoryEntry entry = new TicketPurchaseHistoryEntry();
-        entry.setTicketType(request.ticketType());
-        entry.setAmount(request.amount());
-        entry.setPaymentMethod(request.paymentMethod().trim());
-        entry.setExternalTransactionId(request.externalTransactionId().trim());
-        entry.setLineCode(request.lineCode() != null ? request.lineCode().trim() : null);
-        entry.setPurchasedAt(request.purchasedAt() != null ? request.purchasedAt() : LocalDateTime.now());
-
-        user.addTicketPurchase(entry);
-        ticketPurchaseHistoryRepository.save(entry);
-        return ticketPurchaseMapper.toResponse(entry);
-    }
-
-    @Transactional(readOnly = true)
-    public List<TicketPurchaseStatsResponse> getTicketPurchaseStats(Long userId) {
-        findUserById(userId);
-        return ticketPurchaseHistoryRepository.findTicketPurchaseStatsByUserId(userId);
-    }
 
     @Transactional
     public void deleteTravelHistoryEntry(Long userId, Long entryId) {
@@ -350,11 +302,7 @@ public class UserService {
                 .map(travelHistoryMapper::toResponse)
                 .toList();
 
-        List<TicketPurchaseResponse> purchases = ticketPurchaseHistoryRepository
-                .findByUserIdOrderByPurchasedAtDesc(userId)
-                .stream()
-                .map(ticketPurchaseMapper::toResponse)
-                .toList();
+        List<TicketPurchaseResponse> purchases = moneymanClient.getUserTickets(userId);
 
         List<LoyaltyTransactionResponse> transactions = loyaltyTransactionRepository
                 .findByUserIdOrderByCreatedAtDesc(userId)

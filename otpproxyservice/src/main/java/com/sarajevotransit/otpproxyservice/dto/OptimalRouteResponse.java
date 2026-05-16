@@ -81,6 +81,7 @@ public class OptimalRouteResponse {
         private Long startTime;
         private Long endTime;
         private Double distanceMeters;
+        private String points;
 
         public String getMode() {
             return mode;
@@ -128,6 +129,14 @@ public class OptimalRouteResponse {
 
         public void setDistanceMeters(Double distanceMeters) {
             this.distanceMeters = distanceMeters;
+        }
+
+        public String getPoints() {
+            return points;
+        }
+
+        public void setPoints(String points) {
+            this.points = points;
         }
     }
 }

@@ -420,53 +420,47 @@ curl --request GET "http://localhost:8080/api/v1/users/101/travel-history"
 - Notes:
   - 2026-04-12 (Copilot): Results are ordered by `traveledAt` descending.
 
-## 10) Create One Ticket Purchase Entry
+## 10) Purchase Ticket (Handled by Moneyman)
 
-- Title: Create One Ticket Purchase Entry
-- URL: `/api/v1/users/:userId/ticket-purchases`
+- Title: Purchase Ticket (Handled by Moneyman)
+- URL: `/api/finance/purchase`
 - Method: `POST`
 - URL Params:
-  - Required:
-    - `userId=[integer > 0]`
-      - Example: `userId=101`
+  - Required: none
   - Optional: none
 - Data Params:
 
 ```json
 {
   "ticketType": "[enum required: SINGLE|DAILY|WEEKLY|MONTHLY]",
-  "amount": "[decimal, required, > 0]",
-  "paymentMethod": "[string, required]",
-  "externalTransactionId": "[string, required]",
-  "lineCode": "[string optional, max 40]",
-  "purchasedAt": "[datetime optional, ISO-8601]"
+  "paymentMethodId": "[integer required]"
 }
 ```
 
 - Success Response:
-  - Code: `201 CREATED`
-  - Content: `{ "id": 7001, "ticketType": "MONTHLY", "amount": 53.00 }`
+  - Code: `200 OK`
+  - Content: `{ "id": "uuid", "type": "MONTHLY", "status": "ACTIVE" }`
 - Error Response:
   - Code: `400 BAD REQUEST`
   - Content: `{ "message": "Validation failed" }`
   - OR
-  - Code: `404 NOT FOUND`
-  - Content: `{ "message": "User with id 101 not found." }`
+  - Code: `401 UNAUTHORIZED`
+  - Content: `{ "message": "Missing user identity" }`
 - Sample Call:
 
 ```bash
-curl --request POST "http://localhost:8080/api/v1/users/101/ticket-purchases" \
+curl --request POST "http://localhost:8080/api/finance/purchase" \
   --header "Content-Type: application/json" \
-  --data "{\"ticketType\":\"MONTHLY\",\"amount\":53.00,\"paymentMethod\":\"CARD\",\"externalTransactionId\":\"TXN-101\",\"lineCode\":\"TRAM-3\"}"
+  --data "{\"ticketType\":\"MONTHLY\",\"paymentMethodId\":12}"
 ```
 
 - Notes:
-  - 2026-04-12 (Copilot): `purchasedAt` defaults to now when omitted.
+  - 2026-05-11 (Copilot): Ticket purchases are handled by the Moneyman service; the user service does not create them.
 
-## 11) Show All Ticket Purchase Entries for One User
+## 11) Show User Wallet (Handled by Moneyman)
 
-- Title: Show All Ticket Purchase Entries for One User
-- URL: `/api/v1/users/:userId/ticket-purchases`
+- Title: Show User Wallet (Handled by Moneyman)
+- URL: `/api/finance/wallet/:userId`
 - Method: `GET`
 - URL Params:
   - Required:
@@ -476,21 +470,21 @@ curl --request POST "http://localhost:8080/api/v1/users/101/ticket-purchases" \
 - Data Params: none
 - Success Response:
   - Code: `200 OK`
-  - Content: `[ { "id": 7001, "ticketType": "MONTHLY", "amount": 53.00 } ]`
+  - Content: `{ "content": [ { "id": "uuid", "type": "MONTHLY" } ] }`
 - Error Response:
   - Code: `400 BAD REQUEST`
   - Content: `{ "message": "Validation failed" }`
   - OR
-  - Code: `404 NOT FOUND`
-  - Content: `{ "message": "User with id 101 not found." }`
+  - Code: `403 FORBIDDEN`
+  - Content: `{ "message": "Access denied" }`
 - Sample Call:
 
 ```bash
-curl --request GET "http://localhost:8080/api/v1/users/101/ticket-purchases"
+curl --request GET "http://localhost:8080/api/finance/wallet/101"
 ```
 
 - Notes:
-  - 2026-04-12 (Copilot): Results are ordered by `purchasedAt` descending.
+  - 2026-05-11 (Copilot): Use the Moneyman wallet endpoint for ticket history; user summary only aggregates it.
 
 ## 12) Show One User Summary
 
@@ -530,7 +524,7 @@ curl --request GET "http://localhost:8080/api/v1/users/101/summary"
 ```
 
 - Notes:
-  - 2026-04-12 (Copilot): Aggregates local user, travel, purchase, and loyalty data.
+  - 2026-05-11 (Copilot): Aggregates local user/travel/loyalty data and ticket purchases fetched from Moneyman.
 
 ## 13) Show Personalized Line Suggestions
 
@@ -831,42 +825,19 @@ curl --request POST "http://localhost:8080/api/v1/users/101/travel-history/batch
 - Notes:
   - 2026-04-15 (Copilot): Batch operation is transactional and rolls back all entries on any validation/persistence error.
 
-## 20) Ticket Purchase Statistics (Custom Query)
+## 20) Ticket Purchase Statistics (Not in User Service)
 
-- Title: Ticket Purchase Statistics
-- URL: `/api/v1/users/:userId/ticket-purchases/stats`
-- Method: `GET`
-- URL Params:
-  - Required:
-    - `userId=[integer > 0]`
-      - Example: `userId=101`
-  - Optional: none
+- Title: Ticket Purchase Statistics (Not in User Service)
+- URL: `n/a`
+- Method: `n/a`
+- URL Params: none
 - Data Params: none
-- Success Response:
-  - Code: `200 OK`
-  - Content:
-
-```json
-[
-  { "ticketType": "MONTHLY", "purchaseCount": 2, "totalAmount": 106.0 },
-  { "ticketType": "DAILY", "purchaseCount": 1, "totalAmount": 2.0 }
-]
-```
-
-- Error Response:
-  - Code: `400 BAD REQUEST`
-  - Content: `{ "message": "Validation failed" }`
-  - OR
-  - Code: `404 NOT FOUND`
-  - Content: `{ "message": "User with id 101 not found." }`
-- Sample Call:
-
-```bash
-curl --request GET "http://localhost:8080/api/v1/users/101/ticket-purchases/stats"
-```
+- Success Response: none
+- Error Response: none
+- Sample Call: none
 
 - Notes:
-  - 2026-04-15 (Copilot): Backed by a JPQL aggregate query grouped by `ticketType` (not repository method derivation).
+  - 2026-05-11 (Copilot): User service does not maintain ticket purchase statistics. Query the Moneyman wallet and aggregate client-side, or add a reporting endpoint to Moneyman.
 
 ## 21) Delete Travel History Entry
 

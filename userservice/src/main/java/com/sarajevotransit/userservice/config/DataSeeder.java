@@ -1,6 +1,5 @@
 package com.sarajevotransit.userservice.config;
 
-import com.sarajevotransit.userservice.dto.AddTicketPurchaseRequest;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
@@ -8,7 +7,6 @@ import com.sarajevotransit.userservice.dto.LoyaltyRedeemRequest;
 import com.sarajevotransit.userservice.model.LanguageCode;
 import com.sarajevotransit.userservice.model.NotificationChannel;
 import com.sarajevotransit.userservice.model.ThemeMode;
-import com.sarajevotransit.userservice.model.TicketType;
 import com.sarajevotransit.userservice.model.UserRole;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
 import com.sarajevotransit.userservice.service.LoyaltyService;
@@ -68,13 +66,7 @@ public class DataSeeder {
                                         LocalDateTime.now().minusDays(1),
                                         22));
 
-                        userService.addTicketPurchase(amina.id(), new AddTicketPurchaseRequest(
-                                        TicketType.MONTHLY,
-                                        new BigDecimal("53.00"),
-                                        "CARD",
-                                        "TXN-AMINA-0001",
-                                        "TRAM-3",
-                                        LocalDateTime.now().minusDays(5)));
+
 
                         loyaltyService.earnPoints(amina.id(), new LoyaltyEarnRequest(
                                         120,
@@ -101,13 +93,7 @@ public class DataSeeder {
                                         LocalDateTime.now().minusDays(2),
                                         27));
 
-                        userService.addTicketPurchase(tar.id(), new AddTicketPurchaseRequest(
-                                        TicketType.WEEKLY,
-                                        new BigDecimal("17.50"),
-                                        "PAYPAL",
-                                        "TXN-TARIK-0001",
-                                        "TROL-103",
-                                        LocalDateTime.now().minusDays(4)));
+
 
                         loyaltyService.earnPoints(tar.id(), new LoyaltyEarnRequest(
                                         45,
