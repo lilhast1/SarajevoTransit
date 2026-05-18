@@ -343,7 +343,18 @@ Kljucni izvjestaji:
 - [../target/surefire-reports/TEST-com.sarajevotransit.feedbackservice.repository.RepositoryQueryPerformanceTests.xml](../target/surefire-reports/TEST-com.sarajevotransit.feedbackservice.repository.RepositoryQueryPerformanceTests.xml)
 - [../target/surefire-reports/TEST-com.sarajevotransit.feedbackservice.integration.PostgresFeedbackDbIntegrationTests.xml](../target/surefire-reports/TEST-com.sarajevotransit.feedbackservice.integration.PostgresFeedbackDbIntegrationTests.xml)
 
-## 14. Zakljucak
+## 14. Konceptualne integracije (van opsega zadatka)
+
+Iako je feedbackservice u ovom zadatku samostalan, u punoj mikroservisnoj arhitekturi oslanja se na:
+
+- UserService: validacija reporterUserId/reviewerUserId i opcionalni dohvat imena/emaila za admin dashboard.
+- RoutingService: validacija lineId i dohvat naziva linije.
+- VehicleService: validacija vehicleId/vehicleRegistrationNumber/vehicleInternalId.
+- NotificationService: slanje obavjestenja pri promjeni statusa prijave ili moderaciji review-a.
+
+Napomena: Integracije nisu implementirane u ovoj iteraciji (nema RestTemplate/WebClient/FeignClient poziva).
+
+## 15. Zakljucak
 
 Svi trazeni zadaci su implementirani u `feedbackservice` modulu sa jasnim dokazima u kodu, dokumentaciji i test artefaktima.
 Implementacija je uskladjena sa trazenim smjernicama za REST dizajn, testiranje, DTO pristup, validaciju, N+1 kontrolu, uniforman error handling i Lombok-based smanjenje boilerplate koda.

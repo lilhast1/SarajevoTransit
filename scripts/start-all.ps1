@@ -70,6 +70,30 @@ function Test-PortAvailable {
   }
 }
 
+function Wait-ForHttpOk {
+  param(
+    [string]$Url,
+    [int]$TimeoutSeconds = 120,
+    [int]$PollIntervalSeconds = 2
+  )
+
+  $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  while ((Get-Date) -lt $deadline) {
+    try {
+      $response = Invoke-WebRequest -UseBasicParsing -Uri $Url -TimeoutSec 5
+      if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) {
+        return
+      }
+    } catch {
+      # Keep waiting until the endpoint comes up.
+    }
+
+    Start-Sleep -Seconds $PollIntervalSeconds
+  }
+
+  throw "Timed out waiting for $Url"
+}
+
 function Get-RandomFreePort {
   param([System.Collections.Generic.HashSet[int]]$Reserved)
 
@@ -187,6 +211,16 @@ foreach ($service in $services) {
   $selectedPorts[$service] = $port
   Start-ServiceWindow -Root $root -Service $service -Port $port
   Start-Sleep -Seconds 2
+
+  if ($service -eq "configserver") {
+    Write-Host "[INFO] Waiting for configserver health..."
+    Wait-ForHttpOk -Url "http://localhost:8888/actuator/health" -TimeoutSeconds 120
+  }
+
+  if ($service -eq "eurekaserver") {
+    Write-Host "[INFO] Waiting for eurekaserver health..."
+    Wait-ForHttpOk -Url "http://localhost:8761/actuator/health" -TimeoutSeconds 180
+  }
 }
 
 Write-Host ""

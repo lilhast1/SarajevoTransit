@@ -3,6 +3,9 @@ package com.sarajevotransit.feedbackservice.service;
 import com.sarajevotransit.feedbackservice.dto.CreateLineReviewRequest;
 import com.sarajevotransit.feedbackservice.dto.LineRatingSummaryResponse;
 import com.sarajevotransit.feedbackservice.dto.LineReviewResponse;
+import com.sarajevotransit.feedbackservice.client.NotificationServiceClient;
+import com.sarajevotransit.feedbackservice.client.RoutingServiceClient;
+import com.sarajevotransit.feedbackservice.client.UserServiceClient;
 import com.sarajevotransit.feedbackservice.exception.BadRequestException;
 import com.sarajevotransit.feedbackservice.exception.NotFoundException;
 import com.sarajevotransit.feedbackservice.mapper.LineReviewMapper;
@@ -27,9 +30,15 @@ public class LineReviewService {
 
     private final LineReviewRepository lineReviewRepository;
     private final LineReviewMapper lineReviewMapper;
+    private final UserServiceClient userServiceClient;
+    private final RoutingServiceClient routingServiceClient;
+    private final NotificationServiceClient notificationServiceClient;
 
     @Transactional
     public LineReviewResponse createReview(CreateLineReviewRequest request) {
+        userServiceClient.validateUser(request.getReviewerUserId());
+        routingServiceClient.validateLine(request.getLineId());
+
         LocalDate today = LocalDate.now();
         if (request.getRideDate().isAfter(today)) {
             throw new BadRequestException("rideDate cannot be in the future.");
@@ -85,6 +94,7 @@ public class LineReviewService {
         LineReview review = findReviewOrThrow(id);
         review.setModerationStatus(moderationStatus);
         LineReview saved = lineReviewRepository.save(review);
+        notificationServiceClient.notifyModerationFlag(saved.getId(), saved.getLineId(), saved.getReviewerUserId());
         return lineReviewMapper.toResponse(saved);
     }
 

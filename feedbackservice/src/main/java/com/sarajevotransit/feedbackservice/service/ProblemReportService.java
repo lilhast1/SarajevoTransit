@@ -5,6 +5,10 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
+import com.sarajevotransit.feedbackservice.client.NotificationServiceClient;
+import com.sarajevotransit.feedbackservice.client.RoutingServiceClient;
+import com.sarajevotransit.feedbackservice.client.UserServiceClient;
+import com.sarajevotransit.feedbackservice.client.VehicleServiceClient;
 import com.sarajevotransit.feedbackservice.dto.BatchCreateProblemReportsResponse;
 import com.sarajevotransit.feedbackservice.dto.CreateProblemReportRequest;
 import com.sarajevotransit.feedbackservice.dto.LineReportCountResponse;
@@ -38,6 +42,10 @@ public class ProblemReportService {
     private final ProblemReportMapper problemReportMapper;
     private final ObjectMapper objectMapper;
     private final Validator validator;
+    private final UserServiceClient userServiceClient;
+    private final RoutingServiceClient routingServiceClient;
+    private final VehicleServiceClient vehicleServiceClient;
+    private final NotificationServiceClient notificationServiceClient;
 
     @Transactional
     public ProblemReportResponse createReport(CreateProblemReportRequest request) {
@@ -69,6 +77,7 @@ public class ProblemReportService {
         validatePatchedRequest(patchedRequest);
 
         applyPatchResultToEntity(report, patchedRequest);
+        validateExternalReferences(report);
         applyBusinessRules(report);
 
         ProblemReport saved = problemReportRepository.save(report);
@@ -122,6 +131,11 @@ public class ProblemReportService {
         ProblemReport report = findReportOrThrow(id);
         report.setStatus(status);
         ProblemReport saved = problemReportRepository.save(report);
+        notificationServiceClient.notifyReportStatusChange(
+                saved.getId(),
+                saved.getLineId(),
+                saved.getReporterUserId(),
+                status.name());
         return problemReportMapper.toResponse(saved);
     }
 
@@ -137,6 +151,14 @@ public class ProblemReportService {
     }
 
     private ProblemReport buildEntityForCreate(CreateProblemReportRequest request) {
+        userServiceClient.validateUser(request.getReporterUserId());
+        if (request.getLineId() != null) {
+            routingServiceClient.validateLine(request.getLineId());
+        }
+        if (request.getVehicleId() != null) {
+            vehicleServiceClient.validateVehicle(request.getVehicleId());
+        }
+
         validateVehicleOrStationReference(request.getVehicleId(),
                 request.getVehicleRegistrationNumber(),
                 request.getVehicleInternalId(),
@@ -334,6 +356,15 @@ public class ProblemReportService {
         report.setDescription(patchedRequest.getDescription());
         report.setPhotoUrls(patchedRequest.getPhotoUrls());
         report.setStatus(patchedRequest.getStatus());
+    }
+
+    private void validateExternalReferences(ProblemReport entity) {
+        if (entity.getLineId() != null) {
+            routingServiceClient.validateLine(entity.getLineId());
+        }
+        if (entity.getVehicleId() != null) {
+            vehicleServiceClient.validateVehicle(entity.getVehicleId());
+        }
     }
 
     private void applyBusinessRules(ProblemReport entity) {
