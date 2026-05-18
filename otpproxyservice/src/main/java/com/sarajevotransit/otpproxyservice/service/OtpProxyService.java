@@ -123,6 +123,9 @@ public class OtpProxyService {
                     for (OtpPlanResponse.Leg leg : itinerary.getLegs()) {
                         OptimalRouteResponse.Leg mappedLeg = new OptimalRouteResponse.Leg();
                         mappedLeg.setMode(leg.getMode());
+                        mappedLeg.setRouteType(leg.getRoute() != null ? leg.getRoute().getResolvedType() : null);
+                        mappedLeg.setLineCode(leg.getRoute() != null ? leg.getRoute().getShortName() : null);
+                        mappedLeg.setLineName(resolveLineName(leg.getRoute()));
                         mappedLeg.setFromName(leg.getFrom() != null ? leg.getFrom().getName() : null);
                         mappedLeg.setToName(leg.getTo() != null ? leg.getTo().getName() : null);
                         mappedLeg.setStartTime(toEpochMillis(leg.getStart() != null ? leg.getStart().getScheduledTime() : null));
@@ -173,10 +176,23 @@ public class OtpProxyService {
                 + ") {"
                 + " itineraries {"
                 + " duration walkDistance numberOfTransfers"
-                + " legs { mode from { name } to { name } start { scheduledTime } end { scheduledTime } distance legGeometry { points } }"
+                + " legs { mode route { shortName longName type } from { name } to { name } start { scheduledTime } end { scheduledTime } distance legGeometry { points } }"
                 + " }"
                 + " }"
                 + "}";
+    }
+
+    private String resolveLineName(OtpPlanResponse.Route route) {
+        if (route == null) {
+            return null;
+        }
+        if (route.getLongName() != null && !route.getLongName().isBlank()) {
+            return route.getLongName();
+        }
+        if (route.getShortName() != null && !route.getShortName().isBlank()) {
+            return route.getShortName();
+        }
+        return null;
     }
 
     private String buildTransportModesGraphQlInput(String modes) {

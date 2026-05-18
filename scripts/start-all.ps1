@@ -184,7 +184,7 @@ $preferredPorts = @{
   "vehicleservice" = 8083
   "routingservice" = 9999
   "moneyman" = 8081
-  "otpproxyservice" = 8082
+  "otpproxyservice" = 8084
 }
 
 $reservedPorts = [System.Collections.Generic.HashSet[int]]::new()

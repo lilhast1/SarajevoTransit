@@ -76,6 +76,9 @@ public class OptimalRouteResponse {
     public static class Leg {
 
         private String mode;
+        private Integer routeType;
+        private String lineCode;
+        private String lineName;
         private String fromName;
         private String toName;
         private Long startTime;
@@ -89,6 +92,30 @@ public class OptimalRouteResponse {
 
         public void setMode(String mode) {
             this.mode = mode;
+        }
+
+        public Integer getRouteType() {
+            return routeType;
+        }
+
+        public void setRouteType(Integer routeType) {
+            this.routeType = routeType;
+        }
+
+        public String getLineCode() {
+            return lineCode;
+        }
+
+        public void setLineCode(String lineCode) {
+            this.lineCode = lineCode;
+        }
+
+        public String getLineName() {
+            return lineName;
+        }
+
+        public void setLineName(String lineName) {
+            this.lineName = lineName;
         }
 
         public String getFromName() {

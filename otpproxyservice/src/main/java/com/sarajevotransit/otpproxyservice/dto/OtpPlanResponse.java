@@ -70,6 +70,7 @@ public class OtpPlanResponse {
     public static class Leg {
 
         private String mode;
+        private Route route;
         private Place from;
         private Place to;
         private LegTime start;
@@ -83,6 +84,14 @@ public class OtpPlanResponse {
 
         public void setMode(String mode) {
             this.mode = mode;
+        }
+
+        public Route getRoute() {
+            return route;
+        }
+
+        public void setRoute(Route route) {
+            this.route = route;
         }
 
         public Place getFrom() {
@@ -131,6 +140,50 @@ public class OtpPlanResponse {
 
         public void setLegGeometry(LegGeometry legGeometry) {
             this.legGeometry = legGeometry;
+        }
+    }
+
+    public static class Route {
+
+        private String shortName;
+        private String longName;
+        private Integer type;
+        private Integer gtfsType;
+
+        public String getShortName() {
+            return shortName;
+        }
+
+        public void setShortName(String shortName) {
+            this.shortName = shortName;
+        }
+
+        public String getLongName() {
+            return longName;
+        }
+
+        public void setLongName(String longName) {
+            this.longName = longName;
+        }
+
+        public Integer getType() {
+            return type;
+        }
+
+        public void setType(Integer type) {
+            this.type = type;
+        }
+
+        public Integer getGtfsType() {
+            return gtfsType;
+        }
+
+        public void setGtfsType(Integer gtfsType) {
+            this.gtfsType = gtfsType;
+        }
+
+        public Integer getResolvedType() {
+            return type != null ? type : gtfsType;
         }
     }
 
