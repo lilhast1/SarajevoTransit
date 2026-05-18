@@ -82,9 +82,15 @@ docker compose down -v
 
 ### 4. Start Services
 
-#### Option A (recommended): one command (PowerShell)
+#### Option A (recommended): one command
 
-From project root:
+**Linux / macOS:**
+
+```bash
+bash scripts/start-all.sh
+```
+
+**Windows (PowerShell):**
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
@@ -92,20 +98,32 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
 
 This starts:
 - PostgreSQL + MySQL via Docker Compose
-- Config Server, Eureka, all microservices, and API Gateway in separate PowerShell windows
+- Config Server, Eureka, all microservices, and API Gateway in separate terminal windows
 
-If a service has no `mvnw.cmd`, the script falls back to `mvn` only when Maven is installed globally. Otherwise it stops early with a clear pre-check error.
+If a service has no `mvnw` / `mvnw.cmd`, the script falls back to `mvn` only when Maven is installed globally. Otherwise it stops early with a clear pre-check error.
 Ports are locked for Config Server (`8888`), Eureka (`8761`), and API Gateway (`8080`). For other services, the script tries the default port first and automatically picks a free random port when that port is already in use.
 
 Optional flags:
 
+```bash
+# Linux / macOS
+bash scripts/start-all.sh --include-otp
+```
+
 ```powershell
+# Windows
 powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1 -IncludeOtp
 ```
 
 To stop everything:
 
+```bash
+# Linux / macOS
+bash scripts/stop-all.sh
+```
+
 ```powershell
+# Windows
 powershell -ExecutionPolicy Bypass -File .\scripts\stop-all.ps1
 ```
 
