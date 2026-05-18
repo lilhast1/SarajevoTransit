@@ -1,6 +1,6 @@
 package com.sarajevotransit.feedbackservice.controller;
 
-import tools.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.sarajevotransit.feedbackservice.dto.BatchCreateProblemReportsRequest;
 import com.sarajevotransit.feedbackservice.dto.BatchCreateProblemReportsResponse;
 import com.sarajevotransit.feedbackservice.dto.CreateProblemReportRequest;
@@ -62,6 +62,7 @@ public class ProblemReportController {
     }
 
     @GetMapping
+    @Operation(security = {})
     public Page<ProblemReportResponse> getReports(
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) Long reporterUserId,
@@ -71,6 +72,7 @@ public class ProblemReportController {
     }
 
     @GetMapping("/search")
+    @Operation(security = {})
     public Page<ProblemReportResponse> searchReports(
             @RequestParam("q") String keyword,
             @RequestParam(required = false) ReportStatus status,
@@ -88,6 +90,7 @@ public class ProblemReportController {
     }
 
     @GetMapping("/{id}")
+    @Operation(security = {})
     public ProblemReportResponse getReport(
             @PathVariable @Positive Long id,
             jakarta.servlet.http.HttpServletRequest httpRequest) {
@@ -95,6 +98,7 @@ public class ProblemReportController {
     }
 
     @GetMapping("/line/{lineId}")
+    @Operation(security = {})
     public Page<ProblemReportResponse> getReportsByLineId(
             @PathVariable @Positive Long lineId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,

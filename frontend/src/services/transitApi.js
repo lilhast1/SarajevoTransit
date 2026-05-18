@@ -59,7 +59,7 @@ function mockGetStopsByLine(lineId) {
   const lineDirections = directions.filter((d) => d.lineId === Number(lineId))
   const stopIds = new Set()
   lineDirections.forEach((d) => {
-    ;(directionStations[d.id] || []).forEach((sid) => stopIds.add(sid))
+    ; (directionStations[d.id] || []).forEach((sid) => stopIds.add(sid))
   })
   return stations.filter((s) => stopIds.has(s.id))
 }
