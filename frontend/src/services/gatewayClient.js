@@ -91,6 +91,14 @@ export const gatewayClient = {
   /** GET /api/v1/users/me */
   getCurrentUser: () => request('/api/v1/users/me'),
 
+  // ── Problem reports ───────────────────────────────────────────────────
+  /** POST /api/v1/reports */
+  createProblemReport: (payload) =>
+    request('/api/v1/reports', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
   /** POST /api/v1/auth/logout */
   logout: () => request('/api/v1/auth/logout', { method: 'POST' }),
 }
