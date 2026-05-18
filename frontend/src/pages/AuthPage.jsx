@@ -129,10 +129,6 @@ export function AuthPage() {
             {loading ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create account'}
           </button>
         </form>
-
-        <p className="mt-4 rounded-lg border border-border bg-surface-soft px-3 py-2 text-xs text-muted">
-          Demo login: demo@sarajevotransit.ba / Password123
-        </p>
       </PanelCard>
     </div>
   )

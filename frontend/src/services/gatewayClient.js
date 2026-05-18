@@ -88,19 +88,6 @@ export const gatewayClient = {
   /** GET /api/v1/routes/optimal?fromLat=&fromLon=&toLat=&toLon=&… */
   getOptimalRoute: (query) => request(`/api/v1/routes/optimal?${query}`),
 
-  // ── Authentication (UserService) ───────────────────────────────────────
-  /** POST /api/v1/auth/register */
-  register: (data) => request('/api/v1/auth/register', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-  
-  /** POST /api/v1/auth/login */
-  login: (data) => request('/api/v1/auth/login', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-
   /** GET /api/v1/users/me */
   getCurrentUser: () => request('/api/v1/users/me'),
 

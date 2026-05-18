@@ -55,28 +55,11 @@ function mockGetDirectionStations(directionId) {
   })
 }
 
-function mockGetDirectionPolyline(directionId) {
-  const polyline = routePolylines[Number(directionId)]
-  if (Array.isArray(polyline) && polyline.length > 1) return polyline
-
-  const stationIds = directionStations[Number(directionId)] || []
-  const fallbackPolyline = stationIds
-    .map((stationId) => {
-      const station = stations.find((item) => item.id === stationId)
-      return station ? [station.latitude, station.longitude] : null
-    })
-    .filter(Boolean)
-
-  if (fallbackPolyline.length > 1) return fallbackPolyline
-
-  return [sarajevoCenter]
-}
-
 function mockGetStopsByLine(lineId) {
   const lineDirections = directions.filter((d) => d.lineId === Number(lineId))
   const stopIds = new Set()
   lineDirections.forEach((d) => {
-    ; (directionStations[d.id] || []).forEach((sid) => stopIds.add(sid))
+    ;(directionStations[d.id] || []).forEach((sid) => stopIds.add(sid))
   })
   return stations.filter((s) => stopIds.has(s.id))
 }
@@ -316,7 +299,7 @@ export const transitApi = {
       const polyline = geoJsonToLeafletPolyline(feature)
       return polyline || [sarajevoCenter]
     } catch {
-      return mockGetDirectionPolyline(directionId)
+      return routePolylines[Number(directionId)] || [sarajevoCenter]
     }
   },
 
@@ -489,56 +472,14 @@ export const transitApi = {
     }
   },
 
-  // ── Auth (attempts real backend, falls back to mock) ─────────────────────
+  // ── Auth ───────────────────────────────────────────────────────────────────
   async register({ fullName, email, password }) {
-    try {
-      // Try to call real backend
-      return await gatewayClient.register({ fullName, email, password })
-    } catch (error) {
-      // Fallback to mock data if backend unavailable
-      const existing = mockUsers.find((user) => user.email.toLowerCase() === email.toLowerCase())
-      if (existing) throw new Error('Email already in use')
-
-      const nextId = mockUsers.length + 1
-      mockUsers.push({ id: nextId, fullName, email, password })
-
-      return {
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
-        tokenType: 'Bearer',
-        expiresIn: 3600,
-        userId: nextId,
-        email,
-        fullName,
-        role: 'USER',
-      }
-    }
+    await gatewayClient.register({ fullName, email, password })
+    return gatewayClient.login({ email, password })
   },
 
   async login({ email, password }) {
-    try {
-      // Try to call real backend
-      return await gatewayClient.login({ email, password })
-    } catch (error) {
-      // Fallback to mock data if backend unavailable
-      const user = mockUsers.find(
-        (candidate) =>
-          candidate.email.toLowerCase() === email.toLowerCase() && candidate.password === password,
-      )
-
-      if (!user) throw new Error('Invalid email or password')
-
-      return {
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
-        tokenType: 'Bearer',
-        expiresIn: 3600,
-        userId: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        role: 'USER',
-      }
-    }
+    return gatewayClient.login({ email, password })
   },
 
   async getProfileSnapshot(favorites) {
