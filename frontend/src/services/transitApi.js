@@ -2,7 +2,6 @@ import {
   directionStations,
   directions,
   lines as mockLines,
-  mockUsers,
   routePolylines,
   sarajevoCenter,
   stations,
@@ -10,8 +9,9 @@ import {
   vehicleTypes,
 } from '../data/mockTransitData'
 import { gatewayClient } from './gatewayClient'
+import { VEHICLE_TYPE_META_BY_ID, getVehicleTypeMetaByName } from '../constants/vehicleColors'
 
-const isGatewayOnly = true
+const vehicleTypeById = VEHICLE_TYPE_META_BY_ID
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -144,6 +144,109 @@ function decodePolyline(encoded) {
     poly.push([lat / 1e5, lng / 1e5])
   }
   return poly
+}
+
+function normalizeNumber(value) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
+function extractCoordinates(item) {
+  const latitude =
+    normalizeNumber(item?.latitude) ??
+    normalizeNumber(item?.lat) ??
+    normalizeNumber(item?.gpsLatitude) ??
+    normalizeNumber(item?.y) ??
+    normalizeNumber(item?.position?.latitude) ??
+    normalizeNumber(item?.position?.lat)
+
+  const longitude =
+    normalizeNumber(item?.longitude) ??
+    normalizeNumber(item?.lon) ??
+    normalizeNumber(item?.lng) ??
+    normalizeNumber(item?.gpsLongitude) ??
+    normalizeNumber(item?.x) ??
+    normalizeNumber(item?.position?.longitude) ??
+    normalizeNumber(item?.position?.lon) ??
+    normalizeNumber(item?.position?.lng)
+
+  if (latitude === null || longitude === null) return null
+  return { latitude, longitude }
+}
+
+function resolveTypeInfo(item, requestedTypeIds = []) {
+  const rawType =
+    normalizeNumber(item?.vehicleTypeId) ??
+    normalizeNumber(item?.vehicle_type_id) ??
+    normalizeNumber(item?.typeId) ??
+    normalizeNumber(item?.vehicleType?.id) ??
+    normalizeNumber(item?.line?.vehicleTypeId)
+
+  if (rawType && vehicleTypeById[rawType]) return vehicleTypeById[rawType]
+
+  const rawTypeName = String(item?.vehicleType || item?.type || '').toLowerCase().trim()
+  if (rawTypeName) {
+    const matched = getVehicleTypeMetaByName(rawTypeName)
+    if (matched) return matched
+  }
+
+  if (requestedTypeIds.length === 1 && vehicleTypeById[requestedTypeIds[0]]) {
+    return vehicleTypeById[requestedTypeIds[0]]
+  }
+
+  return {
+    id: 0,
+    key: 'transit',
+    label: 'Transit',
+    color: '#6366f1',
+  }
+}
+
+function normalizeVehiclePosition(item, fallbackId, typeInfo) {
+  const coords = extractCoordinates(item)
+  if (!coords) return null
+
+  return {
+    id: item?.id || item?.vehicleId || item?.vehicle_id || `${typeInfo.id}-${fallbackId}`,
+    lineCode:
+      String(
+        item?.lineCode || item?.line?.code || item?.code || item?.vehicle_code || item?.vehicleCode || '',
+      ).trim() || '--',
+    name:
+      String(
+        item?.lineName || item?.line?.name || item?.name || item?.vehicle_name || item?.vehicleName || item?.direction || '',
+      ).trim() || undefined,
+    latitude: coords.latitude,
+    longitude: coords.longitude,
+    typeId: typeInfo.id,
+    type: typeInfo.key,
+    typeLabel: typeInfo.label,
+    color: typeInfo.color,
+    heading: normalizeNumber(item?.heading) ?? normalizeNumber(item?.bearing) ?? undefined,
+    speed: normalizeNumber(item?.speed) ?? undefined,
+    raw: item,
+  }
+}
+
+async function fetchVehiclePositionsByTypes(typeIds) {
+  const csvTypes = typeIds.join(',')
+  const response = await fetch(`/jp-api/api/lines/vehicle/positions/${csvTypes}`, {
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`Vehicle positions request failed (${response.status})`)
+  }
+
+  if (response.status === 204) return []
+  const payload = await response.json()
+  if (!Array.isArray(payload)) return []
+
+  return payload
+    .map((item, index) => normalizeVehiclePosition(item, index, resolveTypeInfo(item, typeIds)))
+    .filter(Boolean)
 }
 
 // ─── API ──────────────────────────────────────────────────────────────────────
@@ -448,5 +551,18 @@ export const transitApi = {
 
   async getStopsByLine(lineId) {
     return mockGetStopsByLine(lineId)
+  },
+
+  async getVehiclePositions(vehicleTypeIds = [1, 2, 3, 4]) {
+    const validTypeIds = Array.from(
+      new Set(
+        vehicleTypeIds
+          .map((item) => Number(item))
+          .filter((item) => Number.isFinite(item) && vehicleTypeById[item]),
+      ),
+    )
+
+    if (validTypeIds.length === 0) return []
+    return fetchVehiclePositionsByTypes(validTypeIds)
   },
 }

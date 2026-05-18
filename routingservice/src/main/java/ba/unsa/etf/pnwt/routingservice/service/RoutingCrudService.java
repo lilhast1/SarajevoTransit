@@ -15,9 +15,11 @@ import ba.unsa.etf.pnwt.routingservice.dto.StationRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.StationResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.TimetableRequest;
 import ba.unsa.etf.pnwt.routingservice.dto.TimetableResponse;
+import ba.unsa.etf.pnwt.routingservice.event.TimetableChangedEvent;
 import ba.unsa.etf.pnwt.routingservice.exception.ConflictException;
 import ba.unsa.etf.pnwt.routingservice.exception.ResourceNotFoundException;
 import ba.unsa.etf.pnwt.routingservice.mapper.RoutingMapper;
+import ba.unsa.etf.pnwt.routingservice.messaging.TimetableEventPublisher;
 import ba.unsa.etf.pnwt.routingservice.model.Direction;
 import ba.unsa.etf.pnwt.routingservice.model.DirectionStation;
 import ba.unsa.etf.pnwt.routingservice.model.Line;
@@ -35,7 +37,9 @@ import ba.unsa.etf.pnwt.routingservice.repository.VehicleTypeRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -49,6 +53,7 @@ public class RoutingCrudService {
     private final RoutePointRepository routePointRepository;
     private final VehicleTypeRepository vehicleTypeRepository;
     private final RoutingMapper mapper;
+    private final TimetableEventPublisher timetableEventPublisher;
 
     public RoutingCrudService(
             LineRepository lineRepository,
@@ -58,7 +63,8 @@ public class RoutingCrudService {
             DirectionStationRepository directionStationRepository,
             RoutePointRepository routePointRepository,
             VehicleTypeRepository vehicleTypeRepository,
-            RoutingMapper mapper
+            RoutingMapper mapper,
+            TimetableEventPublisher timetableEventPublisher
     ) {
         this.lineRepository = lineRepository;
         this.directionRepository = directionRepository;
@@ -68,6 +74,7 @@ public class RoutingCrudService {
         this.routePointRepository = routePointRepository;
         this.vehicleTypeRepository = vehicleTypeRepository;
         this.mapper = mapper;
+        this.timetableEventPublisher = timetableEventPublisher;
     }
 
     public List<LineResponse> getLines(Boolean activeOnly, Short vehicleTypeId) {
@@ -102,7 +109,16 @@ public class RoutingCrudService {
         validateLineExternalIdOnUpdate(id, request.getExternalId());
         VehicleType vehicleType = findVehicleType(request.getVehicleTypeId());
         applyLineRequest(line, request, vehicleType);
-        return mapper.toLineResponse(lineRepository.save(line));
+        Line saved = lineRepository.save(line);
+        timetableEventPublisher.publishTimetableChanged(new TimetableChangedEvent(
+                UUID.randomUUID().toString(),
+                saved.getId().longValue(),
+                saved.getCode(),
+                saved.getName(),
+                "LINE_UPDATED",
+                Instant.now()
+        ));
+        return mapper.toLineResponse(saved);
     }
 
     public void deleteLine(Integer id) {
@@ -142,7 +158,16 @@ public class RoutingCrudService {
         validateDirectionExternalIdOnUpdate(id, request.getExternalId());
         Line line = findLine(request.getLineId());
         applyDirectionRequest(direction, request, line);
-        return mapper.toDirectionResponse(directionRepository.save(direction));
+        Direction saved = directionRepository.save(direction);
+        timetableEventPublisher.publishTimetableChanged(new TimetableChangedEvent(
+                UUID.randomUUID().toString(),
+                line.getId().longValue(),
+                line.getCode(),
+                line.getName(),
+                "DIRECTION_UPDATED",
+                Instant.now()
+        ));
+        return mapper.toDirectionResponse(saved);
     }
 
     public void deleteDirection(Integer id) {
@@ -223,7 +248,16 @@ public class RoutingCrudService {
         Line line = findLine(request.getLineId());
         validateTimetableLineDirectionConsistency(direction, line);
         applyTimetableRequest(timetable, request, direction, line);
-        return mapper.toTimetableResponse(timetableRepository.save(timetable));
+        Timetable saved = timetableRepository.save(timetable);
+        timetableEventPublisher.publishTimetableChanged(new TimetableChangedEvent(
+                UUID.randomUUID().toString(),
+                line.getId().longValue(),
+                line.getCode(),
+                line.getName(),
+                "TIMETABLE_UPDATED",
+                Instant.now()
+        ));
+        return mapper.toTimetableResponse(saved);
     }
 
     public void deleteTimetable(Integer id) {

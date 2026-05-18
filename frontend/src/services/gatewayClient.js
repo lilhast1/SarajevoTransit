@@ -2,23 +2,47 @@ import { getAccessToken } from '../utils/authStorage'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
-async function request(path, options = {}) {
-  const token = getAccessToken()
-  
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options.headers || {}),
+async function buildErrorMessage(response) {
+  const contentType = response.headers.get('content-type') || ''
+
+  if (contentType.includes('application/json')) {
+    try {
+      const payload = await response.json()
+      if (Array.isArray(payload?.validationErrors) && payload.validationErrors.length > 0) {
+        return payload.validationErrors.join(', ')
+      }
+      if (typeof payload?.message === 'string' && payload.message.trim().length > 0) {
+        return payload.message
+      }
+    } catch {
+      return `Request failed with status ${response.status}`
+    }
   }
 
+  try {
+    const text = await response.text()
+    if (text && text.trim().length > 0) return text
+  } catch {
+    return `Request failed with status ${response.status}`
+  }
+
+  return `Request failed with status ${response.status}`
+}
+
+async function request(path, options = {}) {
+  const { token, headers: customHeaders, ...restOptions } = options
+
   const response = await fetch(`${BASE_URL}${path}`, {
-    headers,
-    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(customHeaders || {}),
+    },
+    ...restOptions,
   })
 
   if (!response.ok) {
-    const message = await response.text()
-    throw new Error(message || `Request failed with status ${response.status}`)
+    throw new Error(await buildErrorMessage(response))
   }
 
   if (response.status === 204) return null
@@ -26,6 +50,18 @@ async function request(path, options = {}) {
 }
 
 export const gatewayClient = {
+  // ── Auth / users ────────────────────────────────────────────────────────
+  login: (payload) =>
+    request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  register: (payload) =>
+    request('/api/v1/users', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   // ── Lines ──────────────────────────────────────────────────────────────
   getLines: (query = '') => request(`/api/v1/lines${query}`),
   getLineById: (lineId) => request(`/api/v1/lines/${lineId}`),

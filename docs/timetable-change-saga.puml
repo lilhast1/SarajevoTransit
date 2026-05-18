@@ -1,0 +1,65 @@
+@startuml Timetable Change Saga — Choreography with RabbitMQ
+
+skinparam sequenceArrowThickness 2
+skinparam sequenceBoxBorderColor #444
+skinparam noteBorderColor #888
+
+title Timetable Change Saga (Saga Choreography Pattern)
+
+actor      "Admin"                   as A
+participant "RoutingService\n:9999"  as R  #LightBlue
+queue      "RabbitMQ\ntimetable.exchange" as Q  #Orange
+participant "NotificationService\n:8086" as N  #LightYellow
+
+== Happy Path ==
+
+A -> R : PUT /api/v1/lines/{id}\n(or /directions/{id} or /timetables/{id})
+activate R
+
+R -> R : **Local TX**\nUpdate Line/Direction/Timetable in DB\ngenerate sagaId
+
+R -> Q : **timetable.changed**\n{sagaId, lineId, lineCode, lineName, changeType}
+R --> A : 200 OK {updated entity}
+deactivate R
+
+Q -> N : timetable.changed
+activate N
+
+N -> N : **Local TX**\nfetch active subscribers for lineId\nbulk-create Notification rows (TIMETABLE_CHANGE)
+
+N -> Q : **timetable.notification.sent**\n{sagaId, lineId, notifiedCount}
+deactivate N
+
+Q -> R : timetable.notification.sent
+activate R
+R -> R : log "Saga [sagaId]: notifications sent\nto N subscribers for line X"\n**SAGA FINALIZED ✓**
+deactivate R
+
+== Compensation Path (NotificationService fails) ==
+
+|||
+A -> R : PUT /api/v1/lines/{id}
+activate R
+R -> R : **Local TX**\nUpdate entity in DB\ngenerate sagaId
+R -> Q : **timetable.changed**\n{sagaId, lineId, ...}
+R --> A : 200 OK
+deactivate R
+
+Q -> N : timetable.changed
+activate N
+N -> N : broadcast() — FAILS\n(DB error / exception)\nnotifications NOT created
+N -> Q : **timetable.notification.failed**\n{sagaId, lineId, reason}
+deactivate N
+
+Q -> R : timetable.notification.failed
+activate R
+R -> R : log warning\n**Compensating action:**\nrepublish timetable.changed (RETRY)
+R -> Q : **timetable.changed** {sagaId, changeType="RETRY"}
+deactivate R
+
+note over R, N
+  RoutingService DB write is always committed regardless of notification outcome.
+  Compensation retries notification delivery once — further retries left to ops.
+end note
+
+@enduml

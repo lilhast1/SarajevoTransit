@@ -1,10 +1,11 @@
+import { ArrowLeft, Route } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { LineBadge } from '../components/common/LineBadge'
 import { PanelCard } from '../components/common/PanelCard'
 import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
 import { LoadingSkeletons, EmptyState } from '../components/common/LoadingStates'
 import { AlertCircle, RefreshCw } from 'lucide-react'
+import { TransitMap } from '../components/map/TransitMap'
 import { transitApi } from '../services/transitApi'
 
 const typeFilters = ['all', 'tram', 'bus', 'trolleybus', 'minibus']
@@ -22,6 +23,16 @@ export function LinesPage() {
   const [type, setType] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  const [selectedLineId, setSelectedLineId] = useState(null)
+  const [selectedLine, setSelectedLine] = useState(null)
+  const [directions, setDirections] = useState([])
+  const [selectedDirectionId, setSelectedDirectionId] = useState(null)
+  const [stops, setStops] = useState([])
+  const [polyline, setPolyline] = useState([])
+  const [detailLoading, setDetailLoading] = useState(false)
+
+  const detailMode = selectedLineId !== null
 
   useEffect(() => {
     let active = true
@@ -55,6 +66,70 @@ export function LinesPage() {
       active = false
     }
   }, [query, type])
+
+  useEffect(() => {
+    if (!selectedLineId) return
+    let active = true
+    setDetailLoading(true)
+
+    Promise.all([transitApi.getLineById(selectedLineId), transitApi.getDirectionsByLine(selectedLineId)])
+      .then(async ([lineResponse, directionResponse]) => {
+        if (!active) return
+        setSelectedLine(lineResponse)
+        setDirections(directionResponse)
+
+        if (directionResponse.length > 0) {
+          let foundDirectionId = null
+
+          // Try to find the first direction that has a valid polyline
+          for (const direction of directionResponse) {
+            const dPolyline = await transitApi.getDirectionPolyline(direction.id)
+            if (!active) return
+
+            if (dPolyline && dPolyline.length > 1) {
+              foundDirectionId = direction.id
+              break 
+            }
+          }
+
+          // Fallback to first direction if none had geometry
+          if (!foundDirectionId) {
+            foundDirectionId = directionResponse[0].id
+          }
+
+          setSelectedDirectionId(foundDirectionId)
+        } else {
+          setSelectedDirectionId(null)
+          setStops([])
+          setPolyline([])
+        }
+      })
+      .finally(() => {
+        if (active) setDetailLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [selectedLineId])
+
+  useEffect(() => {
+    if (!selectedDirectionId) return
+    let active = true
+
+    Promise.all([
+      transitApi.getDirectionStations(selectedDirectionId),
+      transitApi.getDirectionPolyline(selectedDirectionId),
+    ]).then(([directionStops, directionPolyline]) => {
+      if (!active) return
+      setStops(directionStops)
+      setPolyline(directionPolyline)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [selectedDirectionId])
 
   const countLabel = useMemo(() => `${lines.length} line${lines.length === 1 ? '' : 's'}`, [lines])
 
