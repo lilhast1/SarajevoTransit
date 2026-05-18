@@ -1,28 +1,21 @@
-import { ArrowLeft, Route } from 'lucide-react'
+import { AlertCircle, ArrowLeft, RefreshCw, Route } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { LineBadge } from '../components/common/LineBadge'
+import { ErrorAlert } from '../components/common/Alerts'
+import { EmptyState } from '../components/common/LoadingStates'
 import { PanelCard } from '../components/common/PanelCard'
-import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
-import { LoadingSkeletons, EmptyState } from '../components/common/LoadingStates'
-import { AlertCircle, RefreshCw } from 'lucide-react'
 import { TransitMap } from '../components/map/TransitMap'
 import { transitApi } from '../services/transitApi'
 
 const typeFilters = ['all', 'tram', 'bus', 'trolleybus', 'minibus']
 
-/**
- * Lines Discovery Page - demonstrates:
- * - Client-side filtering (no full page reload)
- * - Real-time search API integration
- * - Loading and error states
- * - SPA navigation to detail pages
- */
 export function LinesPage() {
   const [lines, setLines] = useState([])
   const [query, setQuery] = useState('')
   const [type, setType] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [linesRetryKey, setLinesRetryKey] = useState(0)
 
   const [selectedLineId, setSelectedLineId] = useState(null)
   const [selectedLine, setSelectedLine] = useState(null)
@@ -31,6 +24,8 @@ export function LinesPage() {
   const [stops, setStops] = useState([])
   const [polyline, setPolyline] = useState([])
   const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState(null)
+  const [directionError, setDirectionError] = useState(null)
 
   const detailMode = selectedLineId !== null
 
@@ -52,6 +47,7 @@ export function LinesPage() {
       } catch (err) {
         if (active) {
           setError(err.message || 'Failed to load lines')
+          setLines([])
         }
       } finally {
         if (active) {
@@ -65,15 +61,22 @@ export function LinesPage() {
     return () => {
       active = false
     }
-  }, [query, type])
+  }, [query, type, linesRetryKey])
 
   useEffect(() => {
     if (!selectedLineId) return
     let active = true
     setDetailLoading(true)
+    setDetailError(null)
+    setDirectionError(null)
 
-    Promise.all([transitApi.getLineById(selectedLineId), transitApi.getDirectionsByLine(selectedLineId)])
-      .then(async ([lineResponse, directionResponse]) => {
+    const fetchLineDetail = async () => {
+      try {
+        const [lineResponse, directionResponse] = await Promise.all([
+          transitApi.getLineById(selectedLineId),
+          transitApi.getDirectionsByLine(selectedLineId),
+        ])
+
         if (!active) return
         setSelectedLine(lineResponse)
         setDirections(directionResponse)
@@ -81,18 +84,16 @@ export function LinesPage() {
         if (directionResponse.length > 0) {
           let foundDirectionId = null
 
-          // Try to find the first direction that has a valid polyline
           for (const direction of directionResponse) {
             const dPolyline = await transitApi.getDirectionPolyline(direction.id)
             if (!active) return
 
             if (dPolyline && dPolyline.length > 1) {
               foundDirectionId = direction.id
-              break 
+              break
             }
           }
 
-          // Fallback to first direction if none had geometry
           if (!foundDirectionId) {
             foundDirectionId = directionResponse[0].id
           }
@@ -103,10 +104,23 @@ export function LinesPage() {
           setStops([])
           setPolyline([])
         }
-      })
-      .finally(() => {
-        if (active) setDetailLoading(false)
-      })
+      } catch (err) {
+        if (active) {
+          setDetailError(err.message || 'Failed to load line details')
+          setSelectedLine(null)
+          setDirections([])
+          setSelectedDirectionId(null)
+          setStops([])
+          setPolyline([])
+        }
+      } finally {
+        if (active) {
+          setDetailLoading(false)
+        }
+      }
+    }
+
+    fetchLineDetail()
 
     return () => {
       active = false
@@ -116,15 +130,27 @@ export function LinesPage() {
   useEffect(() => {
     if (!selectedDirectionId) return
     let active = true
+    setDirectionError(null)
 
-    Promise.all([
-      transitApi.getDirectionStations(selectedDirectionId),
-      transitApi.getDirectionPolyline(selectedDirectionId),
-    ]).then(([directionStops, directionPolyline]) => {
-      if (!active) return
-      setStops(directionStops)
-      setPolyline(directionPolyline)
-    })
+    const fetchDirectionData = async () => {
+      try {
+        const [directionStops, directionPolyline] = await Promise.all([
+          transitApi.getDirectionStations(selectedDirectionId),
+          transitApi.getDirectionPolyline(selectedDirectionId),
+        ])
+        if (!active) return
+        setStops(directionStops)
+        setPolyline(directionPolyline)
+      } catch (err) {
+        if (active) {
+          setDirectionError(err.message || 'Failed to load direction data')
+          setStops([])
+          setPolyline([])
+        }
+      }
+    }
+
+    fetchDirectionData()
 
     return () => {
       active = false
@@ -133,110 +159,225 @@ export function LinesPage() {
 
   const countLabel = useMemo(() => `${lines.length} line${lines.length === 1 ? '' : 's'}`, [lines])
 
+  const openLineDetail = (lineId) => {
+    setSelectedLineId(lineId)
+    setSelectedLine(null)
+    setDirections([])
+    setSelectedDirectionId(null)
+    setStops([])
+    setPolyline([])
+  }
+
+  const backToSearch = () => {
+    setSelectedLineId(null)
+    setSelectedLine(null)
+    setDirections([])
+    setSelectedDirectionId(null)
+    setStops([])
+    setPolyline([])
+  }
+
   const handleRetry = () => {
     setError(null)
-    setLoading(true)
+    setLinesRetryKey((current) => current + 1)
   }
+
+  const isPolylineEmpty = useMemo(() => {
+    if (!polyline || polyline.length <= 1) return true
+    return false
+  }, [polyline])
 
   return (
     <div className="space-y-4">
       <PanelCard tone="soft">
-        <h2 className="text-xl font-semibold text-ink">Public Transport Lines</h2>
-        <p className="mt-1 text-sm text-muted">
-          Browse and filter all active public transport lines in Sarajevo. Click on a line to see detailed route information,
-          stops, and timetables.
-        </p>
+        {!detailMode ? (
+          <>
+            <h2 className="text-xl font-semibold text-ink">Line Search</h2>
+            <p className="mt-1 text-sm text-muted">Browse all active public transport lines in Sarajevo.</p>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
-          <div>
-            <label htmlFor="line-search" className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-              Search
-            </label>
-            <input
-              id="line-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by line number or name"
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
-            />
-          </div>
-          <div>
-            <label htmlFor="line-type-filter" className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-              Type
-            </label>
-            <select
-              id="line-type-filter"
-              value={type}
-              onChange={(event) => setType(event.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring md:w-auto"
-            >
-              {typeFilters.map((option) => (
-                <option key={option} value={option}>
-                  {option === 'all' ? 'All types' : option}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+              <label htmlFor="line-search" className="sr-only">
+                Search lines
+              </label>
+              <input
+                id="line-search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search by line number or name"
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
+              />
+              <label htmlFor="line-type-filter" className="sr-only">
+                Filter line type
+              </label>
+              <select
+                id="line-type-filter"
+                value={type}
+                onChange={(event) => setType(event.target.value)}
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
+              >
+                {typeFilters.map((option) => (
+                  <option key={option} value={option}>
+                    {option === 'all' ? 'All types' : option}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <p className="mt-3 text-xs font-medium uppercase tracking-[0.12em] text-muted">{countLabel}</p>
+            <p className="mt-3 text-xs font-medium uppercase tracking-[0.12em] text-muted">{countLabel}</p>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                {selectedLine ? <LineBadge line={selectedLine} /> : null}
+                <h2 className="mt-2 text-xl font-semibold text-ink">{selectedLine?.name || 'Loading line...'}</h2>
+                <p className="mt-1 text-sm text-muted">Direction-aware stop list and route preview.</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={backToSearch}
+                className="inline-flex items-center gap-2 rounded-panel border border-border bg-surface px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
+              >
+                <ArrowLeft size={14} />
+                Back to search
+              </button>
+            </div>
+
+            {directions.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {directions.map((direction) => (
+                  <button
+                    key={direction.id}
+                    type="button"
+                    onClick={() => setSelectedDirectionId(direction.id)}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                      selectedDirectionId === direction.id
+                        ? 'border-accent bg-accent text-white'
+                        : 'border-border text-ink hover:bg-surface-alt'
+                    }`}
+                  >
+                    {direction.directionLabel} · {direction.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
+        )}
       </PanelCard>
 
-      {error && (
+      {!detailMode && error && (
         <ErrorAlert
           error={error}
           onDismiss={() => setError(null)}
         />
       )}
 
-      <div className="grid gap-3">
-        {loading ? (
-          <LoadingSkeletons count={3} />
-        ) : null}
+      {detailMode && detailError && (
+        <ErrorAlert
+          error={detailError}
+          onDismiss={() => setDetailError(null)}
+        />
+      )}
 
-        {!loading && error && (
-          <EmptyState
-            icon={AlertCircle}
-            title="Failed to load lines"
-            description={error}
-            action={
-              <button
-                onClick={handleRetry}
-                className="inline-flex items-center gap-2 rounded-lg border border-accent bg-accent px-3 py-2 text-sm font-medium text-white transition hover:bg-accent/90"
-              >
-                <RefreshCw size={14} />
-                Try again
-              </button>
-            }
-          />
-        )}
+      {detailMode && directionError && (
+        <ErrorAlert
+          error={directionError}
+          onDismiss={() => setDirectionError(null)}
+        />
+      )}
 
-        {!loading && !error && lines.length === 0 ? (
-          <EmptyState
-            title="No lines found"
-            description={query || type !== 'all' ? 'Try adjusting your search or filters' : 'No active lines available'}
-          />
-        ) : null}
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <PanelCard className="min-h-[520px] sm:w-1/3 sm:shrink-0">
+          {!detailMode ? (
+            <>
+              <h3 className="mb-3 text-base font-semibold text-ink">Matching lines</h3>
+              {loading ? <p className="text-sm text-muted">Loading lines...</p> : null}
+              {!loading && error ? (
+                <EmptyState
+                  icon={AlertCircle}
+                  title="Failed to load lines"
+                  description={error}
+                  action={
+                    <button
+                      type="button"
+                      onClick={handleRetry}
+                      className="inline-flex items-center gap-2 rounded-lg border border-accent bg-accent px-3 py-2 text-sm font-medium text-white transition hover:bg-accent/90"
+                    >
+                      <RefreshCw size={14} />
+                      Try again
+                    </button>
+                  }
+                />
+              ) : null}
+              {!loading && !error && lines.length === 0 ? <p className="text-sm text-muted">No lines match your search.</p> : null}
 
-        {!loading && !error && lines.map((line) => (
-          <PanelCard
-            key={line.id}
-            className="flex items-center justify-between gap-3 transition hover:bg-surface-alt"
-            tone="default"
-          >
-            <div>
-              <LineBadge line={line} />
-              <p className="mt-2 text-base font-semibold text-ink">{line.name}</p>
-              {line.description && <p className="text-sm text-muted">{line.description}</p>}
+              <div className="grid gap-2">
+                {!error && lines.map((line) => (
+                  <button
+                    key={line.id}
+                    type="button"
+                    onClick={() => openLineDetail(line.id)}
+                    className="rounded-panel border border-border bg-surface-soft px-3 py-3 text-left transition hover:bg-surface-alt"
+                  >
+                    <LineBadge line={line} />
+                    <p className="mt-2 text-sm font-semibold text-ink">{line.name}</p>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <h3 className="mb-3 text-base font-semibold text-ink">Stations</h3>
+              {detailLoading ? <p className="text-sm text-muted">Loading line details...</p> : null}
+
+              {!detailLoading && stops.length === 0 ? (
+                <p className="text-sm text-muted">No stations available for this direction.</p>
+              ) : null}
+
+              {stops.length > 0 ? (
+                <ol className="divide-y divide-border rounded-lg border border-border bg-surface">
+                  {stops.map((stop) => (
+                    <li key={stop.id} className="px-3 py-2 text-sm text-ink">
+                      <span className="mr-2 text-xs font-semibold text-muted">#{stop.stopSequence}</span>
+                      {stop.stationName}
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+            </>
+          )}
+        </PanelCard>
+
+        <PanelCard className="min-h-[520px] flex-1">
+          <h3 className="mb-3 text-base font-semibold text-ink">Route map</h3>
+
+          {!detailMode ? (
+            <div className="flex h-[460px] items-center justify-center rounded-lg border border-dashed border-border bg-surface-soft px-4 text-center">
+              <div>
+                <Route className="mx-auto mb-2 text-muted" size={22} />
+                <p className="text-sm text-muted">Select a line to preview its route map and stations.</p>
+              </div>
             </div>
-            <Link
-              to={`/lines/${line.id}`}
-              className="flex-shrink-0 rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface"
-            >
-              Details
-            </Link>
-          </PanelCard>
-        ))}
+          ) : detailLoading ? (
+            <div className="flex h-[460px] items-center justify-center rounded-lg border border-border bg-surface-soft">
+              <p className="text-sm text-muted">Loading route map...</p>
+            </div>
+          ) : isPolylineEmpty ? (
+            <div className="flex h-[460px] flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface-soft px-4 text-center">
+              <Route className="mb-2 text-muted" size={24} />
+              <p className="text-sm font-medium text-ink">No route geometry available</p>
+              <p className="mt-1 text-xs text-muted">The polyline data for this direction is currently unavailable.</p>
+            </div>
+          ) : (
+            <TransitMap
+              className="h-[460px]"
+              polyline={polyline}
+              focusPositions={polyline}
+              focusKey={`${selectedLineId || 'none'}-${selectedDirectionId || 'none'}`}
+            />
+          )}
+        </PanelCard>
       </div>
     </div>
   )
