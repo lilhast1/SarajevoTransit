@@ -11,6 +11,7 @@ import { RoutePlannerPage } from './pages/RoutePlannerPage.jsx'
 import { StopDetailPage } from './pages/StopDetailPage.jsx'
 import { StopsPage } from './pages/StopsPage.jsx'
 import { TimetablePage } from './pages/TimetablePage.jsx'
+import { VehiclesPage } from './pages/VehiclesPage.jsx'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/stops" element={<StopsPage />} />
         <Route path="/stops/:id" element={<StopDetailPage />} />
         <Route path="/timetable" element={<TimetablePage />} />
+        <Route path="/vehicles" element={<VehiclesPage />} />
         <Route path="/auth" element={<AuthPage />} />
 
         {/* Protected routes - require authentication */}

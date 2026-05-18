@@ -91,6 +91,12 @@ export const gatewayClient = {
   /** GET /api/v1/users/me */
   getCurrentUser: () => request('/api/v1/users/me'),
 
+  // ── Vehicles ──────────────────────────────────────────────────────────
+  /** GET /api/vehicles?size=200 */
+  getVehicles: (query = '') => request(`/api/vehicles${query}`),
+  /** GET /api/vehicles/{id} */
+  getVehicleById: (vehicleId) => request(`/api/vehicles/${vehicleId}`),
+
   // ── Problem reports ───────────────────────────────────────────────────
   /** POST /api/v1/reports */
   createProblemReport: (payload) =>

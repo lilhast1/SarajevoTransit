@@ -10,6 +10,7 @@ import {
   Route,
   Sun,
   Table,
+  Truck,
   UserRound,
 } from 'lucide-react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -21,6 +22,7 @@ const navItems = [
   { to: '/lines', label: 'Lines', icon: Bus },
   { to: '/stops', label: 'Stops', icon: MapPinned },
   { to: '/timetable', label: 'Timetable', icon: Table },
+  { to: '/vehicles', label: 'Vehicles', icon: Truck },
   { to: '/report', label: 'Report', icon: Bus },
   { to: '/auth', label: 'Auth', icon: LogIn },
   { to: '/profile', label: 'Profile', icon: UserRound },
