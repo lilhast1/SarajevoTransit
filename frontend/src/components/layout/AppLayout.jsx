@@ -16,6 +16,7 @@ import {
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAppContext } from '../../context/AppContext'
+import { SessionExpiryModal } from '../common/SessionExpiryModal'
 
 const publicNavItems = [
   { to: '/', label: 'Route Planner', icon: Route },
@@ -131,6 +132,8 @@ export function AppLayout() {
       <main className="mx-auto w-full max-w-[1500px] px-4 py-4">
         <Outlet />
       </main>
+
+      <SessionExpiryModal />
     </div>
   )
 }

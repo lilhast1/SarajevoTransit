@@ -42,6 +42,9 @@ async function request(path, options = {}) {
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent('session-expired'))
+    }
     throw new Error(await buildErrorMessage(response))
   }
 
@@ -51,6 +54,11 @@ async function request(path, options = {}) {
 
 export const gatewayClient = {
   // ── Auth / users ────────────────────────────────────────────────────────
+  refreshAccessToken: (refreshToken) =>
+    request('/api/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+    }),
   login: (payload) =>
     request('/api/auth/login', {
       method: 'POST',
