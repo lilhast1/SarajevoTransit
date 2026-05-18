@@ -3,3 +3,4 @@
 .vscode
 otp-data/
 **/keys/rsa-private-key.pem
+**/keys/rsa-public-key.pem
