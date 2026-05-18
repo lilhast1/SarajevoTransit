@@ -59,6 +59,7 @@ export function AppProvider({ children }) {
       toggleTheme: () => setTheme((current) => (current === 'dark' ? 'light' : 'dark')),
       session,
       isAuthenticated: Boolean(session?.accessToken),
+      isAdmin: session?.role === 'ADMIN',
       login: (payload) => setSession(payload),
       logout: () => setSession(null),
       favorites,

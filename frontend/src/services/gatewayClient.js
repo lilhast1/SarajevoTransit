@@ -101,4 +101,81 @@ export const gatewayClient = {
     }),
   /** POST /api/v1/auth/logout */
   logout: () => request('/api/v1/auth/logout', { method: 'POST' }),
+
+  // ── Admin: Reports ────────────────────────────────────────────────────────
+  getReports: (query = '') => request(`/api/v1/reports${query}`, { token: getAccessToken() }),
+  updateReportStatus: (id, status) =>
+    request(`/api/v1/reports/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+      token: getAccessToken(),
+    }),
+  deleteReport: (id) =>
+    request(`/api/v1/reports/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Reviews ────────────────────────────────────────────────────────
+  getReviews: (query = '') => request(`/api/v1/reviews${query}`, { token: getAccessToken() }),
+  updateReviewModeration: (id, moderationStatus) =>
+    request(`/api/v1/reviews/${id}/moderation-status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ moderationStatus }),
+      token: getAccessToken(),
+    }),
+  deleteReview: (id) =>
+    request(`/api/v1/reviews/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Lines (writes) ─────────────────────────────────────────────────
+  createLine: (payload) =>
+    request('/api/v1/lines', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  updateLine: (id, payload) =>
+    request(`/api/v1/lines/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  deleteLine: (id) =>
+    request(`/api/v1/lines/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Stations (writes) ──────────────────────────────────────────────
+  createStation: (payload) =>
+    request('/api/v1/stations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  updateStation: (id, payload) =>
+    request(`/api/v1/stations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  deleteStation: (id) =>
+    request(`/api/v1/stations/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Timetables ────────────────────────────────────────────────────
+  createTimetable: (payload) =>
+    request('/api/v1/timetables', { method: 'POST', body: JSON.stringify(payload), token: getAccessToken() }),
+  deleteTimetable: (id) =>
+    request(`/api/v1/timetables/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Users ──────────────────────────────────────────────────────────
+  getAllUsers: (query = '') => request(`/api/v1/users${query}`, { token: getAccessToken() }),
+  deleteUser: (id) =>
+    request(`/api/v1/users/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Notifications ──────────────────────────────────────────────────
+  getAllNotifications: (query = '') =>
+    request(`/notifications${query}`, { token: getAccessToken() }),
+  broadcastNotification: (payload) =>
+    request('/notifications/broadcast', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  deleteNotification: (id) =>
+    request(`/notifications/${id}`, { method: 'DELETE', token: getAccessToken() }),
 }
