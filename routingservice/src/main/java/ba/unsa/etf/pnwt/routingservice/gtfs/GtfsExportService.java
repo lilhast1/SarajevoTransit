@@ -336,6 +336,7 @@ public class GtfsExportService {
         return switch (vehicleTypeId) {
             case 4 -> 0;
             case 3 -> 11;
+            case 1 -> 704;
             default -> 3;
         };
     }
