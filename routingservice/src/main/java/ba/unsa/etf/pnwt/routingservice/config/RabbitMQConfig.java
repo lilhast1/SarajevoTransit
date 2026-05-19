@@ -15,6 +15,7 @@ public class RabbitMQConfig {
     public static final String ROUTING_TIMETABLE_CHANGED          = "timetable.changed";
     public static final String ROUTING_NOTIFICATION_SENT          = "timetable.notification.sent";
     public static final String ROUTING_NOTIFICATION_FAILED        = "timetable.notification.failed";
+    public static final String ROUTING_TRIP_DELAY_CHANGED         = "trip.delay.changed";
 
     public static final String QUEUE_NOTIFICATION_SENT   = "timetable-routing-notification-sent-queue";
     public static final String QUEUE_NOTIFICATION_FAILED = "timetable-routing-notification-failed-queue";
