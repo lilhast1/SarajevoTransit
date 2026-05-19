@@ -14,6 +14,7 @@ import { TimetablePage } from './pages/TimetablePage.jsx'
 import { VehiclesPage } from './pages/VehiclesPage.jsx'
 import { VehicleDetailPage } from './pages/VehicleDetailPage.jsx'
 import { DriverPage } from './pages/DriverPage.jsx'
+import { TicketsPage } from './pages/TicketsPage.jsx'
 
 function App() {
   return (
@@ -47,6 +48,15 @@ function App() {
           element={
             <ProtectedRoute>
               <ReportProblemPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/tickets"
+          element={
+            <ProtectedRoute>
+              <TicketsPage />
             </ProtectedRoute>
           }
         />

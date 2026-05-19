@@ -11,6 +11,7 @@ import {
   Route,
   Sun,
   Table,
+  Ticket,
   Truck,
   UserRound,
 } from 'lucide-react'
@@ -25,6 +26,7 @@ const BASE_NAV_ITEMS = [
   { to: '/timetable', label: 'Timetable', icon: Table },
   { to: '/vehicles', label: 'Vehicles', icon: Truck },
   { to: '/report', label: 'Report', icon: Bus },
+  { to: '/tickets', label: 'Tickets', icon: Ticket },
   { to: '/auth', label: 'Auth', icon: LogIn },
   { to: '/profile', label: 'Profile', icon: UserRound },
 ]
