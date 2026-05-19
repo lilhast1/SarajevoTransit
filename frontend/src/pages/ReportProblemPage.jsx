@@ -4,12 +4,12 @@ import { gatewayClient } from '../services/gatewayClient'
 import { useAppContext } from '../context/AppContext'
 
 const categories = [
-  'BREAKDOWN',
-  'CROWDING',
-  'HYGIENE',
-  'AGGRESSIVE_BEHAVIOR',
-  'DELAY',
-  'OTHER',
+  { value: 'BREAKDOWN', label: 'Breakdown' },
+  { value: 'CROWDING', label: 'Crowding' },
+  { value: 'HYGIENE', label: 'Hygiene' },
+  { value: 'AGGRESSIVE_BEHAVIOR', label: 'Aggressive Behavior' },
+  { value: 'DELAY', label: 'Delay' },
+  { value: 'OTHER', label: 'Other' },
 ]
 
 export function ReportProblemPage() {
@@ -26,18 +26,18 @@ export function ReportProblemPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!userId) {
-      // try fetch current user to obtain id
-      gatewayClient
-        .getCurrentUser()
-        .then((u) => setUserId(u.id))
-        .catch(() => {})
-    }
-  }, [userId])
+    setUserId(session?.userId || null)
+  }, [session?.userId])
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
+
+    if (!userId) {
+      setError('You must be logged in to submit a report.')
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -65,27 +65,27 @@ export function ReportProblemPage() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-lg font-semibold">Prijavi problem</h2>
-      <p className="text-sm text-muted">Prijavi kvar, gužvu ili vanrednu situaciju.</p>
+      <h2 className="text-lg font-semibold">Report Problem</h2>
+      <p className="text-sm text-muted">Report a breakdown, crowding, or other unusual situation.</p>
 
       <form className="mt-4 grid gap-3" onSubmit={handleSubmit}>
         <label className="block">
-          <span className="text-sm text-muted">Kategorija</span>
+          <span className="text-sm text-muted">Category</span>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="w-full rounded-panel border px-3 py-2"
           >
             {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
+              <option key={c.value} value={c.value}>
+                {c.label}
               </option>
             ))}
           </select>
         </label>
 
         <label>
-          <span className="text-sm text-muted">Opis</span>
+          <span className="text-sm text-muted">Description</span>
           <textarea
             required
             value={description}
@@ -98,7 +98,7 @@ export function ReportProblemPage() {
 
         <div className="grid grid-cols-2 gap-2">
           <label>
-            <span className="text-sm text-muted">Broj linije (opcionalno)</span>
+            <span className="text-sm text-muted">Line Number (optional)</span>
             <input
               value={lineId}
               onChange={(e) => setLineId(e.target.value)}
@@ -108,7 +108,7 @@ export function ReportProblemPage() {
           </label>
 
           <label>
-            <span className="text-sm text-muted">ID stanice (opcionalno)</span>
+            <span className="text-sm text-muted">Station ID (optional)</span>
             <input
               value={stationId}
               onChange={(e) => setStationId(e.target.value)}
@@ -119,7 +119,7 @@ export function ReportProblemPage() {
         </div>
 
         <label>
-          <span className="text-sm text-muted">Registracija vozila (opcionalno)</span>
+          <span className="text-sm text-muted">Vehicle Registration (optional)</span>
           <input
             value={vehicleReg}
             onChange={(e) => setVehicleReg(e.target.value)}
@@ -128,7 +128,7 @@ export function ReportProblemPage() {
         </label>
 
         <label>
-          <span className="text-sm text-muted">Fotografije (URL, odvojeni zarezom)</span>
+          <span className="text-sm text-muted">Photos (URLs, comma-separated)</span>
           <input
             value={photoUrls}
             onChange={(e) => setPhotoUrls(e.target.value)}
@@ -144,10 +144,10 @@ export function ReportProblemPage() {
             disabled={submitting}
             className="rounded-panel border border-accent bg-accent px-4 py-2 text-white"
           >
-            {submitting ? 'Šaljem...' : 'Pošalji prijavu'}
+            {submitting ? 'Submitting...' : 'Submit Report'}
           </button>
           <button type="button" onClick={() => navigate(-1)} className="rounded-panel border px-4 py-2">
-            Otkaži
+            Cancel
           </button>
         </div>
       </form>

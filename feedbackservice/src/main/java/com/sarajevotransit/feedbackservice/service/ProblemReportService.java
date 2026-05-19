@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sarajevotransit.feedbackservice.client.NotificationServiceClient;
 import com.sarajevotransit.feedbackservice.client.RoutingServiceClient;
-import com.sarajevotransit.feedbackservice.client.UserServiceClient;
 import com.sarajevotransit.feedbackservice.client.VehicleServiceClient;
 import com.sarajevotransit.feedbackservice.dto.BatchCreateProblemReportsResponse;
 import com.sarajevotransit.feedbackservice.dto.CreateProblemReportRequest;
@@ -42,7 +41,6 @@ public class ProblemReportService {
     private final ProblemReportMapper problemReportMapper;
     private final ObjectMapper objectMapper;
     private final Validator validator;
-    private final UserServiceClient userServiceClient;
     private final RoutingServiceClient routingServiceClient;
     private final VehicleServiceClient vehicleServiceClient;
     private final NotificationServiceClient notificationServiceClient;
@@ -151,7 +149,6 @@ public class ProblemReportService {
     }
 
     private ProblemReport buildEntityForCreate(CreateProblemReportRequest request) {
-        userServiceClient.validateUser(request.getReporterUserId());
         if (request.getLineId() != null) {
             routingServiceClient.validateLine(request.getLineId());
         }
