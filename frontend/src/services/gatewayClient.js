@@ -96,6 +96,30 @@ export const gatewayClient = {
   getVehicles: (query = '') => request(`/api/vehicles${query}`),
   /** GET /api/vehicles/{id} */
   getVehicleById: (vehicleId) => request(`/api/vehicles/${vehicleId}`),
+  /** POST /api/vehicles */
+  addVehicle: (payload) =>
+    request('/api/vehicles', { method: 'POST', body: JSON.stringify(payload), token: getAccessToken() }),
+  /** PATCH /api/vehicles/{id}/status */
+  updateVehicleStatus: (vehicleId, status) =>
+    request(`/api/vehicles/${vehicleId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+      token: getAccessToken(),
+    }),
+  /** GET /api/vehicles/{id}/service-records */
+  getVehicleServiceRecords: (vehicleId) => request(`/api/vehicles/${vehicleId}/service-records`),
+  /** POST /api/vehicles/{id}/service-records */
+  addServiceRecord: (vehicleId, payload) =>
+    request(`/api/vehicles/${vehicleId}/service-records`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/vehicles/{id}/location/history?from=ISO&to=ISO */
+  getVehicleLocationHistory: (vehicleId, from, to) =>
+    request(
+      `/api/vehicles/${vehicleId}/location/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    ),
 
   // ── Problem reports ───────────────────────────────────────────────────
   /** POST /api/v1/reports */

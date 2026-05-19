@@ -1,26 +1,27 @@
-import { AlertCircle, RefreshCw, Truck } from 'lucide-react'
+import { AlertCircle, Plus, RefreshCw, Truck, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { TransitMap } from '../components/map/TransitMap'
 import { useAppContext } from '../context/AppContext'
 import { gatewayClient } from '../services/gatewayClient'
 
 const POLL_INTERVAL_MS = 5000
 
-const VS_TYPE_MAP = {
+export const VS_TYPE_MAP = {
   BUS:     { typeId: 2, key: 'bus',        label: 'Bus',        color: '#3b82f6' },
   TRAM:    { typeId: 4, key: 'tram',       label: 'Tram',       color: '#e63946' },
   TROLLEY: { typeId: 3, key: 'trolleybus', label: 'Trolleybus', color: '#10b981' },
   MINIBUS: { typeId: 1, key: 'minibus',    label: 'Minibus',    color: '#f97316' },
 }
 
-const STATUS_STYLES = {
+export const STATUS_STYLES = {
   OPERATIONAL:    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   IN_MAINTENANCE: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   OUT_OF_SERVICE: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   RETIRED:        'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
 }
 
-const STATUS_LABELS = {
+export const STATUS_LABELS = {
   OPERATIONAL:    'Operational',
   IN_MAINTENANCE: 'Maintenance',
   OUT_OF_SERVICE: 'Out of service',
@@ -29,7 +30,19 @@ const STATUS_LABELS = {
 
 const TYPE_FILTERS = ['all', 'bus', 'tram', 'trolleybus', 'minibus']
 
-function normalizeFleetVehicle(v) {
+const VEHICLE_TYPES = ['BUS', 'TRAM', 'TROLLEY', 'MINIBUS']
+const VEHICLE_STATUSES = ['OPERATIONAL', 'IN_MAINTENANCE', 'OUT_OF_SERVICE', 'RETIRED']
+
+const EMPTY_ADD_FORM = {
+  registrationNumber: '',
+  internalId: '',
+  type: 'BUS',
+  capacity: '',
+  status: 'OPERATIONAL',
+  manufactureDate: '',
+}
+
+export function normalizeFleetVehicle(v) {
   if (v.lastLat == null || v.lastLon == null) return null
   const t = VS_TYPE_MAP[v.type] || VS_TYPE_MAP.BUS
   return {
@@ -81,7 +94,7 @@ function PollingStatusBadge({ status, lastUpdatedAt, theme }) {
   )
 }
 
-function VehicleRow({ vehicle, isSelected, onClick }) {
+function VehicleRow({ vehicle, onClick }) {
   const typeInfo = VS_TYPE_MAP[vehicle.type] || VS_TYPE_MAP.BUS
   const statusStyle = STATUS_STYLES[vehicle.status] || STATUS_STYLES.OPERATIONAL
   const statusLabel = STATUS_LABELS[vehicle.status] || vehicle.status
@@ -91,11 +104,7 @@ function VehicleRow({ vehicle, isSelected, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-panel border px-3 py-2.5 text-left transition ${
-        isSelected
-          ? 'border-accent bg-surface-alt'
-          : 'border-border hover:bg-surface-alt hover:border-border'
-      }`}
+      className="w-full rounded-panel border border-border px-3 py-2.5 text-left transition hover:bg-surface-alt hover:border-accent/50"
     >
       <div className="flex items-center gap-2">
         <span
@@ -121,14 +130,175 @@ function VehicleRow({ vehicle, isSelected, onClick }) {
   )
 }
 
+function AddVehicleModal({ onClose, onCreated }) {
+  const [form, setForm] = useState(EMPTY_ADD_FORM)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  function setField(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setSaving(true)
+    setError(null)
+    try {
+      const payload = {
+        registrationNumber: form.registrationNumber.trim(),
+        internalId: form.internalId.trim() || undefined,
+        type: form.type,
+        capacity: parseInt(form.capacity, 10),
+        status: form.status,
+        manufactureDate: form.manufactureDate || undefined,
+      }
+      const vehicle = await gatewayClient.addVehicle(payload)
+      onCreated(vehicle)
+    } catch (err) {
+      setError(err.message || 'Failed to add vehicle')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Close"
+        className="fixed inset-0 z-[1100] bg-black/40"
+        onClick={onClose}
+      />
+      <div className="fixed left-1/2 top-1/2 z-[1200] w-[min(480px,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-panel border border-border bg-surface p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-ink">Add Vehicle</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-panel border border-border p-1.5 text-muted transition hover:bg-surface-alt hover:text-ink"
+            aria-label="Close"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted">Registration No. *</span>
+              <input
+                required
+                type="text"
+                value={form.registrationNumber}
+                onChange={(e) => setField('registrationNumber', e.target.value)}
+                placeholder="A12-E-345"
+                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted">Internal ID</span>
+              <input
+                type="text"
+                value={form.internalId}
+                onChange={(e) => setField('internalId', e.target.value)}
+                placeholder="401"
+                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted">Type *</span>
+              <select
+                required
+                value={form.type}
+                onChange={(e) => setField('type', e.target.value)}
+                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
+              >
+                {VEHICLE_TYPES.map((t) => (
+                  <option key={t} value={t}>{VS_TYPE_MAP[t]?.label || t}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted">Capacity *</span>
+              <input
+                required
+                type="number"
+                min="1"
+                value={form.capacity}
+                onChange={(e) => setField('capacity', e.target.value)}
+                placeholder="80"
+                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted">Status *</span>
+              <select
+                required
+                value={form.status}
+                onChange={(e) => setField('status', e.target.value)}
+                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
+              >
+                {VEHICLE_STATUSES.map((s) => (
+                  <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted">Manufacture Date</span>
+              <input
+                type="date"
+                value={form.manufactureDate}
+                onChange={(e) => setField('manufactureDate', e.target.value)}
+                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
+              />
+            </label>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 rounded-panel border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
+              <AlertCircle size={13} className="shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="rounded-panel border border-border px-4 py-1.5 text-sm text-muted transition hover:bg-surface-alt hover:text-ink disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-panel bg-accent px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+            >
+              {saving ? 'Adding…' : 'Add Vehicle'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )
+}
+
 export function VehiclesPage() {
-  const { theme } = useAppContext()
+  const { theme, isAuthenticated } = useAppContext()
+  const navigate = useNavigate()
   const [vehicles, setVehicles] = useState([])
   const [pollStatus, setPollStatus] = useState('idle')
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null)
   const [error, setError] = useState(null)
   const [typeFilter, setTypeFilter] = useState('all')
-  const [selectedId, setSelectedId] = useState(null)
+  const [showAddModal, setShowAddModal] = useState(false)
   const pollRef = useRef(null)
   const retryCountRef = useRef(0)
 
@@ -158,9 +328,8 @@ export function VehiclesPage() {
 
   const filteredVehicles = useMemo(() => {
     if (typeFilter === 'all') return vehicles
-    const key = typeFilter.toUpperCase()
     const mapped = { bus: 'BUS', tram: 'TRAM', trolleybus: 'TROLLEY', minibus: 'MINIBUS' }
-    const enumVal = mapped[typeFilter] || key
+    const enumVal = mapped[typeFilter]
     return vehicles.filter((v) => v.type === enumVal)
   }, [vehicles, typeFilter])
 
@@ -169,23 +338,18 @@ export function VehiclesPage() {
     [filteredVehicles],
   )
 
-  const selectedVehicle = useMemo(
-    () => (selectedId != null ? vehicles.find((v) => v.id === selectedId) : null),
-    [vehicles, selectedId],
-  )
-
-  const focusPositions = useMemo(() => {
-    if (!selectedVehicle || selectedVehicle.lastLat == null) return []
-    return [[selectedVehicle.lastLat, selectedVehicle.lastLon]]
-  }, [selectedVehicle])
-
   const operationalCount = vehicles.filter((v) => v.status === 'OPERATIONAL').length
+
+  function handleVehicleCreated(vehicle) {
+    setShowAddModal(false)
+    navigate(`/vehicles/${vehicle.id}`)
+  }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-ink flex items-center gap-2">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
             <Truck size={18} />
             Fleet
           </h2>
@@ -194,6 +358,16 @@ export function VehiclesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-1.5 rounded-panel border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+            >
+              <Plus size={13} />
+              Add Vehicle
+            </button>
+          )}
           <PollingStatusBadge status={pollStatus} lastUpdatedAt={lastUpdatedAt} theme={theme} />
           <button
             type="button"
@@ -250,19 +424,23 @@ export function VehiclesPage() {
             <VehicleRow
               key={v.id}
               vehicle={v}
-              isSelected={selectedId === v.id}
-              onClick={() => setSelectedId((prev) => (prev === v.id ? null : v.id))}
+              onClick={() => navigate(`/vehicles/${v.id}`)}
             />
           ))}
         </div>
 
         <TransitMap
           vehicles={mapVehicles}
-          focusPositions={focusPositions}
-          focusKey={selectedId}
           className="h-[480px] rounded-panel lg:h-[calc(100vh-220px)]"
         />
       </div>
+
+      {showAddModal && (
+        <AddVehicleModal
+          onClose={() => setShowAddModal(false)}
+          onCreated={handleVehicleCreated}
+        />
+      )}
     </div>
   )
 }
