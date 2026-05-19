@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout.jsx'
 import { ProtectedRoute } from './hooks/useAuth.jsx'
+import { AdminRoute } from './hooks/useAdmin.jsx'
 import { AuthPage } from './pages/AuthPage.jsx'
 import { LineDetailPage } from './pages/LineDetailPage.jsx'
 import { LinesPage } from './pages/LinesPage.jsx'
@@ -14,6 +15,14 @@ import { TimetablePage } from './pages/TimetablePage.jsx'
 import { VehiclesPage } from './pages/VehiclesPage.jsx'
 import { VehicleDetailPage } from './pages/VehicleDetailPage.jsx'
 import { DriverPage } from './pages/DriverPage.jsx'
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.jsx'
+import { AdminReportsPage } from './pages/admin/AdminReportsPage.jsx'
+import { AdminReviewsPage } from './pages/admin/AdminReviewsPage.jsx'
+import { AdminLinesPage } from './pages/admin/AdminLinesPage.jsx'
+import { AdminStationsPage } from './pages/admin/AdminStationsPage.jsx'
+import { AdminTimetablePage } from './pages/admin/AdminTimetablePage.jsx'
+import { AdminUsersPage } from './pages/admin/AdminUsersPage.jsx'
+import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage.jsx'
 
 function App() {
   return (
@@ -50,6 +59,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Admin routes - require ADMIN role */}
+        <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+        <Route path="/admin/reports" element={<AdminRoute><AdminReportsPage /></AdminRoute>} />
+        <Route path="/admin/reviews" element={<AdminRoute><AdminReviewsPage /></AdminRoute>} />
+        <Route path="/admin/lines" element={<AdminRoute><AdminLinesPage /></AdminRoute>} />
+        <Route path="/admin/stations" element={<AdminRoute><AdminStationsPage /></AdminRoute>} />
+        <Route path="/admin/timetables" element={<AdminRoute><AdminTimetablePage /></AdminRoute>} />
+        <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+        <Route path="/admin/notifications" element={<AdminRoute><AdminNotificationsPage /></AdminRoute>} />
 
         {/* 404 fallback */}
         <Route path="*" element={<NotFoundPage />} />

@@ -5,6 +5,7 @@ import {
   CircleUserRound,
   X,
   LogIn,
+  LayoutDashboard,
   MapPinned,
   Menu,
   Moon,
@@ -17,8 +18,10 @@ import {
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useAppContext } from '../../context/AppContext'
+import { SessionExpiryModal } from '../common/SessionExpiryModal'
 
-const BASE_NAV_ITEMS = [
+
+const publicNavItems = [
   { to: '/', label: 'Route Planner', icon: Route },
   { to: '/lines', label: 'Lines', icon: Bus },
   { to: '/stops', label: 'Stops', icon: MapPinned },
@@ -28,8 +31,12 @@ const BASE_NAV_ITEMS = [
   { to: '/auth', label: 'Auth', icon: LogIn },
   { to: '/profile', label: 'Profile', icon: UserRound },
 ]
+const BASE_NAV_ITEMS = publicNavItems;
 
 const DRIVER_NAV_ITEM = { to: '/driver', label: 'Driver Portal', icon: Car }
+const adminNavItems = [
+  { to: '/admin', label: 'Admin Panel', icon: LayoutDashboard },
+]
 
 function NavItem({ item, onClick }) {
   const Icon = item.icon
@@ -55,7 +62,8 @@ function NavItem({ item, onClick }) {
 }
 
 export function AppLayout() {
-  const { theme, toggleTheme, isAuthenticated, session } = useAppContext()
+  const { theme, toggleTheme, isAuthenticated, isAdmin } = useAppContext()
+  const navItems = isAdmin ? [...publicNavItems, ...adminNavItems] : publicNavItems
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
 
@@ -139,6 +147,8 @@ export function AppLayout() {
       <main className="mx-auto w-full max-w-[1500px] px-4 py-4">
         <Outlet />
       </main>
+
+      <SessionExpiryModal />
     </div>
   )
 }

@@ -53,6 +53,8 @@ public class NotificationServiceClient {
                     .post()
                     .uri(url)
                     .contentType(MediaType.APPLICATION_JSON)
+                    .header("X-User-Role", "ADMIN")
+                    .header("X-User-Id", "0")
                     .body(payload)
                     .retrieve()
                     .toBodilessEntity();

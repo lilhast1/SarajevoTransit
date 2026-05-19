@@ -69,6 +69,8 @@ public class GatewayRouteConfig {
                         .or(path("/api/v1/route-points/**"))
                         .or(path("/api/v1/direction-stations/**"))
                         .or(path("/api/v1/routes/**"))
+                        .or(path("/api/v1/realtime/**"))
+                        .or(path("/api/v1/admin/realtime/**"))
                         .or(path("/api/v1/test/**")),
                         HandlerFunctions.http())
                 .filter(LoadBalancerFilterFunctions.lb("routingservice"))
