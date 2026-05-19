@@ -65,3 +65,12 @@ export function enrichSessionWithMetadata(session) {
     _storedAt: Date.now(),
   }
 }
+
+/**
+ * Seconds remaining until access token expires. Negative means already expired.
+ */
+export function secondsUntilExpiry(session) {
+  if (!session?.expiresIn || !session?._storedAt) return null
+  const expiresAt = session._storedAt + session.expiresIn * 1000
+  return Math.floor((expiresAt - Date.now()) / 1000)
+}

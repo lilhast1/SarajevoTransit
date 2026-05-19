@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { saveAuthSession, getAuthSession, clearAuthSession, enrichSessionWithMetadata } from '../utils/authStorage'
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
+import { saveAuthSession, getAuthSession, clearAuthSession, enrichSessionWithMetadata, secondsUntilExpiry } from '../utils/authStorage'
+import { gatewayClient } from '../services/gatewayClient'
 
 const STORAGE_KEYS = {
   theme: 'sarajevo-transit-theme',
@@ -30,6 +31,7 @@ export function AppProvider({ children }) {
   const [session, setSession] = useState(() => getAuthSession())
   const [favorites, setFavorites] = useState(() => readStorage(STORAGE_KEYS.favorites, { lines: [], stops: [] }))
   const [tripHistory, setTripHistory] = useState(() => readStorage(STORAGE_KEYS.history, []))
+  const [sessionModal, setSessionModal] = useState({ open: false, refreshExpired: false })
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -52,6 +54,37 @@ export function AppProvider({ children }) {
     window.localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(tripHistory.slice(0, 30)))
   }, [tripHistory])
 
+  // Show modal when access token is within 2 minutes of expiry
+  useEffect(() => {
+    if (!session) return
+    const interval = setInterval(() => {
+      const secs = secondsUntilExpiry(session)
+      if (secs !== null && secs <= 120) {
+        setSessionModal((m) => m.open ? m : { open: true, refreshExpired: false })
+      }
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [session])
+
+  // Also trigger modal on 401 from any API call
+  useEffect(() => {
+    function onSessionExpired() {
+      if (session) setSessionModal({ open: true, refreshExpired: false })
+    }
+    window.addEventListener('session-expired', onSessionExpired)
+    return () => window.removeEventListener('session-expired', onSessionExpired)
+  }, [session])
+
+  const refreshSession = useCallback(async () => {
+    try {
+      const newSession = await gatewayClient.refreshAccessToken(session?.refreshToken)
+      setSession(newSession)
+      setSessionModal({ open: false, refreshExpired: false })
+    } catch {
+      setSessionModal({ open: true, refreshExpired: true })
+    }
+  }, [session])
+
   const value = useMemo(
     () => ({
       theme,
@@ -59,8 +92,12 @@ export function AppProvider({ children }) {
       toggleTheme: () => setTheme((current) => (current === 'dark' ? 'light' : 'dark')),
       session,
       isAuthenticated: Boolean(session?.accessToken),
+      isAdmin: session?.role === 'ADMIN',
       login: (payload) => setSession(payload),
-      logout: () => setSession(null),
+      logout: () => { setSession(null); setSessionModal({ open: false, refreshExpired: false }) },
+      sessionModal,
+      refreshSession,
+      dismissSessionModal: () => setSessionModal({ open: false, refreshExpired: false }),
       favorites,
       toggleFavoriteLine: (lineId) => {
         setFavorites((current) => ({
@@ -81,7 +118,7 @@ export function AppProvider({ children }) {
       tripHistory,
       addTripHistoryItem: (item) => setTripHistory((current) => [item, ...current].slice(0, 30)),
     }),
-    [favorites, session, theme, tripHistory],
+    [favorites, session, sessionModal, refreshSession, theme, tripHistory],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
