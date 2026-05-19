@@ -242,7 +242,7 @@ export function LinesPage() {
                 <ArrowLeft size={14} />
                 Back to search
               </button>
-            </div>
+           </div>
 
             {directions.length > 0 ? (
               <div className="mt-4 flex flex-wrap gap-2">
@@ -260,6 +260,18 @@ export function LinesPage() {
                     {direction.directionLabel} · {direction.name}
                   </button>
                 ))}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    // Logic for add to favorites would go here, but since we don't have that implemented, we'll just show an alert for now
+                    alert('Add to favorites functionality is not implemented yet.')
+                  }}
+                  className="inline-flex items-center gap-2 rounded-panel border border-border bg-surface px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
+                >
+                  <RefreshCw size={14} />
+                  Add to favorites
+                </button>
+ 
               </div>
             ) : null}
           </>
