@@ -12,6 +12,9 @@ import { RoutePlannerPage } from './pages/RoutePlannerPage.jsx'
 import { StopDetailPage } from './pages/StopDetailPage.jsx'
 import { StopsPage } from './pages/StopsPage.jsx'
 import { TimetablePage } from './pages/TimetablePage.jsx'
+import { VehiclesPage } from './pages/VehiclesPage.jsx'
+import { VehicleDetailPage } from './pages/VehicleDetailPage.jsx'
+import { DriverPage } from './pages/DriverPage.jsx'
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.jsx'
 import { AdminReportsPage } from './pages/admin/AdminReportsPage.jsx'
 import { AdminReviewsPage } from './pages/admin/AdminReviewsPage.jsx'
@@ -33,6 +36,9 @@ function App() {
         <Route path="/stops" element={<StopsPage />} />
         <Route path="/stops/:id" element={<StopDetailPage />} />
         <Route path="/timetable" element={<TimetablePage />} />
+        <Route path="/vehicles" element={<VehiclesPage />} />
+        <Route path="/vehicles/:id" element={<VehicleDetailPage />} />
+        <Route path="/driver" element={<DriverPage />} />
         <Route path="/auth" element={<AuthPage />} />
 
         {/* Protected routes - require authentication */}

@@ -99,6 +99,56 @@ export const gatewayClient = {
   /** GET /api/v1/users/me */
   getCurrentUser: () => request('/api/v1/users/me'),
 
+  // ── Vehicles ──────────────────────────────────────────────────────────
+  /** GET /api/vehicles?size=200 */
+  getVehicles: (query = '') => request(`/api/vehicles${query}`),
+  /** GET /api/vehicles/{id} */
+  getVehicleById: (vehicleId) => request(`/api/vehicles/${vehicleId}`),
+  /** POST /api/vehicles */
+  addVehicle: (payload) =>
+    request('/api/vehicles', { method: 'POST', body: JSON.stringify(payload), token: getAccessToken() }),
+  /** PATCH /api/vehicles/{id}/status */
+  updateVehicleStatus: (vehicleId, status) =>
+    request(`/api/vehicles/${vehicleId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+      token: getAccessToken(),
+    }),
+  /** GET /api/vehicles/{id}/service-records */
+  getVehicleServiceRecords: (vehicleId) => request(`/api/vehicles/${vehicleId}/service-records`),
+  /** POST /api/vehicles/{id}/service-records */
+  addServiceRecord: (vehicleId, payload) =>
+    request(`/api/vehicles/${vehicleId}/service-records`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/vehicles/{id}/location/history?from=ISO&to=ISO */
+  getVehicleLocationHistory: (vehicleId, from, to) =>
+    request(
+      `/api/vehicles/${vehicleId}/location/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    ),
+  /** POST /api/vehicles/{vehicleId}/status/requests */
+  createStatusRequest: (vehicleId, payload) =>
+    request(`/api/vehicles/${vehicleId}/status/requests`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/vehicles/{vehicleId}/status/requests?status=PENDING */
+  getVehicleStatusRequests: (vehicleId, status) =>
+    request(`/api/vehicles/${vehicleId}/status/requests${status ? `?status=${status}` : ''}`),
+  /** GET /api/vehicles/status/requests?requestedByUserId={userId} */
+  getMyStatusRequests: (userId) =>
+    request(`/api/vehicles/status/requests?requestedByUserId=${userId}`),
+  /** PATCH /api/vehicles/status/requests/{requestId}/resolve */
+  resolveStatusRequest: (requestId, payload) =>
+    request(`/api/vehicles/status/requests/${requestId}/resolve`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+
   // ── Problem reports ───────────────────────────────────────────────────
   /** POST /api/v1/reports */
   createProblemReport: (payload) =>
