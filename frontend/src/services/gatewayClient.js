@@ -120,6 +120,26 @@ export const gatewayClient = {
     request(
       `/api/vehicles/${vehicleId}/location/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
     ),
+  /** POST /api/vehicles/{vehicleId}/status/requests */
+  createStatusRequest: (vehicleId, payload) =>
+    request(`/api/vehicles/${vehicleId}/status/requests`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/vehicles/{vehicleId}/status/requests?status=PENDING */
+  getVehicleStatusRequests: (vehicleId, status) =>
+    request(`/api/vehicles/${vehicleId}/status/requests${status ? `?status=${status}` : ''}`),
+  /** GET /api/vehicles/status/requests?requestedByUserId={userId} */
+  getMyStatusRequests: (userId) =>
+    request(`/api/vehicles/status/requests?requestedByUserId=${userId}`),
+  /** PATCH /api/vehicles/status/requests/{requestId}/resolve */
+  resolveStatusRequest: (requestId, payload) =>
+    request(`/api/vehicles/status/requests/${requestId}/resolve`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
 
   // ── Problem reports ───────────────────────────────────────────────────
   /** POST /api/v1/reports */

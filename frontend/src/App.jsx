@@ -13,6 +13,7 @@ import { StopsPage } from './pages/StopsPage.jsx'
 import { TimetablePage } from './pages/TimetablePage.jsx'
 import { VehiclesPage } from './pages/VehiclesPage.jsx'
 import { VehicleDetailPage } from './pages/VehicleDetailPage.jsx'
+import { DriverPage } from './pages/DriverPage.jsx'
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="/timetable" element={<TimetablePage />} />
         <Route path="/vehicles" element={<VehiclesPage />} />
         <Route path="/vehicles/:id" element={<VehicleDetailPage />} />
+        <Route path="/driver" element={<DriverPage />} />
         <Route path="/auth" element={<AuthPage />} />
 
         {/* Protected routes - require authentication */}

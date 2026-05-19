@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   ArrowLeft,
+  Bell,
   CheckCircle,
   ChevronDown,
   ChevronUp,
@@ -8,6 +9,7 @@ import {
   Loader2,
   MapPin,
   Wrench,
+  XCircle,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -388,10 +390,136 @@ function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
 
 // ── VehicleDetailPage ──────────────────────────────────────────────────────────
 
+// ── Pending Requests (admin-only) ──────────────────────────────────────────────
+
+const REQUEST_STATUS_STYLES = {
+  PENDING:  'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  APPROVED: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  REJECTED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+}
+
+function PendingRequestsSection({ vehicleId, session, onStatusChanged }) {
+  const [requests, setRequests] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [resolveNotes, setResolveNotes] = useState({})
+  const [resolvingId, setResolvingId] = useState(null)
+  const [resolveError, setResolveError] = useState(null)
+
+  useEffect(() => { loadRequests() }, [vehicleId])
+
+  async function loadRequests() {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await gatewayClient.getVehicleStatusRequests(vehicleId, 'PENDING')
+      setRequests(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setError(err.message || 'Failed to load pending requests')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleResolve(requestId, requestedStatus, resolution) {
+    setResolvingId(requestId)
+    setResolveError(null)
+    try {
+      await gatewayClient.resolveStatusRequest(requestId, {
+        resolution,
+        resolvedByUserId: session?.userId,
+        resolutionNote: resolveNotes[requestId] || null,
+      })
+      if (resolution === 'APPROVED') {
+        onStatusChanged(requestedStatus)
+      }
+      await loadRequests()
+    } catch (err) {
+      setResolveError(err.message || 'Failed to resolve request')
+    } finally {
+      setResolvingId(null)
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-3 rounded-panel border border-amber-200 bg-amber-50/30 p-4 dark:border-amber-900/40 dark:bg-amber-950/10">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <Bell size={15} />
+        Pending Status Requests
+        {requests.length > 0 && (
+          <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+            {requests.length}
+          </span>
+        )}
+      </h3>
+
+      {resolveError && <ErrorAlert error={resolveError} onDismiss={() => setResolveError(null)} />}
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <Loader2 size={13} className="animate-spin" />
+          Loading…
+        </div>
+      ) : requests.length === 0 ? (
+        <p className="text-sm text-muted">No pending requests for this vehicle.</p>
+      ) : (
+        requests.map((req) => (
+          <div key={req.id} className="rounded-panel border border-border bg-surface px-3 py-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${REQUEST_STATUS_STYLES.PENDING}`}>
+                    PENDING
+                  </span>
+                  <span className="text-xs font-medium text-ink">
+                    → {STATUS_LABELS[req.requestedStatus] || req.requestedStatus}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-muted">
+                  Driver ID {req.requestedByUserId} · {formatDatetime(req.requestedAt)}
+                </p>
+                {req.notes && <p className="mt-1 text-xs italic text-muted">{req.notes}</p>}
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                placeholder="Resolution note (optional)"
+                value={resolveNotes[req.id] || ''}
+                onChange={(e) => setResolveNotes((prev) => ({ ...prev, [req.id]: e.target.value }))}
+                className="min-w-0 flex-1 rounded-panel border border-border bg-surface px-3 py-1 text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+              <button
+                type="button"
+                disabled={resolvingId === req.id}
+                onClick={() => handleResolve(req.id, req.requestedStatus, 'APPROVED')}
+                className="flex items-center gap-1 rounded-panel bg-emerald-600 px-3 py-1 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+              >
+                <CheckCircle size={12} />
+                Approve
+              </button>
+              <button
+                type="button"
+                disabled={resolvingId === req.id}
+                onClick={() => handleResolve(req.id, req.requestedStatus, 'REJECTED')}
+                className="flex items-center gap-1 rounded-panel border border-red-300 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-60 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+              >
+                <XCircle size={12} />
+                Reject
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+    </section>
+  )
+}
+
 export function VehicleDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { isAuthenticated } = useAppContext()
+  const { isAuthenticated, session } = useAppContext()
 
   const [vehicle, setVehicle] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -523,6 +651,15 @@ export function VehicleDetailPage() {
 
       {/* Service Records */}
       <ServiceRecordsSection vehicleId={vehicle.id} isAuthenticated={isAuthenticated} />
+
+      {/* Pending Status Requests — admin only */}
+      {isAuthenticated && session?.role === 'ADMIN' && (
+        <PendingRequestsSection
+          vehicleId={vehicle.id}
+          session={session}
+          onStatusChanged={handleStatusChanged}
+        />
+      )}
     </div>
   )
 }

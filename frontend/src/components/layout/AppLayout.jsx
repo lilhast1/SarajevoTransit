@@ -1,5 +1,6 @@
 import {
   Bus,
+  Car,
   ChevronRight,
   CircleUserRound,
   X,
@@ -14,10 +15,10 @@ import {
   UserRound,
 } from 'lucide-react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppContext } from '../../context/AppContext'
 
-const navItems = [
+const BASE_NAV_ITEMS = [
   { to: '/', label: 'Route Planner', icon: Route },
   { to: '/lines', label: 'Lines', icon: Bus },
   { to: '/stops', label: 'Stops', icon: MapPinned },
@@ -27,6 +28,8 @@ const navItems = [
   { to: '/auth', label: 'Auth', icon: LogIn },
   { to: '/profile', label: 'Profile', icon: UserRound },
 ]
+
+const DRIVER_NAV_ITEM = { to: '/driver', label: 'Driver Portal', icon: Car }
 
 function NavItem({ item, onClick }) {
   const Icon = item.icon
@@ -52,13 +55,20 @@ function NavItem({ item, onClick }) {
 }
 
 export function AppLayout() {
-  const { theme, toggleTheme, isAuthenticated } = useAppContext()
+  const { theme, toggleTheme, isAuthenticated, session } = useAppContext()
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
 
   useEffect(() => {
     setMenuOpen(false)
   }, [location.pathname])
+
+  const navItems = useMemo(() => {
+    if (session?.role === 'DRIVER') {
+      return [...BASE_NAV_ITEMS, DRIVER_NAV_ITEM]
+    }
+    return BASE_NAV_ITEMS
+  }, [session?.role])
 
   return (
     <div className="min-h-screen">
@@ -103,7 +113,9 @@ export function AppLayout() {
             <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
               <div className="flex items-center gap-2 text-ink">
                 <CircleUserRound size={18} />
-                <span className="text-sm font-semibold">{isAuthenticated ? 'Signed in' : 'Guest mode'}</span>
+                <span className="text-sm font-semibold">
+                  {isAuthenticated ? (session?.role ? `${session.role}` : 'Signed in') : 'Guest mode'}
+                </span>
               </div>
               <button
                 type="button"
