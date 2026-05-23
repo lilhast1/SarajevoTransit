@@ -280,6 +280,18 @@ export const gatewayClient = {
   deleteNotification: (id) =>
     request(`/notifications/${id}`, { method: 'DELETE', token: getAccessToken() }),
 
+  // ── User Notifications ──────────────────────────────────────────────────
+  getUserNotifications: (userId, page = 0, size = 20) =>
+    request(`/notifications/user/${userId}?page=${page}&size=${size}&sort=sentAt,desc`, { token: getAccessToken() }),
+  getUnreadCount: (userId) =>
+    request(`/notifications/user/${userId}/unread/count`, { token: getAccessToken() }),
+  getUnreadNotifications: (userId) =>
+    request(`/notifications/user/${userId}/unread`, { token: getAccessToken() }),
+  markAsRead: (id) =>
+    request(`/notifications/${id}/read`, { method: 'PATCH', token: getAccessToken() }),
+  markAllAsRead: (userId) =>
+    request(`/notifications/user/${userId}/read-all`, { method: 'PATCH', token: getAccessToken() }),
+
   // ── Subscriptions (Notification Service) ─────────────────────────────────
   createSubscription: (payload) =>
     request('/subscriptions', {

@@ -547,6 +547,27 @@ export const transitApi = {
     return gatewayClient.getSubscriptionById(id)
   },
 
+  // ── User Notifications ─────────────────────────────────────────────────
+  async getUserNotifications(userId, page) {
+    return gatewayClient.getUserNotifications(userId, page)
+  },
+
+  async getUnreadCount(userId) {
+    return gatewayClient.getUnreadCount(userId)
+  },
+
+  async getUnreadNotifications(userId) {
+    return gatewayClient.getUnreadNotifications(userId)
+  },
+
+  async markAsRead(id) {
+    return gatewayClient.markAsRead(id)
+  },
+
+  async markAllAsRead(userId) {
+    return gatewayClient.markAllAsRead(userId)
+  },
+
   async getProfileSnapshot(favorites) {
     return {
       favoriteLines: mockLines.filter((line) => favorites.lines.includes(line.id)),

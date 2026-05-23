@@ -20,6 +20,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { SessionExpiryModal } from '../common/SessionExpiryModal'
+import { NotificationBell } from '../common/NotificationBell'
 import { saveAuthSession, getAuthSession, clearAuthSession, enrichSessionWithMetadata, secondsUntilExpiry } from '../../utils/authStorage'
 
 const publicNavItems = [
@@ -99,6 +100,7 @@ export function AppLayout() {
             >
               {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
             </button>
+            <NotificationBell />
             <button
               type="button"
               className="rounded-panel border border-border p-2 text-muted transition hover:bg-surface-alt hover:text-ink"

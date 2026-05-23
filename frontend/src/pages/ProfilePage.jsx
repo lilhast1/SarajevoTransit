@@ -223,7 +223,6 @@ export function ProfilePage() {
             ) : (
               <div className="space-y-2">
                 {subscriptions.map((sub) => (
-                  console.log('Rendering subscription:', sub) || 
                   <div
                     key={sub.id}
                     className={`rounded-lg border px-3 py-3 transition ${

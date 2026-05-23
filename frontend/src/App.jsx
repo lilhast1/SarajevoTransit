@@ -6,6 +6,7 @@ import { AuthPage } from './pages/AuthPage.jsx'
 import { LineDetailPage } from './pages/LineDetailPage.jsx'
 import { LinesPage } from './pages/LinesPage.jsx'
 import { NotFoundPage } from './pages/NotFoundPage.jsx'
+import { NotificationsPage } from './pages/NotificationsPage.jsx'
 import { ProfilePage } from './pages/ProfilePage.jsx'
 import { ReportProblemPage } from './pages/ReportProblemPage.jsx'
 import { RoutePlannerPage } from './pages/RoutePlannerPage.jsx'
@@ -51,6 +52,15 @@ function App() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationsPage />
             </ProtectedRoute>
           }
         />

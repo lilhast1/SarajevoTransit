@@ -35,6 +35,8 @@ export function AppProvider({ children }) {
   const [sessionModal, setSessionModal] = useState({ open: false, refreshExpired: false })
   const [subscribedLines, setSubscribedLines] = useState({})
   const [subscriptionsRefreshKey, setSubscriptionsRefreshKey] = useState(0)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [recentNotifications, setRecentNotifications] = useState([])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -76,6 +78,51 @@ export function AppProvider({ children }) {
     })
     return () => { active = false }
   }, [session?.userId, subscriptionsRefreshKey])
+
+  // Poll unread notifications count every 30s when logged in
+  useEffect(() => {
+    if (!session?.userId) {
+      setUnreadCount(0)
+      setRecentNotifications([])
+      return
+    }
+    let active = true
+
+    async function poll() {
+      try {
+        const countResult = await transitApi.getUnreadCount(session.userId)
+        if (!active) return
+        const count = typeof countResult === 'object' ? (countResult.count ?? 0) : Number(countResult) || 0
+
+        setUnreadCount((prev) => {
+          if (count > prev && prev > 0) {
+            window.dispatchEvent(new CustomEvent('new-notification'))
+          }
+          return count
+        })
+      } catch {
+        // Silently fail — notifications are not critical
+      }
+    }
+
+    poll()
+    const id = setInterval(poll, 30000)
+    return () => { active = false; clearInterval(id) }
+  }, [session?.userId])
+
+  // Show browser notification when new-notification event fires
+  useEffect(() => {
+    function handleNewNotification() {
+      if (Notification.permission === 'granted') {
+        new Notification('SarajevoTransit', {
+          body: 'You have a new notification.',
+          icon: '/favicon.ico',
+        })
+      }
+    }
+    window.addEventListener('new-notification', handleNewNotification)
+    return () => window.removeEventListener('new-notification', handleNewNotification)
+  }, [])
 
   // Show modal when access token is within 2 minutes of expiry
   useEffect(() => {
@@ -167,10 +214,39 @@ export function AppProvider({ children }) {
       updateLineSubscription: async (subscriptionId, data) => {
         return transitApi.updateSubscription(subscriptionId, data)
       },
+      unreadCount,
+      recentNotifications,
+      fetchRecentNotifications: async () => {
+        if (!session?.userId) return
+        try {
+          const data = await transitApi.getUnreadNotifications(session.userId)
+          setRecentNotifications(data || [])
+        } catch {
+          setRecentNotifications([])
+        }
+      },
+      markAsRead: async (id) => {
+        await transitApi.markAsRead(id)
+        setRecentNotifications((prev) => prev.filter((n) => n.id !== id))
+        setUnreadCount((prev) => Math.max(0, prev - 1))
+      },
+      markAllAsRead: async () => {
+        if (!session?.userId) return
+        await transitApi.markAllAsRead(session.userId)
+        setUnreadCount(0)
+        setRecentNotifications([])
+      },
+      requestNotificationPermission: async () => {
+        if (!('Notification' in window)) return 'denied'
+        if (Notification.permission === 'default') {
+          return Notification.requestPermission()
+        }
+        return Notification.permission
+      },
       tripHistory,
       addTripHistoryItem: (item) => setTripHistory((current) => [item, ...current].slice(0, 30)),
     }),
-    [favorites, session, sessionModal, refreshSession, theme, tripHistory, subscribedLines, subscriptionsRefreshKey],
+    [favorites, session, sessionModal, refreshSession, theme, tripHistory, subscribedLines, subscriptionsRefreshKey, unreadCount, recentNotifications],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
