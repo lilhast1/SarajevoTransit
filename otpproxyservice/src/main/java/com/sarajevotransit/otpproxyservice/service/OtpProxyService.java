@@ -5,6 +5,11 @@ import com.sarajevotransit.otpproxyservice.dto.OtpPlanGraphQlResponse;
 import com.sarajevotransit.otpproxyservice.dto.OtpPlanResponse;
 import com.sarajevotransit.otpproxyservice.dto.OptimalRouteResponse;
 import com.sarajevotransit.otpproxyservice.dto.StopsCountResponse;
+import com.sarajevotransit.otpproxyservice.dto.OtpStopLinesGraphQlResponse;
+import com.sarajevotransit.otpproxyservice.dto.StopLinesResponse;
+import com.sarajevotransit.otpproxyservice.dto.OtpStopDeparturesGraphQlResponse;
+import com.sarajevotransit.otpproxyservice.dto.StopDeparturesResponse;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -22,6 +27,8 @@ import java.util.regex.Pattern;
 public class OtpProxyService {
 
     private static final String STOPS_QUERY = "{ stops { id } }";
+    private static final String STOP_LINES_QUERY = "query GetLinesAtStation($stopId: String!) { stop(id: $stopId) { name routes { shortName longName mode agency { name } gtfsId } } }";
+    private static final String STOP_DEPARTURES_QUERY = "query GetNextDepartures($stopId: String!, $limit: Int!) { stop(id: $stopId) { name stoptimesWithoutPatterns(numberOfDepartures: $limit) { realtimeDeparture scheduledDeparture realtimeState headsign trip { route { shortName mode gtfsId } } } } }";
     private static final String DEFAULT_MODES = "BUS,TRAM,TROLLEYBUS,WALK";
     private static final Pattern MODE_PATTERN = Pattern.compile("[A-Z_]+");
 
@@ -48,6 +55,68 @@ public class OtpProxyService {
         }
 
         return new StopsCountResponse(count, "otp-proxy");
+    }
+
+    public StopLinesResponse fetchStopLines(String stopId) {
+        OtpStopLinesGraphQlResponse response = restClient.post()
+                .uri(otpBaseUrl + "/otp/routers/default/index/graphql")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of(
+                        "query", STOP_LINES_QUERY,
+                        "variables", Map.of("stopId", stopId)
+                ))
+                .retrieve()
+                .body(OtpStopLinesGraphQlResponse.class);
+
+        if (response == null || response.getData() == null || response.getData().getStop() == null) {
+            return new StopLinesResponse(null, List.of());
+        }
+
+        OtpStopLinesGraphQlResponse.Stop stop = response.getData().getStop();
+        List<StopLinesResponse.Line> lines = stop.getRoutes() == null ? List.of() : stop.getRoutes().stream().map(route -> {
+            StopLinesResponse.Line line = new StopLinesResponse.Line();
+            line.setShortName(route.getShortName());
+            line.setLongName(route.getLongName());
+            line.setMode(route.getMode());
+            line.setAgencyName(route.getAgency() != null ? route.getAgency().getName() : null);
+            line.setGtfsId(route.getGtfsId());
+            return line;
+        }).collect(Collectors.toList());
+
+        return new StopLinesResponse(stop.getName(), lines);
+    }
+
+    public StopDeparturesResponse fetchStopDepartures(String stopId, int limit) {
+        OtpStopDeparturesGraphQlResponse response = restClient.post()
+                .uri(otpBaseUrl + "/otp/routers/default/index/graphql")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of(
+                        "query", STOP_DEPARTURES_QUERY,
+                        "variables", Map.of("stopId", stopId, "limit", limit)
+                ))
+                .retrieve()
+                .body(OtpStopDeparturesGraphQlResponse.class);
+
+        if (response == null || response.getData() == null || response.getData().getStop() == null) {
+            return new StopDeparturesResponse(null, List.of());
+        }
+
+        OtpStopDeparturesGraphQlResponse.Stop stop = response.getData().getStop();
+        List<StopDeparturesResponse.Departure> departures = stop.getStoptimesWithoutPatterns() == null ? List.of() : stop.getStoptimesWithoutPatterns().stream().map(st -> {
+            StopDeparturesResponse.Departure dep = new StopDeparturesResponse.Departure();
+            dep.setRealtimeDeparture(st.getRealtimeDeparture());
+            dep.setScheduledDeparture(st.getScheduledDeparture());
+            dep.setRealtimeState(st.getRealtimeState());
+            dep.setHeadsign(st.getHeadsign());
+            if (st.getTrip() != null && st.getTrip().getRoute() != null) {
+                dep.setLineShortName(st.getTrip().getRoute().getShortName());
+                dep.setLineMode(st.getTrip().getRoute().getMode());
+                dep.setGtfsId(st.getTrip().getRoute().getGtfsId());
+            }
+            return dep;
+        }).collect(Collectors.toList());
+
+        return new StopDeparturesResponse(stop.getName(), departures);
     }
 
     public OptimalRouteResponse fetchOptimalRoute(

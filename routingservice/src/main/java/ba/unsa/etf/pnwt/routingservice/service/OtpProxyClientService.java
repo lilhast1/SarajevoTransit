@@ -2,6 +2,8 @@ package ba.unsa.etf.pnwt.routingservice.service;
 
 import ba.unsa.etf.pnwt.routingservice.dto.OtpProxyOptimalRouteResponse;
 import ba.unsa.etf.pnwt.routingservice.dto.OtpProxyStopsCountResponse;
+import ba.unsa.etf.pnwt.routingservice.dto.OtpProxyStopLinesResponse;
+import ba.unsa.etf.pnwt.routingservice.dto.OtpProxyStopDeparturesResponse;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -27,6 +29,37 @@ public class OtpProxyClientService {
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
                 .body(OtpProxyStopsCountResponse.class);
+    }
+
+    public OtpProxyStopLinesResponse getStopLines(String stopId) {
+        String uri = UriComponentsBuilder.fromUriString("http://otp-proxy")
+                .path("/api/v1/proxy/stop-lines")
+                .queryParam("stopId", stopId)
+                .build(true)
+                .toUriString();
+
+        return loadBalancedRestClientBuilder.build()
+                .get()
+                .uri(uri)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(OtpProxyStopLinesResponse.class);
+    }
+
+    public OtpProxyStopDeparturesResponse getStopDepartures(String stopId, int limit) {
+        String uri = UriComponentsBuilder.fromUriString("http://otp-proxy")
+                .path("/api/v1/proxy/stop-departures")
+                .queryParam("stopId", stopId)
+                .queryParam("limit", limit)
+                .build(true)
+                .toUriString();
+
+        return loadBalancedRestClientBuilder.build()
+                .get()
+                .uri(uri)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(OtpProxyStopDeparturesResponse.class);
     }
 
     public OtpProxyOptimalRouteResponse getOptimalRoute(
