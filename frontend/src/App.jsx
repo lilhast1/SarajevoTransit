@@ -19,6 +19,7 @@ import { TicketsPage } from './pages/TicketsPage.jsx'
 
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.jsx'
 import { AdminReportsPage } from './pages/admin/AdminReportsPage.jsx'
+import { AdminReportDetailPage } from './pages/admin/AdminReportDetailPage.jsx'
 import { AdminReviewsPage } from './pages/admin/AdminReviewsPage.jsx'
 import { AdminLinesPage } from './pages/admin/AdminLinesPage.jsx'
 import { AdminStationsPage } from './pages/admin/AdminStationsPage.jsx'
