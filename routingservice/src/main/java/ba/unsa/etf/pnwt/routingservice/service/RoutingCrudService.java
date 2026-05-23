@@ -214,10 +214,14 @@ public class RoutingCrudService {
 
     public List<TimetableResponse> getTimetables(Integer lineId, Integer directionId, Boolean activeOnly) {
         List<Timetable> timetables;
-        if (directionId != null && Boolean.TRUE.equals(activeOnly)) {
-            timetables = timetableRepository.findByDirection_IdAndIsActiveTrueOrderByDepartureTimeAsc(directionId);
-        } else if (lineId != null && Boolean.TRUE.equals(activeOnly)) {
-            timetables = timetableRepository.findByLine_IdAndIsActiveTrueOrderByDepartureTimeAsc(lineId);
+        if (directionId != null) {
+            timetables = Boolean.TRUE.equals(activeOnly)
+                    ? timetableRepository.findByDirection_IdAndIsActiveTrueOrderByDepartureTimeAsc(directionId)
+                    : timetableRepository.findByDirection_IdOrderByDepartureTimeAsc(directionId);
+        } else if (lineId != null) {
+            timetables = Boolean.TRUE.equals(activeOnly)
+                    ? timetableRepository.findByLine_IdAndIsActiveTrueOrderByDepartureTimeAsc(lineId)
+                    : timetableRepository.findByLine_IdOrderByDepartureTimeAsc(lineId);
         } else if (Boolean.TRUE.equals(activeOnly)) {
             timetables = timetableRepository.findByIsActiveTrueOrderByDepartureTimeAsc();
         } else {

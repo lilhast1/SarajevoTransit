@@ -17,7 +17,12 @@ export function AdminReviewsPage() {
   const [lines, setLines] = useState([])
   const [lineId, setLineId] = useState('')
   const [page, setPage] = useState(0)
+  const [sortDir, setSortDir] = useState('desc')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [data, setData] = useState({ content: [], totalPages: 0 })
+  const [reviewerNames, setReviewerNames] = useState({})
+  const [lineNames, setLineNames] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -28,21 +33,60 @@ export function AdminReviewsPage() {
   }, [vehicleTypeId])
 
   const load = useCallback(async () => {
-    if (!lineId) return
     setLoading(true)
     setError(null)
     try {
-      const query = new URLSearchParams({ lineId, includeHidden: true, page, size: 20 })
+      const params = { includeHidden: true, page, size: 20, sort: `createdAt,${sortDir}` }
+      if (lineId) params.lineId = lineId
+      const query = new URLSearchParams(params)
       const res = await gatewayClient.getReviews(`?${query}`)
       setData(res)
+
+      const rows = res.content ?? []
+
+      // batch-fetch reviewer names
+      const userIds = [...new Set(rows.map((r) => r.reviewerUserId).filter(Boolean))]
+      const userEntries = await Promise.all(
+        userIds.map((id) =>
+          gatewayClient.getUserById(id)
+            .then((u) => [id, u.fullName ?? u.email ?? `#${id}`])
+            .catch(() => [id, `#${id}`])
+        )
+      )
+      setReviewerNames((prev) => ({ ...prev, ...Object.fromEntries(userEntries) }))
+
+      // batch-fetch line names
+      const lids = [...new Set(rows.map((r) => r.lineId).filter(Boolean))]
+      const lineEntries = await Promise.all(
+        lids.map((id) =>
+          gatewayClient.getLineById(id)
+            .then((l) => [id, l.code ? `${l.code} – ${l.name}` : l.name])
+            .catch(() => [id, `#${id}`])
+        )
+      )
+      setLineNames((prev) => ({ ...prev, ...Object.fromEntries(lineEntries) }))
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [lineId, page])
+  }, [lineId, page, sortDir])
 
   useEffect(() => { load() }, [load])
+
+  const visibleRows = (() => {
+    const rows = data.content ?? []
+    if (!dateFrom && !dateTo) return rows
+    const from = dateFrom ? new Date(dateFrom) : null
+    const to = dateTo ? new Date(`${dateTo}T23:59:59`) : null
+    return rows.filter((r) => {
+      if (!r.createdAt) return true
+      const d = new Date(r.createdAt)
+      if (from && d < from) return false
+      if (to && d > to) return false
+      return true
+    })
+  })()
 
   async function handleToggleVisibility(review) {
     const next = review.moderationStatus === 'VISIBLE' ? 'HIDDEN' : 'VISIBLE'
@@ -66,9 +110,10 @@ export function AdminReviewsPage() {
 
   const columns = [
     { key: 'createdAt', label: 'Date', render: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—' },
-    { key: 'reviewerUserId', label: 'Reviewer ID' },
+    { key: 'reviewer', label: 'Reviewer', render: (r) => reviewerNames[r.reviewerUserId] ?? (r.reviewerUserId ? `#${r.reviewerUserId}` : '—') },
+    { key: 'line', label: 'Line', render: (r) => lineNames[r.lineId] ?? (r.lineId ? `#${r.lineId}` : '—') },
     { key: 'rating', label: 'Rating', render: (r) => '⭐'.repeat(r.rating ?? 0) },
-    { key: 'comment', label: 'Comment', render: (r) => trunc(r.comment, 80) },
+    { key: 'comment', label: 'Comment', render: (r) => trunc(r.reviewText, 80) },
     {
       key: 'moderationStatus', label: 'Status', render: (r) => (
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -110,6 +155,7 @@ export function AdminReviewsPage() {
         <p className="mt-1 text-sm text-muted">Show or hide user reviews per line.</p>
       </div>
 
+      {/* vehicle type filter */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted">Type:</span>
         {[{ id: '', label: 'All' }, ...VEHICLE_TYPES].map((vt) => (
@@ -128,34 +174,83 @@ export function AdminReviewsPage() {
         ))}
       </div>
 
-      <div className="flex items-center gap-3">
-        <label className="text-sm text-muted">Line:</label>
-        <select
-          value={lineId}
-          onChange={(e) => { setLineId(e.target.value); setPage(0) }}
-          className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink"
-        >
-          <option value="">— Select a line —</option>
-          {lines.map((l) => (
-            <option key={l.id} value={l.id}>{l.code} – {l.name}</option>
+      {/* line + sort row */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-muted">Line:</label>
+          <select
+            value={lineId}
+            onChange={(e) => { setLineId(e.target.value); setPage(0) }}
+            className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink"
+          >
+            <option value="">— All lines —</option>
+            {lines.map((l) => (
+              <option key={l.id} value={l.id}>{l.code} – {l.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-muted">Sort:</span>
+          {[{ value: 'desc', label: 'Latest first' }, { value: 'asc', label: 'Earliest first' }].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { setSortDir(opt.value); setPage(0) }}
+              className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
+                sortDir === opt.value
+                  ? 'border-accent bg-accent text-white'
+                  : 'border-border text-muted hover:bg-surface-alt'
+              }`}
+            >
+              {opt.label}
+            </button>
           ))}
-        </select>
+        </div>
+      </div>
+
+      {/* date range filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm text-muted">Date range:</span>
+        <label className="flex items-center gap-1.5 text-sm text-muted">
+          From
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="rounded-panel border border-border bg-surface px-2 py-1 text-sm text-ink dark:[color-scheme:dark]"
+          />
+        </label>
+        <label className="flex items-center gap-1.5 text-sm text-muted">
+          To
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="rounded-panel border border-border bg-surface px-2 py-1 text-sm text-ink dark:[color-scheme:dark]"
+          />
+        </label>
+        {(dateFrom || dateTo) && (
+          <button
+            type="button"
+            onClick={() => { setDateFrom(''); setDateTo('') }}
+            className="text-xs text-muted underline hover:text-ink"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
 
-      {lineId ? (
-        <DataTable
-          columns={columns}
-          rows={data.content ?? []}
-          page={page}
-          totalPages={data.totalPages ?? 0}
-          onPageChange={setPage}
-          loading={loading}
-        />
-      ) : (
-        <p className="text-sm text-muted">Select a line to load its reviews.</p>
-      )}
+      <DataTable
+        columns={columns}
+        rows={visibleRows}
+        page={page}
+        totalPages={data.totalPages ?? 0}
+        onPageChange={setPage}
+        loading={loading}
+      />
     </div>
   )
 }

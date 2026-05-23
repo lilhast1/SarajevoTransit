@@ -75,12 +75,13 @@ export function AdminTimetablePage() {
   }, [form.formLineId])
 
   const load = useCallback(async () => {
-    if (!lineId || !directionId) return
     setLoading(true)
     setError(null)
     try {
-      const query = new URLSearchParams({ lineId, directionId, activeOnly: false })
-      const res = await gatewayClient.getTimetables(`?${query}`)
+      const params = { activeOnly: false }
+      if (lineId) params.lineId = lineId
+      if (directionId) params.directionId = directionId
+      const res = await gatewayClient.getTimetables(`?${new URLSearchParams(params)}`)
       const dayNums = DAY_TYPES.find((d) => d.key === dayType)?.days ?? []
       const filtered = res.filter((t) => (t.daysOfWeek ?? []).some((d) => dayNums.includes(d)))
       setTimetables(filtered.sort((a, b) => String(a.departureTime).localeCompare(String(b.departureTime))))
@@ -219,7 +220,7 @@ export function AdminTimetablePage() {
             onChange={(e) => setLineId(e.target.value)}
             className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink"
           >
-            <option value="">— Select —</option>
+            <option value="">— All lines —</option>
             {lines.map((l) => <option key={l.id} value={l.id}>{l.code} – {l.name}</option>)}
           </select>
         </div>
@@ -231,7 +232,7 @@ export function AdminTimetablePage() {
             disabled={!lineId}
             className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink disabled:opacity-50"
           >
-            <option value="">— Select —</option>
+            <option value="">— All directions —</option>
             {directions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
@@ -376,18 +377,14 @@ export function AdminTimetablePage() {
 
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
 
-      {lineId && directionId ? (
-        <DataTable
-          columns={columns}
-          rows={timetables}
-          page={0}
-          totalPages={1}
-          onPageChange={() => {}}
-          loading={loading}
-        />
-      ) : (
-        <p className="text-sm text-muted">Select a line and direction to load timetable entries.</p>
-      )}
+      <DataTable
+        columns={columns}
+        rows={timetables}
+        page={0}
+        totalPages={1}
+        onPageChange={() => {}}
+        loading={loading}
+      />
     </div>
   )
 }

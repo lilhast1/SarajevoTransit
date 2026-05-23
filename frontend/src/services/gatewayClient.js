@@ -224,6 +224,10 @@ export const gatewayClient = {
   deleteTimetable: (id) =>
     request(`/api/v1/timetables/${id}`, { method: 'DELETE', token: getAccessToken() }),
 
+  // ── Admin: Subscriptions ─────────────────────────────────────────────────
+  getSubscriptionsByLine: (lineId, page = 0, size = 10) =>
+    request(`/subscriptions/line/${lineId}?page=${page}&size=${size}&sort=createdAt,desc`, { token: getAccessToken() }),
+
   // ── Admin: Users ──────────────────────────────────────────────────────────
   getAllUsers: (query = '') => request(`/api/v1/users${query}`, { token: getAccessToken() }),
   getUserById: (id) => request(`/api/v1/users/${id}`, { token: getAccessToken() }),
@@ -233,6 +237,12 @@ export const gatewayClient = {
   // ── Admin: Notifications ──────────────────────────────────────────────────
   getAllNotifications: (query = '') =>
     request(`/notifications${query}`, { token: getAccessToken() }),
+  createNotification: (payload) =>
+    request('/notifications', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
   broadcastNotification: (payload) =>
     request('/notifications/broadcast', {
       method: 'POST',

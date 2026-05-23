@@ -1,5 +1,7 @@
 server:
   port: 8080
+  tomcat:
+    max-http-post-size: 20MB
 
 jwt:
   public-key: classpath:keys/rsa-public-key.pem
