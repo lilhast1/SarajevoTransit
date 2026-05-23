@@ -1,17 +1,21 @@
-import { AlertCircle, RefreshCw, Route } from 'lucide-react'
+import { AlertCircle, RefreshCw, Heart, Route, Loader2, LogIn } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LineBadge } from '../components/common/LineBadge'
-import { ErrorAlert } from '../components/common/Alerts'
+import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
 import { EmptyState } from '../components/common/LoadingStates'
 import { PanelCard } from '../components/common/PanelCard'
 import { LineDetailLayout } from '../components/lines/LineDetailLayout'
+import { SubscriptionModal } from '../components/common/SubscriptionModal'
+import { useAppContext } from '../context/AppContext'
 import { transitApi } from '../services/transitApi'
 
 const typeFilters = ['all', 'tram', 'bus', 'trolleybus', 'minibus']
 
 export function LinesPage() {
   const navigate = useNavigate()
+  const { isAuthenticated, isLineSubscribed, subscribeToLine, unsubscribeFromLine } = useAppContext()
+
   const [lines, setLines] = useState([])
   const [query, setQuery] = useState('')
   const [type, setType] = useState('all')
@@ -28,6 +32,12 @@ export function LinesPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState(null)
   const [directionError, setDirectionError] = useState(null)
+
+  const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false)
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false)
+  const [subscribing, setSubscribing] = useState(false)
+  const [subscriptionMsg, setSubscriptionMsg] = useState(null)
+  const { session } = useAppContext()
 
   const detailMode = selectedLineId !== null
 
@@ -161,6 +171,11 @@ export function LinesPage() {
 
   const countLabel = useMemo(() => `${lines.length} line${lines.length === 1 ? '' : 's'}`, [lines])
 
+  const subscribed = useMemo(
+    () => selectedLineId != null && isLineSubscribed(selectedLineId),
+    [isLineSubscribed, selectedLineId],
+  )
+
   const openLineDetail = (lineId) => {
     setSelectedLineId(lineId)
     setSelectedLine(null)
@@ -184,8 +199,49 @@ export function LinesPage() {
     setLinesRetryKey((current) => current + 1)
   }
 
+  async function handleHeartClick() {
+    setSubscriptionMsg(null)
+    if (!isAuthenticated) {
+      setLoginPromptOpen(true)
+      return
+    }
+    if (subscribed) {
+      setSubscribing(true)
+      try {
+        await unsubscribeFromLine(selectedLineId)
+        setSubscriptionMsg({ type: 'success', text: 'Unsubscribed from notifications for this line.' })
+      } catch (err) {
+        setSubscriptionMsg({ type: 'error', text: err.message || 'Failed to unsubscribe.' })
+      } finally {
+        setSubscribing(false)
+      }
+    } else {
+      setSubscriptionModalOpen(true)
+    }
+  }
+
+  async function handleSubscriptionSubmit(data) {
+    if (!selectedLine || !session?.userId) return
+    await subscribeToLine(
+      session.userId,
+      selectedLineId,
+      selectedLine.code,
+      selectedLine.name,
+      data.startInterval,
+      data.endInterval,
+      data.daysOfWeek,
+    )
+  }
+
   return (
     <div className="space-y-4">
+      {subscriptionMsg && subscriptionMsg.type === 'success' && (
+        <SuccessAlert message={subscriptionMsg.text} onDismiss={() => setSubscriptionMsg(null)} />
+      )}
+      {subscriptionMsg && subscriptionMsg.type === 'error' && (
+        <ErrorAlert error={subscriptionMsg.text} onDismiss={() => setSubscriptionMsg(null)} />
+      )}
+
       {!detailMode ? (
         <PanelCard tone="soft">
           <h2 className="text-xl font-semibold text-ink">Line Search</h2>
@@ -309,14 +365,66 @@ export function LinesPage() {
           directionAction={(
             <button
               type="button"
-              onClick={() => alert('Add to favorites functionality is not implemented yet.')}
-              className="inline-flex items-center gap-2 rounded-panel border border-border bg-surface px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
+              onClick={handleHeartClick}
+              disabled={subscribing}
+              className={`inline-flex items-center gap-2 rounded-panel border px-3 py-2 text-sm font-medium transition disabled:opacity-60 ${
+                subscribed
+                  ? 'border-accent bg-accent text-white'
+                  : 'border-border text-ink hover:bg-surface-alt'
+              }`}
             >
-              <RefreshCw size={14} />
-              Add to favorites
+              {subscribing ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Heart size={14} fill={subscribed ? 'currentColor' : 'none'} />
+              )}
+              {subscribing ? 'Unsubscribing...' : subscribed ? 'Subscribed' : 'Subscribe'}
             </button>
           )}
         />
+      )}
+
+      <SubscriptionModal
+        isOpen={subscriptionModalOpen}
+        onClose={() => setSubscriptionModalOpen(false)}
+        onSubmit={handleSubscriptionSubmit}
+        lineName={selectedLine?.name}
+      />
+
+      {loginPromptOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setLoginPromptOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-panel border border-border bg-surface p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <LogIn size={18} className="text-accent" />
+              <h2 className="text-base font-semibold text-ink">Login required</h2>
+            </div>
+            <p className="mb-5 mt-2 text-sm text-muted">
+              Please log in to subscribe to line notifications and receive updates.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/auth')}
+                className="flex-1 rounded-panel border border-accent bg-accent py-2 text-sm font-medium text-white"
+              >
+                Go to Login
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoginPromptOpen(false)}
+                className="flex-1 rounded-panel border border-border py-2 text-sm font-medium text-ink hover:bg-surface-alt"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

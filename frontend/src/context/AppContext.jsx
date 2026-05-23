@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 import { saveAuthSession, getAuthSession, clearAuthSession, enrichSessionWithMetadata, secondsUntilExpiry } from '../utils/authStorage'
 import { gatewayClient } from '../services/gatewayClient'
+import { transitApi } from '../services/transitApi'
 
 const STORAGE_KEYS = {
   theme: 'sarajevo-transit-theme',
@@ -32,6 +33,8 @@ export function AppProvider({ children }) {
   const [favorites, setFavorites] = useState(() => readStorage(STORAGE_KEYS.favorites, { lines: [], stops: [] }))
   const [tripHistory, setTripHistory] = useState(() => readStorage(STORAGE_KEYS.history, []))
   const [sessionModal, setSessionModal] = useState({ open: false, refreshExpired: false })
+  const [subscribedLines, setSubscribedLines] = useState({})
+  const [subscriptionsRefreshKey, setSubscriptionsRefreshKey] = useState(0)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -53,6 +56,26 @@ export function AppProvider({ children }) {
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(tripHistory.slice(0, 30)))
   }, [tripHistory])
+
+  // Load active subscriptions from backend when user logs in
+  useEffect(() => {
+    if (!session?.userId) {
+      setSubscribedLines({})
+      return
+    }
+    let active = true
+    transitApi.getUserSubscriptions(session.userId).then((subs) => {
+      if (!active) return
+      const map = {}
+      subs.forEach((sub) => {
+        if (sub.isActive) map[sub.lineId] = sub.id
+      })
+      setSubscribedLines(map)
+    }).catch(() => {
+      // Silently fail — subscriptions are not critical for page rendering
+    })
+    return () => { active = false }
+  }, [session?.userId, subscriptionsRefreshKey])
 
   // Show modal when access token is within 2 minutes of expiry
   useEffect(() => {
@@ -115,10 +138,39 @@ export function AppProvider({ children }) {
             : [...current.stops, stopId],
         }))
       },
+      subscribedLines,
+      isLineSubscribed: (lineId) => Object.prototype.hasOwnProperty.call(subscribedLines, lineId),
+      subscribeToLine: async (lineId, lineCode, lineName, startInterval, endInterval, daysOfWeek) => {
+        const sub = await transitApi.subscribeToLine({ lineId, lineCode, lineName, startInterval, endInterval, daysOfWeek })
+        setSubscribedLines((prev) => ({ ...prev, [lineId]: sub.id }))
+        setFavorites((prev) => ({
+          ...prev,
+          lines: prev.lines.includes(lineId) ? prev.lines : [...prev.lines, lineId],
+        }))
+        return sub
+      },
+      unsubscribeFromLine: async (lineId) => {
+        const subId = subscribedLines[lineId]
+        if (!subId) return
+        await transitApi.unsubscribeFromLine(subId)
+        setSubscribedLines((prev) => {
+          const next = { ...prev }
+          delete next[lineId]
+          return next
+        })
+        setFavorites((prev) => ({
+          ...prev,
+          lines: prev.lines.filter((id) => id !== lineId),
+        }))
+      },
+      refreshSubscriptions: () => setSubscriptionsRefreshKey((k) => k + 1),
+      updateLineSubscription: async (subscriptionId, data) => {
+        return transitApi.updateSubscription(subscriptionId, data)
+      },
       tripHistory,
       addTripHistoryItem: (item) => setTripHistory((current) => [item, ...current].slice(0, 30)),
     }),
-    [favorites, session, sessionModal, refreshSession, theme, tripHistory],
+    [favorites, session, sessionModal, refreshSession, theme, tripHistory, subscribedLines, subscriptionsRefreshKey],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

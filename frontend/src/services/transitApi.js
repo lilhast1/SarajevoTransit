@@ -506,6 +506,47 @@ export const transitApi = {
     return gatewayClient.login({ email, password })
   },
 
+  // ── Subscriptions (Notification Service) ────────────────────────────────
+  async subscribeToLine({ userId, lineId, lineCode, lineName, startInterval, endInterval, daysOfWeek }) {
+    return gatewayClient.createSubscription({
+      userId,
+      lineId,
+      lineCode,
+      lineName,
+      startInterval,
+      endInterval,
+      daysOfWeek,
+    })
+  },
+
+  async unsubscribeFromLine(subscriptionId) {
+    return gatewayClient.deactivateSubscription(subscriptionId)
+  },
+
+  async reactivateSubscription(subscriptionId) {
+    return gatewayClient.activateSubscription(subscriptionId)
+  },
+
+  async updateSubscription(subscriptionId, data) {
+    return gatewayClient.updateSubscription(subscriptionId, data)
+  },
+
+  async deleteSubscription(subscriptionId) {
+    return gatewayClient.deleteSubscription(subscriptionId)
+  },
+
+  async getUserSubscriptions(userId) {
+    return gatewayClient.getUserSubscriptions(userId)
+  },
+
+  async getAllUserSubscriptions(userId) {
+    return gatewayClient.getAllUserSubscriptions(userId)
+  },
+
+  async getSubscriptionById(id) {
+    return gatewayClient.getSubscriptionById(id)
+  },
+
   async getProfileSnapshot(favorites) {
     return {
       favoriteLines: mockLines.filter((line) => favorites.lines.includes(line.id)),

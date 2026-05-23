@@ -6,10 +6,11 @@
             "server": "localhost",
             "port": 5432,
             "driver": "PostgreSQL",
-            "name": "loc",
-            "database": "sarajevo_transit_routing",
+            "name": "sarajevotransit",
+            "database": "postgres",
             "username": "postgres",
-            "password": "postgres"
+            "password": "password"
         }
-    ]
+    ],
+    "workbench.colorTheme": "Monokai Pro (Filter Octagon)"
 }

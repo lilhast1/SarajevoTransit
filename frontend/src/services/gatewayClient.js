@@ -241,4 +241,36 @@ export const gatewayClient = {
     }),
   deleteNotification: (id) =>
     request(`/notifications/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Subscriptions (Notification Service) ─────────────────────────────────
+  createSubscription: (payload) =>
+    request('/subscriptions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  deactivateSubscription: (id) =>
+    request(`/subscriptions/${id}/deactivate`, {
+      method: 'PATCH',
+      token: getAccessToken(),
+    }),
+  activateSubscription: (id) =>
+    request(`/subscriptions/${id}/activate`, {
+      method: 'PATCH',
+      token: getAccessToken(),
+    }),
+  updateSubscription: (id, payload) =>
+    request(`/subscriptions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  deleteSubscription: (id) =>
+    request(`/subscriptions/${id}`, { method: 'DELETE', token: getAccessToken() }),
+  getUserSubscriptions: (userId) =>
+    request(`/subscriptions/user/${userId}/active`, { token: getAccessToken() }),
+  getAllUserSubscriptions: (userId) =>
+    request(`/subscriptions/user/${userId}`, { token: getAccessToken() }),
+  getSubscriptionById: (id) =>
+    request(`/subscriptions/${id}`, { token: getAccessToken() }),
 }
