@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
+import { Image } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { DataTable } from '../../components/admin/DataTable'
 import { ErrorAlert } from '../../components/common/Alerts'
 import { gatewayClient } from '../../services/gatewayClient'
@@ -16,10 +18,13 @@ function trunc(str, n) {
   return str.length > n ? `${str.slice(0, n)}…` : str
 }
 
+
 export function AdminReportsPage() {
+  const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [page, setPage] = useState(0)
   const [data, setData] = useState({ content: [], totalPages: 0 })
+  const [userNames, setUserNames] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -31,6 +36,11 @@ export function AdminReportsPage() {
       if (statusFilter !== 'ALL') query.set('status', statusFilter)
       const res = await gatewayClient.getReports(`?${query}`)
       setData(res)
+      const ids = [...new Set((res.content ?? []).map((r) => r.reporterUserId).filter(Boolean))]
+      const entries = await Promise.all(
+        ids.map((id) => gatewayClient.getUserById(id).then((u) => [id, u.fullName ?? `#${id}`]).catch(() => [id, `#${id}`]))
+      )
+      setUserNames(Object.fromEntries(entries))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -62,9 +72,19 @@ export function AdminReportsPage() {
   const columns = [
     { key: 'createdAt', label: 'Date', render: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—' },
     { key: 'category', label: 'Category' },
-    { key: 'description', label: 'Description', render: (r) => trunc(r.description, 80) },
-    { key: 'reporterUserId', label: 'Reporter ID' },
+    { key: 'description', label: 'Description', render: (r) => trunc(r.description, 60) },
+    { key: 'reporterUserId', label: 'Reporter', render: (r) => userNames[r.reporterUserId] ?? (r.reporterUserId ? `#${r.reporterUserId}` : '—') },
     { key: 'lineId', label: 'Line' },
+    {
+      key: 'photos', label: 'Photos', render: (r) => (
+        r.photoUrls?.length > 0 ? (
+          <span className="flex items-center gap-1 text-xs text-muted">
+            <Image size={12} />
+            {r.photoUrls.length}
+          </span>
+        ) : '—'
+      )
+    },
     {
       key: 'status', label: 'Status', render: (r) => (
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[r.status] ?? ''}`}>
@@ -75,6 +95,13 @@ export function AdminReportsPage() {
     {
       key: 'actions', label: 'Actions', render: (r) => (
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate(`/admin/reports/${r.id}`)}
+            className="rounded border border-border px-2 py-0.5 text-xs text-muted hover:bg-surface-alt hover:text-ink"
+          >
+            Details
+          </button>
           <select
             value={r.status}
             onChange={(e) => handleStatusChange(r.id, e.target.value)}
@@ -130,6 +157,7 @@ export function AdminReportsPage() {
         onPageChange={setPage}
         loading={loading}
       />
+
     </div>
   )
 }

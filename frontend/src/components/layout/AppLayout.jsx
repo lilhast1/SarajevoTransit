@@ -62,8 +62,7 @@ function NavItem({ item, onClick }) {
 }
 
 export function AppLayout() {
-  const { theme, toggleTheme, isAuthenticated, isAdmin } = useAppContext()
-  const navItems = isAdmin ? [...publicNavItems, ...adminNavItems] : publicNavItems
+  const { theme, toggleTheme, isAuthenticated, isAdmin, session } = useAppContext()
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
 
@@ -72,11 +71,11 @@ export function AppLayout() {
   }, [location.pathname])
 
   const navItems = useMemo(() => {
-    if (session?.role === 'DRIVER') {
-      return [...BASE_NAV_ITEMS, DRIVER_NAV_ITEM]
-    }
-    return BASE_NAV_ITEMS
-  }, [session?.role])
+    let items = [...BASE_NAV_ITEMS]
+    if (session?.role === 'DRIVER') items = [...items, DRIVER_NAV_ITEM]
+    if (isAdmin) items = [...items, ...adminNavItems]
+    return items
+  }, [session?.role, isAdmin])
 
   return (
     <div className="min-h-screen">

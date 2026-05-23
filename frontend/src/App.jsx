@@ -23,6 +23,7 @@ import { AdminStationsPage } from './pages/admin/AdminStationsPage.jsx'
 import { AdminTimetablePage } from './pages/admin/AdminTimetablePage.jsx'
 import { AdminUsersPage } from './pages/admin/AdminUsersPage.jsx'
 import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage.jsx'
+import { AdminReportDetailPage } from './pages/admin/AdminReportDetailPage.jsx'
 
 function App() {
   return (
@@ -63,6 +64,7 @@ function App() {
         {/* Admin routes - require ADMIN role */}
         <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
         <Route path="/admin/reports" element={<AdminRoute><AdminReportsPage /></AdminRoute>} />
+        <Route path="/admin/reports/:id" element={<AdminRoute><AdminReportDetailPage /></AdminRoute>} />
         <Route path="/admin/reviews" element={<AdminRoute><AdminReviewsPage /></AdminRoute>} />
         <Route path="/admin/lines" element={<AdminRoute><AdminLinesPage /></AdminRoute>} />
         <Route path="/admin/stations" element={<AdminRoute><AdminStationsPage /></AdminRoute>} />

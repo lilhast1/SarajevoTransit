@@ -85,8 +85,8 @@ public class ProblemReport {
 
     @ElementCollection
     @CollectionTable(name = "incident_report_photos", joinColumns = @JoinColumn(name = "incident_report_id"))
-    @Column(name = "photo_url", length = 500)
-    private List<@Size(max = 500) String> photoUrls = new ArrayList<>();
+    @Column(name = "photo_url", columnDefinition = "TEXT")
+    private List<String> photoUrls = new ArrayList<>();
 
     @NotNull
     @Enumerated(EnumType.STRING)
