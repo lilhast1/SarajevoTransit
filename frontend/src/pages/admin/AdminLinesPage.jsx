@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, X, Users, ChevronUp } from 'lucide-react'
+import { Plus, X, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import { DataTable } from '../../components/admin/DataTable'
 import { PanelCard } from '../../components/common/PanelCard'
 import { ErrorAlert } from '../../components/common/Alerts'
@@ -10,7 +10,7 @@ const VEHICLE_TYPES = Object.values(VEHICLE_TYPE_META_BY_ID)
 
 const EMPTY_FORM = { code: '', name: '', vehicleTypeId: 1, isActive: true }
 
-function SubscribersPanel({ line, onClose }) {
+function SubscribersPanel({ line }) {
   const [page, setPage] = useState(0)
   const [data, setData] = useState({ content: [], totalPages: 0 })
   const [loading, setLoading] = useState(false)
@@ -47,15 +47,10 @@ function SubscribersPanel({ line, onClose }) {
   ]
 
   return (
-    <div className="mt-2 rounded-panel border border-border bg-surface-alt p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-ink">
-          Subscribers — {line.code} {line.name}
-        </h4>
-        <button type="button" onClick={onClose} className="text-muted hover:text-ink">
-          <ChevronUp size={16} />
-        </button>
-      </div>
+    <div>
+      <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">
+        Subscribers — {line.code} {line.name}
+      </p>
       {loading && <p className="text-sm text-muted">Loading…</p>}
       {!loading && (data.content ?? []).length === 0 && (
         <p className="text-sm text-muted">No subscribers for this line.</p>
@@ -214,7 +209,9 @@ export function AdminLinesPage() {
                 : 'border-border text-muted hover:bg-surface-alt hover:text-ink'
             }`}
           >
-            <Users size={11} /> Subscribers
+            <Users size={11} />
+            Subscribers
+            {expandedLineId === r.id ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
           </button>
         </div>
       )
@@ -325,14 +322,9 @@ export function AdminLinesPage() {
         totalPages={1}
         onPageChange={() => {}}
         loading={loading}
+        expandedRowId={expandedLineId}
+        renderExpandedRow={(row) => <SubscribersPanel line={row} />}
       />
-
-      {expandedLineId && (
-        <SubscribersPanel
-          line={lines.find((l) => l.id === expandedLineId)}
-          onClose={() => setExpandedLineId(null)}
-        />
-      )}
     </div>
   )
 }
