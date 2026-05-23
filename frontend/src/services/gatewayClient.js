@@ -152,6 +152,34 @@ export const gatewayClient = {
       token: getAccessToken(),
     }),
 
+  // ── Finance / Tickets ──────────────────────────────────────────────────
+  /** POST /api/finance/purchase */
+  purchaseTicket: (payload) =>
+    request('/api/finance/purchase', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/finance/wallet/{userId}?page=0&size=20 */
+  getWallet: (userId, query = '') =>
+    request(`/api/finance/wallet/${userId}${query}`, { token: getAccessToken() }),
+  /** GET /api/payments/methods/{userId} */
+  getPaymentMethods: (userId) =>
+    request(`/api/payments/methods/${userId}`, { token: getAccessToken() }),
+  /** POST /api/payments/methods */
+  addPaymentMethod: (payload) =>
+    request('/api/payments/methods', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** DELETE /api/payments/methods/{id} */
+  removePaymentMethod: (methodId) =>
+    request(`/api/payments/methods/${methodId}`, {
+      method: 'DELETE',
+      token: getAccessToken(),
+    }),
+
   // ── Problem reports ───────────────────────────────────────────────────
   /** POST /api/v1/reports */
   createProblemReport: (payload) =>
