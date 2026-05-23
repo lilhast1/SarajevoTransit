@@ -3,6 +3,9 @@ import { Eye, EyeOff } from 'lucide-react'
 import { DataTable } from '../../components/admin/DataTable'
 import { ErrorAlert } from '../../components/common/Alerts'
 import { gatewayClient } from '../../services/gatewayClient'
+import { VEHICLE_TYPE_META_BY_ID } from '../../constants/vehicleColors'
+
+const VEHICLE_TYPES = Object.values(VEHICLE_TYPE_META_BY_ID)
 
 function trunc(str, n) {
   if (!str) return '—'
@@ -10,6 +13,7 @@ function trunc(str, n) {
 }
 
 export function AdminReviewsPage() {
+  const [vehicleTypeId, setVehicleTypeId] = useState('')
   const [lines, setLines] = useState([])
   const [lineId, setLineId] = useState('')
   const [page, setPage] = useState(0)
@@ -18,8 +22,10 @@ export function AdminReviewsPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    gatewayClient.getLines('').then(setLines).catch(() => {})
-  }, [])
+    const q = vehicleTypeId ? `?vehicleTypeId=${vehicleTypeId}` : ''
+    setLineId('')
+    gatewayClient.getLines(q).then(setLines).catch(() => {})
+  }, [vehicleTypeId])
 
   const load = useCallback(async () => {
     if (!lineId) return
@@ -102,6 +108,24 @@ export function AdminReviewsPage() {
       <div>
         <h2 className="text-xl font-semibold text-ink">Review Moderation</h2>
         <p className="mt-1 text-sm text-muted">Show or hide user reviews per line.</p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted">Type:</span>
+        {[{ id: '', label: 'All' }, ...VEHICLE_TYPES].map((vt) => (
+          <button
+            key={vt.id}
+            type="button"
+            onClick={() => setVehicleTypeId(vt.id)}
+            className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
+              vehicleTypeId === vt.id
+                ? 'border-accent bg-accent text-white'
+                : 'border-border text-muted hover:bg-surface-alt'
+            }`}
+          >
+            {vt.label}
+          </button>
+        ))}
       </div>
 
       <div className="flex items-center gap-3">

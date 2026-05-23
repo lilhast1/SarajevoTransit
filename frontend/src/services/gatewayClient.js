@@ -165,6 +165,7 @@ export const gatewayClient = {
 
   // ── Admin: Reports ────────────────────────────────────────────────────────
   getReports: (query = '') => request(`/api/v1/reports${query}`, { token: getAccessToken() }),
+  getReportById: (id) => request(`/api/v1/reports/${id}`, { token: getAccessToken() }),
   updateReportStatus: (id, status) =>
     request(`/api/v1/reports/${id}/status`, {
       method: 'PATCH',
@@ -225,6 +226,7 @@ export const gatewayClient = {
 
   // ── Admin: Users ──────────────────────────────────────────────────────────
   getAllUsers: (query = '') => request(`/api/v1/users${query}`, { token: getAccessToken() }),
+  getUserById: (id) => request(`/api/v1/users/${id}`, { token: getAccessToken() }),
   deleteUser: (id) =>
     request(`/api/v1/users/${id}`, { method: 'DELETE', token: getAccessToken() }),
 

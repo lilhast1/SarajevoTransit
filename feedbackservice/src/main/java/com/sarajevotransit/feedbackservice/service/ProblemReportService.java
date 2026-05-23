@@ -156,11 +156,6 @@ public class ProblemReportService {
             vehicleServiceClient.validateVehicle(request.getVehicleId());
         }
 
-        validateVehicleOrStationReference(request.getVehicleId(),
-                request.getVehicleRegistrationNumber(),
-                request.getVehicleInternalId(),
-                request.getStationId());
-
         ProblemReport entity = problemReportMapper.toEntity(request);
         entity.setStatus(ReportStatus.RECEIVED);
         applyNormalization(entity);
@@ -365,11 +360,6 @@ public class ProblemReportService {
     }
 
     private void applyBusinessRules(ProblemReport entity) {
-        validateVehicleOrStationReference(entity.getVehicleId(),
-                entity.getVehicleRegistrationNumber(),
-                entity.getVehicleInternalId(),
-                entity.getStationId());
-
         applyNormalization(entity);
     }
 

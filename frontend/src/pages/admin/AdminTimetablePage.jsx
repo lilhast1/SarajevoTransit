@@ -4,6 +4,9 @@ import { DataTable } from '../../components/admin/DataTable'
 import { PanelCard } from '../../components/common/PanelCard'
 import { ErrorAlert } from '../../components/common/Alerts'
 import { gatewayClient } from '../../services/gatewayClient'
+import { VEHICLE_TYPE_META_BY_ID } from '../../constants/vehicleColors'
+
+const VEHICLE_TYPES = Object.values(VEHICLE_TYPE_META_BY_ID)
 
 const DAY_LABELS = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' }
 const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7]
@@ -29,6 +32,7 @@ const EMPTY_FORM = {
 
 export function AdminTimetablePage() {
   // filter state (table view)
+  const [vehicleTypeId, setVehicleTypeId] = useState('')
   const [lines, setLines] = useState([])
   const [lineId, setLineId] = useState('')
   const [directions, setDirections] = useState([])
@@ -45,8 +49,12 @@ export function AdminTimetablePage() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    gatewayClient.getLines('').then(setLines).catch(() => {})
-  }, [])
+    const q = vehicleTypeId ? `?vehicleTypeId=${vehicleTypeId}` : ''
+    setLineId('')
+    setDirectionId('')
+    setDirections([])
+    gatewayClient.getLines(q).then(setLines).catch(() => {})
+  }, [vehicleTypeId])
 
   // load directions for the table filter
   useEffect(() => {
@@ -181,6 +189,25 @@ export function AdminTimetablePage() {
         >
           <Plus size={15} /> New Entry
         </button>
+      </div>
+
+      {/* vehicle type filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted">Type:</span>
+        {[{ id: '', label: 'All' }, ...VEHICLE_TYPES].map((vt) => (
+          <button
+            key={vt.id}
+            type="button"
+            onClick={() => setVehicleTypeId(vt.id)}
+            className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
+              vehicleTypeId === vt.id
+                ? 'border-accent bg-accent text-white'
+                : 'border-border text-muted hover:bg-surface-alt'
+            }`}
+          >
+            {vt.label}
+          </button>
+        ))}
       </div>
 
       {/* table filters */}
