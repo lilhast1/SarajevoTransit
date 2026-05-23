@@ -5,6 +5,7 @@ import {
   CircleUserRound,
   X,
   LogIn,
+  LayoutDashboard,
   MapPinned,
   Menu,
   Moon,
@@ -18,8 +19,10 @@ import {
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useAppContext } from '../../context/AppContext'
+import { SessionExpiryModal } from '../common/SessionExpiryModal'
+import { saveAuthSession, getAuthSession, clearAuthSession, enrichSessionWithMetadata, secondsUntilExpiry } from '../../utils/authStorage'
 
-const BASE_NAV_ITEMS = [
+const publicNavItems = [
   { to: '/', label: 'Route Planner', icon: Route },
   { to: '/lines', label: 'Lines', icon: Bus },
   { to: '/stops', label: 'Stops', icon: MapPinned },
@@ -30,8 +33,12 @@ const BASE_NAV_ITEMS = [
   { to: '/auth', label: 'Auth', icon: LogIn },
   { to: '/profile', label: 'Profile', icon: UserRound },
 ]
+const BASE_NAV_ITEMS = publicNavItems;
 
 const DRIVER_NAV_ITEM = { to: '/driver', label: 'Driver Portal', icon: Car }
+const adminNavItems = [
+  { to: '/admin', label: 'Admin Panel', icon: LayoutDashboard },
+]
 
 function NavItem({ item, onClick }) {
   const Icon = item.icon
@@ -42,11 +49,11 @@ function NavItem({ item, onClick }) {
       className={({ isActive }) =>
         `flex items-center justify-between gap-2 rounded-panel border px-3 py-2 text-sm font-medium transition ${
           isActive
-            ? 'border-accent bg-accent text-white'
-            : 'border-border text-muted hover:bg-surface-alt hover:text-ink'
+          ? 'border-accent bg-accent text-white'
+          : 'border-border text-muted hover:bg-surface-alt hover:text-ink'
         }`
       }
-    >
+      >
       <span className="flex items-center gap-2">
         <Icon size={16} />
         <span>{item.label}</span>
@@ -57,20 +64,21 @@ function NavItem({ item, onClick }) {
 }
 
 export function AppLayout() {
-  const { theme, toggleTheme, isAuthenticated, session } = useAppContext()
+  const { theme, toggleTheme, isAuthenticated, isAdmin } = useAppContext()
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
-
+  const [session, setSession] = useState(() => getAuthSession())
+  
   useEffect(() => {
     setMenuOpen(false)
   }, [location.pathname])
 
   const navItems = useMemo(() => {
-    if (session?.role === 'DRIVER') {
-      return [...BASE_NAV_ITEMS, DRIVER_NAV_ITEM]
-    }
-    return BASE_NAV_ITEMS
-  }, [session?.role])
+    let items = [...BASE_NAV_ITEMS]
+    if (session?.role === 'DRIVER') items = [...items, DRIVER_NAV_ITEM]
+    if (isAdmin) items = [...items, ...adminNavItems]
+    return items
+  }, [session?.role, isAdmin])
 
   return (
     <div className="min-h-screen">
@@ -141,6 +149,8 @@ export function AppLayout() {
       <main className="mx-auto w-full max-w-[1500px] px-4 py-4">
         <Outlet />
       </main>
+
+      <SessionExpiryModal />
     </div>
   )
 }

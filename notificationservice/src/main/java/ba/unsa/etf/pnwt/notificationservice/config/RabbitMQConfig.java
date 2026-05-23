@@ -17,9 +17,11 @@ public class RabbitMQConfig {
 
     public static final String TIMETABLE_EXCHANGE            = "timetable.exchange";
     public static final String ROUTING_TIMETABLE_CHANGED     = "timetable.changed";
+    public static final String ROUTING_TRIP_DELAY_CHANGED    = "trip.delay.changed";
     public static final String ROUTING_NOTIFICATION_SENT     = "timetable.notification.sent";
     public static final String ROUTING_NOTIFICATION_FAILED   = "timetable.notification.failed";
     public static final String QUEUE_TIMETABLE_CHANGED       = "timetable-notification-changed-queue";
+    public static final String QUEUE_TRIP_DELAY_CHANGED      = "trip-delay-notification-changed-queue";
 
     @Bean
     public TopicExchange ticketSagaExchange() {
@@ -37,8 +39,18 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue tripDelayChangedQueue() {
+        return QueueBuilder.durable(QUEUE_TRIP_DELAY_CHANGED).build();
+    }
+
+    @Bean
     public Binding bindTimetableChanged(Queue timetableChangedQueue, TopicExchange timetableExchange) {
         return BindingBuilder.bind(timetableChangedQueue).to(timetableExchange).with(ROUTING_TIMETABLE_CHANGED);
+    }
+
+    @Bean
+    public Binding bindTripDelayChanged(Queue tripDelayChangedQueue, TopicExchange timetableExchange) {
+        return BindingBuilder.bind(tripDelayChangedQueue).to(timetableExchange).with(ROUTING_TRIP_DELAY_CHANGED);
     }
 
     @Bean

@@ -42,6 +42,9 @@ async function request(path, options = {}) {
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent('session-expired'))
+    }
     throw new Error(await buildErrorMessage(response))
   }
 
@@ -51,6 +54,11 @@ async function request(path, options = {}) {
 
 export const gatewayClient = {
   // ── Auth / users ────────────────────────────────────────────────────────
+  refreshAccessToken: (refreshToken) =>
+    request('/api/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+    }),
   login: (payload) =>
     request('/api/auth/login', {
       method: 'POST',
@@ -87,6 +95,9 @@ export const gatewayClient = {
   // ── Route planning ─────────────────────────────────────────────────────
   /** GET /api/v1/routes/optimal?fromLat=&fromLon=&toLat=&toLon=&… */
   getOptimalRoute: (query) => request(`/api/v1/routes/optimal?${query}`),
+
+  getStopLines: (stopId) => request(`/api/v1/routes/stop-lines?stopId=1:stop-${stopId}`),
+  getStopDepartures: (stopId, limit = 5) => request(`/api/v1/routes/stop-departures?stopId=1:stop-${stopId}&limit=${limit}`),
 
   /** GET /api/v1/users/me */
   getCurrentUser: () => request('/api/v1/users/me'),
@@ -179,4 +190,93 @@ export const gatewayClient = {
     }),
   /** POST /api/v1/auth/logout */
   logout: () => request('/api/v1/auth/logout', { method: 'POST' }),
+
+  // ── Admin: Reports ────────────────────────────────────────────────────────
+  getReports: (query = '') => request(`/api/v1/reports${query}`, { token: getAccessToken() }),
+  getReportById: (id) => request(`/api/v1/reports/${id}`, { token: getAccessToken() }),
+  updateReportStatus: (id, status) =>
+    request(`/api/v1/reports/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+      token: getAccessToken(),
+    }),
+  deleteReport: (id) =>
+    request(`/api/v1/reports/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Reviews ────────────────────────────────────────────────────────
+  getReviews: (query = '') => request(`/api/v1/reviews${query}`, { token: getAccessToken() }),
+  updateReviewModeration: (id, moderationStatus) =>
+    request(`/api/v1/reviews/${id}/moderation-status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ moderationStatus }),
+      token: getAccessToken(),
+    }),
+  deleteReview: (id) =>
+    request(`/api/v1/reviews/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Lines (writes) ─────────────────────────────────────────────────
+  createLine: (payload) =>
+    request('/api/v1/lines', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  updateLine: (id, payload) =>
+    request(`/api/v1/lines/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  deleteLine: (id) =>
+    request(`/api/v1/lines/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Stations (writes) ──────────────────────────────────────────────
+  createStation: (payload) =>
+    request('/api/v1/stations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  updateStation: (id, payload) =>
+    request(`/api/v1/stations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  deleteStation: (id) =>
+    request(`/api/v1/stations/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Timetables ────────────────────────────────────────────────────
+  createTimetable: (payload) =>
+    request('/api/v1/timetables', { method: 'POST', body: JSON.stringify(payload), token: getAccessToken() }),
+  deleteTimetable: (id) =>
+    request(`/api/v1/timetables/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Subscriptions ─────────────────────────────────────────────────
+  getSubscriptionsByLine: (lineId, page = 0, size = 10) =>
+    request(`/subscriptions/line/${lineId}?page=${page}&size=${size}&sort=createdAt,desc`, { token: getAccessToken() }),
+
+  // ── Admin: Users ──────────────────────────────────────────────────────────
+  getAllUsers: (query = '') => request(`/api/v1/users${query}`, { token: getAccessToken() }),
+  getUserById: (id) => request(`/api/v1/users/${id}`, { token: getAccessToken() }),
+  deleteUser: (id) =>
+    request(`/api/v1/users/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── Admin: Notifications ──────────────────────────────────────────────────
+  getAllNotifications: (query = '') =>
+    request(`/notifications${query}`, { token: getAccessToken() }),
+  createNotification: (payload) =>
+    request('/notifications', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  broadcastNotification: (payload) =>
+    request('/notifications/broadcast', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  deleteNotification: (id) =>
+    request(`/notifications/${id}`, { method: 'DELETE', token: getAccessToken() }),
 }

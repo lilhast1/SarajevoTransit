@@ -1,6 +1,8 @@
 package ba.unsa.etf.pnwt.routingservice.controller;
 
 import ba.unsa.etf.pnwt.routingservice.dto.OtpProxyOptimalRouteResponse;
+import ba.unsa.etf.pnwt.routingservice.dto.OtpProxyStopLinesResponse;
+import ba.unsa.etf.pnwt.routingservice.dto.OtpProxyStopDeparturesResponse;
 import ba.unsa.etf.pnwt.routingservice.service.OtpProxyClientService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -11,6 +13,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
@@ -43,6 +46,16 @@ public class RoutePlanningController {
                 query.getWheelchair(),
                 query.getNumItineraries()
         );
+    }
+
+    @GetMapping("/stop-lines")
+    public OtpProxyStopLinesResponse stopLines(@RequestParam String stopId) {
+        return otpProxyClientService.getStopLines(stopId);
+    }
+
+    @GetMapping("/stop-departures")
+    public OtpProxyStopDeparturesResponse stopDepartures(@RequestParam String stopId, @RequestParam(defaultValue = "5") int limit) {
+        return otpProxyClientService.getStopDepartures(stopId, limit);
     }
 
     public static class OptimalRouteQuery {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { sarajevoCenter } from '../../data/mockTransitData'
@@ -19,9 +19,11 @@ function createIcon(color, label, zoom) {
   const scale = Math.pow(1.15, zoom - 13)
   const width = Math.max(8, 38 * scale)
   const height = Math.max(10, 50 * scale)
+  const svg = markerSvg(color, label)
+  const svgBase64 = window.btoa(unescape(encodeURIComponent(svg)))
 
   return L.icon({
-    iconUrl: `data:image/svg+xml;base64,${btoa(markerSvg(color, label))}`,
+    iconUrl: `data:image/svg+xml;base64,${svgBase64}`,
     iconSize: [width, height],
     iconAnchor: [width / 2, height],
     popupAnchor: [0, -height],
@@ -41,6 +43,11 @@ export function TransitMap({
   focusPositions = [],
   focusKey,
   onLegPathClick,
+  highlightedStopId,
+  onStopClick,
+  onStopHover,
+  onStopHoverEnd,
+  stopStyle = 'pin',
 }) {
   const { theme } = useAppContext()
   const [zoom, setZoom] = useState(13)
@@ -129,15 +136,62 @@ export function TransitMap({
           </Marker>
         ))}
 
-        {stops.map((stop) => (
-          <Marker 
-            key={stop.id} 
-            position={[stop.latitude, stop.longitude]} 
-            icon={createIcon(stop.color || '#e63946', 'Transit stop', zoom)}
-          >
-            <Popup>{stop.name}</Popup>
-          </Marker>
-        ))}
+        {stops.map((stop) => {
+          const isHighlighted = stop.id === highlightedStopId
+          const stopColor = isHighlighted
+            ? (stop.hoverColor || stop.color || '#c9c9c9')
+            : (stop.color || '#e63946')
+
+          if (stopStyle === 'dot') {
+            return (
+              <CircleMarker
+                key={stop.id}
+                center={[stop.latitude, stop.longitude]}
+                radius={isHighlighted ? 8 : 5}
+                pathOptions={{
+                  color: '#ffffff',
+                  weight: isHighlighted ? 2 : 1.5,
+                  fillColor: stopColor,
+                  fillOpacity: 1,
+                  opacity: 1,
+                }}
+                eventHandlers={{
+                  click: () => onStopClick && onStopClick(stop),
+                  mouseover: () => onStopHover && onStopHover(stop),
+                  mouseout: () => onStopHoverEnd && onStopHoverEnd(stop),
+                }}
+              >
+                <Tooltip
+                  direction="top"
+                  offset={[0, -10]}
+                  opacity={1}
+                  permanent={isHighlighted}
+                >
+                  {stop.name}
+                </Tooltip>
+              </CircleMarker>
+            )
+          }
+
+          return (
+            <Marker 
+              key={stop.id} 
+              position={[stop.latitude, stop.longitude]} 
+              icon={createIcon(
+                stopColor,
+                stop.name || 'Transit stop',
+                zoom,
+              )}
+              eventHandlers={{
+                click: () => onStopClick && onStopClick(stop),
+                mouseover: () => onStopHover && onStopHover(stop),
+                mouseout: () => onStopHoverEnd && onStopHoverEnd(stop),
+              }}
+            >
+              <Popup>{stop.name}</Popup>
+            </Marker>
+          )
+        })}
 
         {startPin ? (
           <Marker position={startPin} icon={createIcon('#198754', 'Start point', zoom)}>

@@ -19,6 +19,10 @@ export default defineConfig(({ mode }) => {
           target: 'http://localhost:8080',
           changeOrigin: true,
         },
+        '/notifications': {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+        },
         // Temporary dev proxy for live vehicle positions from javniprevozks.ba
         '/jp-api': {
           target: 'https://javniprevozks.ba',

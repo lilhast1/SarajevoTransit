@@ -15,6 +15,49 @@ export function StopDetailPage() {
 
   const [stop, setStop] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [departuresLimit, setDeparturesLimit] = useState(5)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  const [selectedPolyline, setSelectedPolyline] = useState(null)
+  const [focusPositions, setFocusPositions] = useState([])
+  const [focusKey, setFocusKey] = useState(0)
+
+  // const handleLineClick = async (lineCode) => {
+  //   try {
+  //     const lines = await transitApi.getLines({ search: lineCode })
+  //     const localLine = lines.find((l) => l.code === lineCode)
+  //     if (!localLine) return
+      
+  //     const directions = await transitApi.getDirectionsByLine(localLine.id)
+  //     if (!directions || directions.length === 0) return
+      
+  //     const polyline = await transitApi.getDirectionPolyline(directions[0].id)
+  //     if (polyline && polyline.length > 0) {
+  //       setSelectedPolyline(polyline)
+  //       setFocusPositions(polyline)
+  //       setFocusKey((k) => k + 1)
+  //     }
+  //   } catch (e) {
+  //     console.warn('Failed to load polyline', e)
+  //   }
+  // }
+
+  const handleLineClick = (lineId) => {
+    // Reditect to line detail page
+    window.location.href = `/lines/${lineId}`
+  }
+
+  const handleLoadMore = async () => {
+    const newLimit = departuresLimit + 5
+    setLoadingMore(true)
+    try {
+      const moreDeps = await transitApi.getStopDepartures(stopId, newLimit)
+      setStop((s) => ({ ...s, departures: moreDeps }))
+      setDeparturesLimit(newLimit)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -78,12 +121,28 @@ export function StopDetailPage() {
         </div>
       </PanelCard>
 
+      <PanelCard>
+        <h3 className="mb-3 text-base font-semibold text-ink">Stop map</h3>
+        <TransitMap
+          stops={[stop]}
+          polyline={selectedPolyline || []}
+          focusPositions={focusPositions}
+          focusKey={focusKey}
+          className="h-[300px]"
+        />
+      </PanelCard>
+
       <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <PanelCard tone="default">
-          <h3 className="text-base font-semibold text-ink">Lines serving this stop</h3>
-          <div className="mt-3 grid gap-2">
+        <PanelCard tone="default" className="flex h-[400px] flex-col">
+          <h3 className="shrink-0 text-base font-semibold text-ink">Lines serving this stop</h3>
+          <div className="mt-3 grid flex-1 content-start gap-2 overflow-y-auto pr-2">
             {stop.lines.map((line) => (
-              <div key={line.id} className="rounded-lg border border-border bg-surface-soft px-3 py-2">
+              console.log(line) ||
+              <div
+                key={line.id}
+                className="cursor-pointer rounded-lg border border-border bg-surface-soft px-3 py-2 transition hover:border-accent hover:bg-surface-alt"
+                onClick={() => handleLineClick(line.gtfsId)}
+              >
                 <LineBadge line={line} />
                 <p className="mt-1 text-sm font-medium text-ink">{line.name}</p>
               </div>
@@ -91,13 +150,14 @@ export function StopDetailPage() {
           </div>
         </PanelCard>
 
-        <PanelCard tone="default">
-          <h3 className="text-base font-semibold text-ink">Next departures</h3>
-          <div className="mt-3 space-y-2">
+        <PanelCard tone="default" className="flex h-[400px] flex-col">
+          <h3 className="shrink-0 text-base font-semibold text-ink">Next departures</h3>
+          <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-2">
             {stop.departures.map((departure) => (
               <div
                 key={`${departure.id}-${departure.departureTime}`}
-                className="flex items-center justify-between rounded-lg border border-border bg-surface-soft px-3 py-2 text-sm"
+                className="flex cursor-pointer items-center justify-between rounded-lg border border-border bg-surface-soft px-3 py-2 text-sm transition hover:border-accent hover:bg-surface-alt"
+                onClick={() => handleLineClick(departure.gtfsId) /* Use gtfsId to identify line in line detail page */ }
               >
                 <div>
                   <p className="font-semibold text-ink">{departure.lineCode}</p>
@@ -109,14 +169,16 @@ export function StopDetailPage() {
                 </div>
               </div>
             ))}
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="mt-2 w-full rounded-lg py-2 text-sm font-medium text-accent transition hover:bg-surface-soft disabled:opacity-50"
+            >
+              {loadingMore ? 'Loading...' : 'Show more'}
+            </button>
           </div>
         </PanelCard>
       </div>
-
-      <PanelCard>
-        <h3 className="mb-3 text-base font-semibold text-ink">Stop map</h3>
-        <TransitMap stops={[stop]} className="h-[300px]" />
-      </PanelCard>
     </div>
   )
 }

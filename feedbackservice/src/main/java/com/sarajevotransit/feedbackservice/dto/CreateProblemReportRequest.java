@@ -46,5 +46,5 @@ public class CreateProblemReportRequest {
     @Size(max = 1000)
     private String description;
 
-    private List<@Size(max = 500) String> photoUrls = new ArrayList<>();
+    private List<String> photoUrls = new ArrayList<>();
 }

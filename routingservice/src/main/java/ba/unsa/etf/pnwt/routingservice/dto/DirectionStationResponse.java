@@ -1,5 +1,7 @@
 package ba.unsa.etf.pnwt.routingservice.dto;
 
+import java.math.BigDecimal;
+
 public class DirectionStationResponse {
 
     private Integer id;
@@ -9,6 +11,8 @@ public class DirectionStationResponse {
     private Integer stationId;
     private Integer stationExternalId;
     private String stationName;
+    private BigDecimal stationLatitude;
+    private BigDecimal stationLongitude;
     private Integer stopSequence;
     private Integer travelTimeFromPrevSeconds;
 
@@ -66,6 +70,22 @@ public class DirectionStationResponse {
 
     public void setStationName(String stationName) {
         this.stationName = stationName;
+    }
+
+    public BigDecimal getStationLatitude() {
+        return stationLatitude;
+    }
+
+    public void setStationLatitude(BigDecimal stationLatitude) {
+        this.stationLatitude = stationLatitude;
+    }
+
+    public BigDecimal getStationLongitude() {
+        return stationLongitude;
+    }
+
+    public void setStationLongitude(BigDecimal stationLongitude) {
+        this.stationLongitude = stationLongitude;
     }
 
     public Integer getStopSequence() {

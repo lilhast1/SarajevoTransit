@@ -10,6 +10,11 @@ const initialState = {
   password: '',
 }
 
+function validateEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return re.test(String(email).toLowerCase())
+}
+
 export function AuthPage() {
   const { isAuthenticated, login } = useAppContext()
   const [mode, setMode] = useState('login')
@@ -30,6 +35,10 @@ export function AuthPage() {
     setLoading(true)
 
     try {
+      if (!validateEmail(form.email)) {
+        setError('Please enter a valid email address')
+        return
+      }
       const payload =
         mode === 'login'
           ? await transitApi.login({ email: form.email, password: form.password })

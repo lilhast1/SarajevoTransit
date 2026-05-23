@@ -1,5 +1,7 @@
 server:
   port: 8080
+  tomcat:
+    max-http-post-size: 20MB
 
 jwt:
   public-key: classpath:keys/rsa-public-key.pem
@@ -46,10 +48,25 @@ spring:
             predicates:
               - Path=/api/vehicles/**
 
-          - id: routingservice-route
+          - id: routingservice-lines-route
             uri: lb://routingservice
             predicates:
-              - Path=/api/v1/routes/**, /api/v1/lines/**
+              - Path=/api/v1/lines/**
+
+          - id: routingservice-routes-route
+            uri: lb://routingservice
+            predicates:
+              - Path=/api/v1/routes/**
+
+          - id: routingservice-realtime-route
+            uri: lb://routingservice
+            predicates:
+              - Path=/api/v1/realtime/**
+
+          - id: routingservice-admin-realtime-route
+            uri: lb://routingservice
+            predicates:
+              - Path=/api/v1/admin/realtime/**
 
           - id: moneyman-route
             uri: lb://moneyman

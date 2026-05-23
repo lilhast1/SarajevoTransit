@@ -101,6 +101,8 @@ public class RoutingMapper {
         response.setStationId(directionStation.getStation().getId());
         response.setStationExternalId(directionStation.getStation().getExternalId());
         response.setStationName(directionStation.getStation().getName());
+        response.setStationLatitude(directionStation.getStation().getLatitude());
+        response.setStationLongitude(directionStation.getStation().getLongitude());
         response.setStopSequence(directionStation.getStopSequence());
         response.setTravelTimeFromPrevSeconds(directionStation.getTravelTimeFromPrevSeconds());
         return response;

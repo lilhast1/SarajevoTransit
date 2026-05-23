@@ -25,6 +25,12 @@ public interface TimetableRepository extends JpaRepository<Timetable, Integer> {
     @EntityGraph(attributePaths = {"line", "direction"})
     List<Timetable> findByDirection_IdAndIsActiveTrueOrderByDepartureTimeAsc(Integer directionId);
 
+    @EntityGraph(attributePaths = {"line", "direction"})
+    List<Timetable> findByDirection_IdOrderByDepartureTimeAsc(Integer directionId);
+
+    @EntityGraph(attributePaths = {"line", "direction"})
+    List<Timetable> findByLine_IdOrderByDepartureTimeAsc(Integer lineId);
+
     Optional<Timetable> findByExternalId(Integer externalId);
     List<Timetable> findByExternalIdIn(List<Integer> externalIds);
     boolean existsByExternalId(Integer externalId);

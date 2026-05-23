@@ -2,6 +2,8 @@ package com.sarajevotransit.otpproxyservice.controller;
 
 import com.sarajevotransit.otpproxyservice.dto.OptimalRouteResponse;
 import com.sarajevotransit.otpproxyservice.dto.StopsCountResponse;
+import com.sarajevotransit.otpproxyservice.dto.StopLinesResponse;
+import com.sarajevotransit.otpproxyservice.dto.StopDeparturesResponse;
 import com.sarajevotransit.otpproxyservice.service.OtpProxyService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -29,6 +31,16 @@ public class OtpProxyController {
     @GetMapping("/stops-count")
     public StopsCountResponse stopsCount() {
         return otpProxyService.fetchStopsCount();
+    }
+
+    @GetMapping("/stop-lines")
+    public StopLinesResponse stopLines(@RequestParam String stopId) {
+        return otpProxyService.fetchStopLines(stopId);
+    }
+
+    @GetMapping("/stop-departures")
+    public StopDeparturesResponse stopDepartures(@RequestParam String stopId, @RequestParam(defaultValue = "5") int limit) {
+        return otpProxyService.fetchStopDepartures(stopId, limit);
     }
 
     @GetMapping("/optimal-route")

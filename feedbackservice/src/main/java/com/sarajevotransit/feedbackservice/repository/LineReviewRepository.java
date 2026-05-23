@@ -16,6 +16,8 @@ public interface LineReviewRepository extends JpaRepository<LineReview, Long> {
 
         Page<LineReview> findByLineId(Long lineId, Pageable pageable);
 
+        Page<LineReview> findByModerationStatus(ModerationStatus moderationStatus, Pageable pageable);
+
         Page<LineReview> findByLineIdAndModerationStatus(Long lineId,
                         ModerationStatus moderationStatus,
                         Pageable pageable);

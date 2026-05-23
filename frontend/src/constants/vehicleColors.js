@@ -23,6 +23,13 @@ const LEG_MODE_COLORS = {
   TRANSIT: '#6366f1',
 }
 
+const LEG_ROUTE_TYPE_COLORS = {
+  0: VEHICLE_TYPE_META_BY_KEY.tram.color,
+  3: VEHICLE_TYPE_META_BY_KEY.bus.color,
+  11: VEHICLE_TYPE_META_BY_KEY.trolleybus.color,
+  704: VEHICLE_TYPE_META_BY_KEY.minibus.color,
+}
+
 export function getVehicleTypeMetaByName(name) {
   if (!name) return null
   return VEHICLE_TYPE_META_BY_KEY[String(name).toLowerCase().trim()] || null
@@ -38,6 +45,15 @@ export function getColorForLegMode(mode) {
   if (normalized.includes('BUS')) return LEG_MODE_COLORS.BUS
   if (normalized.includes('WALK')) return LEG_MODE_COLORS.WALK
   return LEG_MODE_COLORS.TRANSIT
+}
+
+export function getColorForLegRouteType(routeType, mode) {
+  if (routeType === undefined || routeType === null) return getColorForLegMode(mode)
+  const normalizedType = Number(routeType)
+  if (Number.isFinite(normalizedType) && LEG_ROUTE_TYPE_COLORS[normalizedType]) {
+    return LEG_ROUTE_TYPE_COLORS[normalizedType]
+  }
+  return getColorForLegMode(mode)
 }
 
 export function withAlpha(hexColor, alpha) {

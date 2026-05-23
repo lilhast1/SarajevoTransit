@@ -4,7 +4,7 @@ import { TransitMap } from '../components/map/TransitMap'
 import { sarajevoCenter } from '../data/mockTransitData'
 import { useAppContext } from '../context/AppContext'
 import { transitApi } from '../services/transitApi'
-import { VEHICLE_TYPE_META_BY_ID, getColorForLegMode, withAlpha } from '../constants/vehicleColors'
+import { VEHICLE_TYPE_META_BY_ID, getColorForLegRouteType, withAlpha } from '../constants/vehicleColors'
 import { formatDepartureFromTimestamp, formatDurationFromSeconds } from '../utils/formatters'
 
 const POLL_INTERVAL_MS = 5000
@@ -12,6 +12,20 @@ const STATIONARY_TIMEOUT_MS = 60 * 1000
 const MOVEMENT_THRESHOLD_METERS = 3
 
 const VEHICLE_TYPE_META = VEHICLE_TYPE_META_BY_ID
+
+function getLegDisplayLabel(leg) {
+  const mode = String(leg?.mode || '').toUpperCase().trim()
+  if (mode === 'WALK') return 'WALK'
+
+  const lineCode = String(leg?.lineCode || '').trim()
+  const lineName = String(leg?.lineName || '').trim()
+
+  if (lineCode && lineName) return `${lineCode} - ${lineName}`
+  if (lineCode) return lineCode
+  if (lineName) return lineName
+  if (mode) return mode
+  return 'Transit'
+}
 
 function getCoordsFromStop(stop) {
   if (!stop) return null
@@ -127,7 +141,8 @@ export function RoutePlannerPage() {
   const coloredPolylines = useMemo(() => {
     if (!displayItinerary?.legs) return []
     return displayItinerary.legs.map((leg, legIndex) => {
-      const color = getColorForLegMode(leg.mode)
+      const color = getColorForLegRouteType(leg.routeType, leg.mode)
+      const legLabel = getLegDisplayLabel(leg)
       const dimmed = selectedLegIndex !== null && legIndex !== selectedLegIndex
       return {
         positions: leg.path || [],
@@ -136,7 +151,7 @@ export function RoutePlannerPage() {
         weight: dimmed ? 4 : 7,
         casingOpacity: dimmed ? 0.2 : 0.78,
         legIndex,
-        label: `${leg.mode}: ${leg.fromName} -> ${leg.toName} (${Math.round(leg.distanceMeters / 100) / 10} km)`,
+        label: `${legLabel}: ${leg.fromName} -> ${leg.toName} (${Math.round(leg.distanceMeters / 100) / 10} km)`,
       }
     })
   }, [displayItinerary, selectedLegIndex])
@@ -147,7 +162,7 @@ export function RoutePlannerPage() {
     const collected = []
 
     displayItinerary.legs.forEach((leg, index) => {
-      const legColor = getColorForLegMode(leg.mode)
+      const legColor = getColorForLegRouteType(leg.routeType, leg.mode)
       const dimmed = selectedLegIndex !== null && index !== selectedLegIndex
       if (!stopsSet.has(leg.fromName)) {
         stopsSet.add(leg.fromName)
@@ -298,12 +313,13 @@ export function RoutePlannerPage() {
       setSelectedLegIndex(null)
 
       if (response.itineraries?.[0]) {
+        const primaryTransitLeg = response.itineraries[0].legs.find((leg) => String(leg.mode || '').toUpperCase() !== 'WALK')
         addTripHistoryItem({
           id: Date.now(),
           fromStop: fromStop.name,
           toStop: toStop.name,
           durationMinutes: Math.round((response.itineraries[0].durationSeconds || 0) / 60),
-          lineCode: response.itineraries[0].legs.find((leg) => leg.mode !== 'WALK')?.mode || 'Mixed',
+          lineCode: primaryTransitLeg?.lineCode || primaryTransitLeg?.lineName || primaryTransitLeg?.mode || 'Mixed',
           traveledAt: new Date().toISOString(),
         })
       }
@@ -388,22 +404,22 @@ export function RoutePlannerPage() {
                 <div className="grid gap-2">
                   {results[selectedDetailIndex].legs?.map((leg, idx) => (
                     <button
-                      key={`${leg.mode}-${idx}`}
+                      key={`${leg.lineCode || leg.lineName || leg.mode}-${idx}`}
                       type="button"
                       onClick={() => setSelectedLegIndex(idx)}
                       className="w-full rounded-panel border p-3 text-left text-sm transition"
                       style={{
                         borderColor:
                           selectedLegIndex === idx
-                            ? getColorForLegMode(leg.mode)
-                            : withAlpha(getColorForLegMode(leg.mode), 0.45),
+                            ? getColorForLegRouteType(leg.routeType, leg.mode)
+                            : withAlpha(getColorForLegRouteType(leg.routeType, leg.mode), 0.45),
                         backgroundColor:
                           selectedLegIndex === idx
-                            ? withAlpha(getColorForLegMode(leg.mode), theme === 'dark' ? 0.24 : 0.16)
-                            : withAlpha(getColorForLegMode(leg.mode), theme === 'dark' ? 0.18 : 0.1),
+                            ? withAlpha(getColorForLegRouteType(leg.routeType, leg.mode), theme === 'dark' ? 0.24 : 0.16)
+                            : withAlpha(getColorForLegRouteType(leg.routeType, leg.mode), theme === 'dark' ? 0.18 : 0.1),
                       }}
                     >
-                      <p className="font-semibold" style={{ color: getColorForLegMode(leg.mode) }}>{leg.mode}</p>
+                      <p className="font-semibold" style={{ color: getColorForLegRouteType(leg.routeType, leg.mode) }}>{getLegDisplayLabel(leg)}</p>
                       <p className="mt-1 text-muted">
                         {leg.fromName} {'->'} {leg.toName}
                       </p>
@@ -421,7 +437,7 @@ export function RoutePlannerPage() {
                   results.map((itinerary, index) => (
                     (() => {
                       const primaryLeg = itinerary.legs?.find((leg) => String(leg.mode || '').toUpperCase() !== 'WALK') || itinerary.legs?.[0]
-                      const cardColor = getColorForLegMode(primaryLeg?.mode)
+                      const cardColor = getColorForLegRouteType(primaryLeg?.routeType, primaryLeg?.mode)
                       return (
                     <button
                       key={index}
@@ -459,10 +475,10 @@ export function RoutePlannerPage() {
                           <li key={`${index}-${legIndex}`} className="flex items-center gap-2 text-xs text-ink">
                             <span
                               className="h-2 w-2 rounded-full"
-                              style={{ backgroundColor: getColorForLegMode(leg.mode) }}
+                              style={{ backgroundColor: getColorForLegRouteType(leg.routeType, leg.mode) }}
                             />
-                            <span className="font-semibold" style={{ color: getColorForLegMode(leg.mode) }}>
-                              {leg.mode}
+                            <span className="font-semibold" style={{ color: getColorForLegRouteType(leg.routeType, leg.mode) }}>
+                              {getLegDisplayLabel(leg)}
                             </span>
                             <span className="text-muted">{leg.fromName} {'->'} {leg.toName}</span>
                           </li>

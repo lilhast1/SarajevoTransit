@@ -58,7 +58,11 @@ public class LineReviewService {
     @Transactional(readOnly = true)
     public Page<LineReviewResponse> getReviewsByLine(Long lineId, boolean includeHidden, Pageable pageable) {
         Page<LineReview> reviews;
-        if (includeHidden) {
+        if (lineId == null) {
+            reviews = includeHidden
+                    ? lineReviewRepository.findAll(pageable)
+                    : lineReviewRepository.findByModerationStatus(ModerationStatus.VISIBLE, pageable);
+        } else if (includeHidden) {
             reviews = lineReviewRepository.findByLineId(lineId, pageable);
         } else {
             reviews = lineReviewRepository.findByLineIdAndModerationStatus(lineId,

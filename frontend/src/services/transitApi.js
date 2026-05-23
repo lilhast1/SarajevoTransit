@@ -334,41 +334,65 @@ export const transitApi = {
     }
     if (!stop) return null
 
-    // Resolve which lines serve this station using gateway directions where possible,
-    // falling back to mock data for the enrichment (lines + departures).
-    let servedLineIds = []
+    let lines = []
+    let departures = []
+
     try {
-      const allDirections = await gatewayClient.getDirections('?activeOnly=true')
-      const stationId = stop.id
-      // We check which directions include this station by loading their station lists.
-      // To avoid N+1 requests we use the mock lookup as a reasonable approximation
-      // when the full relationship data isn't separately available.
-      const relatedMockDirections = directions.filter((d) =>
-        (directionStations[d.id] || []).includes(Number(stationId)),
-      )
-      servedLineIds = Array.from(new Set(relatedMockDirections.map((d) => d.lineId)))
-    } catch {
-      const relatedDirections = directions.filter((d) =>
-        (directionStations[d.id] || []).includes(Number(stopId)),
-      )
-      servedLineIds = Array.from(new Set(relatedDirections.map((d) => d.lineId)))
+      const linesResponse = await gatewayClient.getStopLines(stopId)
+      if (linesResponse && linesResponse.lines) { 
+        lines = linesResponse.lines.map((l, idx) => {
+          return {
+          id: l.shortName || idx,
+          gtfsId: Number(l.gtfsId.split('-')[1]) || idx,
+          code: l.shortName || '?',
+          name: l.longName || l.shortName || 'Unknown',
+          vehicleTypeName: l.mode ? l.mode.toLowerCase() : 'bus',
+      }})
+      }
+    } catch (e) {
+      console.warn('Failed to fetch stop lines from GraphQL proxy:', e)
     }
 
-    // Fetch line details from the gateway when possible
-    const servedLines = await Promise.all(
-      servedLineIds.map((id) =>
-        gatewayClient
-          .getLineById(id)
-          .then(withVehicleType)
-          .catch(() => mockLines.find((l) => l.id === id)),
-      ),
-    ).then((results) => results.filter(Boolean))
+    try {
+      departures = await this.getStopDepartures(stopId, 5)
+    } catch (e) {
+      console.warn('Failed to fetch stop departures', e)
+    }
 
     return {
       ...stop,
-      lines: servedLines,
-      departures: mockGetNextDeparturesForStop(stopId),
+      lines,
+      departures,
     }
+  },
+
+  async getStopDepartures(stopId, limit = 5) {
+    let departures = []
+    try {
+      const depResponse = await gatewayClient.getStopDepartures(stopId, limit)
+      if (depResponse && depResponse.departures) {
+        departures = depResponse.departures.map((d, idx) => {
+          const totalSeconds = d.realtimeDeparture ?? d.scheduledDeparture ?? 0
+          const hours = Math.floor(totalSeconds / 3600) % 24
+          const minutes = Math.floor((totalSeconds % 3600) / 60)
+          const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+          const gtfsId = Number(d.gtfsId.split('-')[1])
+
+          return {
+            id: `${d.lineShortName}-${totalSeconds}-${idx}`,
+            gtfsId: gtfsId,
+            departureTime: timeStr,
+            lineCode: d.lineShortName || '?',
+            lineName: d.headsign || d.lineShortName,
+            directionName: d.headsign || 'Unknown',
+          }
+        })
+      }
+    } catch (e) {
+      console.warn('Failed to fetch stop departures from GraphQL proxy:', e)
+      departures = mockGetNextDeparturesForStop(stopId)
+    }
+    return departures
   },
 
   // ── Timetables ───────────────────────────────────────────────────────────
