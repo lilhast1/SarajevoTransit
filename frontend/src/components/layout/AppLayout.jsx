@@ -62,7 +62,7 @@ function NavItem({ item, onClick }) {
 }
 
 export function AppLayout() {
-  const { theme, toggleTheme, isAuthenticated, isAdmin, session } = useAppContext()
+  const { theme, toggleTheme, isAuthenticated, isAdmin } = useAppContext()
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
   const [session, setSession] = useState(() => getAuthSession())
