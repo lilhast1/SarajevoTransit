@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { Loader2, AlertCircle, RefreshCw, Trash2, Pencil, Clock, CalendarDays } from 'lucide-react'
 import { LineBadge } from '../components/common/LineBadge'
 import { PanelCard } from '../components/common/PanelCard'
@@ -20,11 +20,19 @@ function formatDays(daysStr) {
   return daysStr.split(',').map((d) => DAY_LABELS[d.trim()] || d.trim()).filter(Boolean).join(' · ')
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  try {
-    return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-  } catch { return dateStr }
+import { gatewayClient } from '../services/gatewayClient'
+
+const TICKET_STATUS_STYLES = {
+  ACTIVE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  PENDING: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  USED: 'bg-surface-alt text-muted',
+  EXPIRED: 'bg-surface-alt text-muted',
+  CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+}
+
+function formatDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 export function ProfilePage() {
@@ -57,6 +65,20 @@ export function ProfilePage() {
   useEffect(() => {
     fetchSubscriptions()
   }, [fetchSubscriptions])
+  const [recentTickets, setRecentTickets] = useState([])
+  const [ticketsLoading, setTicketsLoading] = useState(true)
+
+  useEffect(() => {
+    if (!isAuthenticated || !session?.userId) return
+    gatewayClient
+      .getWallet(session.userId, '?size=3&sort=purchaseDate,desc')
+      .then((data) => {
+        const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : []
+        setRecentTickets(list)
+      })
+      .catch(() => {})
+      .finally(() => setTicketsLoading(false))
+  }, [isAuthenticated, session?.userId])
 
   if (!isAuthenticated) return <Navigate to="/auth" replace />
 
@@ -336,6 +358,42 @@ export function ProfilePage() {
           </div>
         </div>
       )}
+
+      <PanelCard tone="default">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-ink">Wallet</h3>
+          <Link to="/tickets" className="text-xs text-accent underline-offset-2 hover:underline">
+            View all tickets →
+          </Link>
+        </div>
+
+        {ticketsLoading ? (
+          <p className="mt-3 text-sm text-muted">Loading…</p>
+        ) : recentTickets.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">
+            No tickets yet.{' '}
+            <Link to="/tickets" className="text-accent underline-offset-2 hover:underline">
+              Buy your first ticket
+            </Link>
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {recentTickets.map((t) => (
+              <div key={t.id} className="flex items-center justify-between rounded-lg border border-border bg-surface-soft px-3 py-2 text-sm">
+                <div>
+                  <span className="font-medium text-ink capitalize">{t.type?.toLowerCase()}</span>
+                  {t.validUntil && (
+                    <span className="ml-2 text-xs text-muted">valid until {formatDate(t.validUntil)}</span>
+                  )}
+                </div>
+                <span className={`rounded px-2 py-0.5 text-xs font-semibold ${TICKET_STATUS_STYLES[t.status] || ''}`}>
+                  {t.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </PanelCard>
     </div>
   )
 }

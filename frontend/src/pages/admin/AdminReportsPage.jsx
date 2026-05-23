@@ -22,9 +22,11 @@ function trunc(str, n) {
 export function AdminReportsPage() {
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [sortDir, setSortDir] = useState('desc')
   const [page, setPage] = useState(0)
   const [data, setData] = useState({ content: [], totalPages: 0 })
   const [userNames, setUserNames] = useState({})
+  const [lineNames, setLineNames] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -32,21 +34,33 @@ export function AdminReportsPage() {
     setLoading(true)
     setError(null)
     try {
-      const query = new URLSearchParams({ page, size: 20, sort: 'createdAt,desc' })
+      const query = new URLSearchParams({ page, size: 20, sort: `createdAt,${sortDir}` })
       if (statusFilter !== 'ALL') query.set('status', statusFilter)
       const res = await gatewayClient.getReports(`?${query}`)
       setData(res)
-      const ids = [...new Set((res.content ?? []).map((r) => r.reporterUserId).filter(Boolean))]
+      const rows = res.content ?? []
+
+      const ids = [...new Set(rows.map((r) => r.reporterUserId).filter(Boolean))]
       const entries = await Promise.all(
         ids.map((id) => gatewayClient.getUserById(id).then((u) => [id, u.fullName ?? `#${id}`]).catch(() => [id, `#${id}`]))
       )
       setUserNames(Object.fromEntries(entries))
+
+      const lids = [...new Set(rows.map((r) => r.lineId).filter(Boolean))]
+      const lineEntries = await Promise.all(
+        lids.map((id) =>
+          gatewayClient.getLineById(id)
+            .then((l) => [id, l.code ? `${l.code} – ${l.name}` : l.name])
+            .catch(() => [id, `#${id}`])
+        )
+      )
+      setLineNames((prev) => ({ ...prev, ...Object.fromEntries(lineEntries) }))
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, page])
+  }, [statusFilter, sortDir, page])
 
   useEffect(() => { load() }, [load])
 
@@ -74,7 +88,7 @@ export function AdminReportsPage() {
     { key: 'category', label: 'Category' },
     { key: 'description', label: 'Description', render: (r) => trunc(r.description, 60) },
     { key: 'reporterUserId', label: 'Reporter', render: (r) => userNames[r.reporterUserId] ?? (r.reporterUserId ? `#${r.reporterUserId}` : '—') },
-    { key: 'lineId', label: 'Line' },
+    { key: 'lineId', label: 'Line', render: (r) => r.lineId ? (lineNames[r.lineId] ?? `#${r.lineId}`) : '—' },
     {
       key: 'photos', label: 'Photos', render: (r) => (
         r.photoUrls?.length > 0 ? (
@@ -130,21 +144,41 @@ export function AdminReportsPage() {
         <p className="mt-1 text-sm text-muted">Review and manage user-submitted problem reports.</p>
       </div>
 
-      <div className="flex gap-2">
-        {STATUSES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => { setStatusFilter(s); setPage(0) }}
-            className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
-              statusFilter === s
-                ? 'border-accent bg-accent text-white'
-                : 'border-border text-muted hover:bg-surface-alt'
-            }`}
-          >
-            {s}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex gap-2">
+          {STATUSES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => { setStatusFilter(s); setPage(0) }}
+              className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
+                statusFilter === s
+                  ? 'border-accent bg-accent text-white'
+                  : 'border-border text-muted hover:bg-surface-alt'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-muted">Sort:</span>
+          {[{ value: 'desc', label: 'Latest first' }, { value: 'asc', label: 'Earliest first' }].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { setSortDir(opt.value); setPage(0) }}
+              className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
+                sortDir === opt.value
+                  ? 'border-accent bg-accent text-white'
+                  : 'border-border text-muted hover:bg-surface-alt'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <ErrorAlert error={error} onDismiss={() => setError(null)} />

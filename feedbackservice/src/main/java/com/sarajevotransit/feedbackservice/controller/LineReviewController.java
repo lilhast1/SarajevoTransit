@@ -53,7 +53,7 @@ public class LineReviewController {
     @GetMapping
     @Operation(security = {})
     public Page<LineReviewResponse> getReviews(
-            @RequestParam @Positive Long lineId,
+            @RequestParam(required = false) @Positive Long lineId,
             @RequestParam(defaultValue = "false") boolean includeHidden,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return lineReviewService.getReviewsByLine(lineId, includeHidden, pageable);

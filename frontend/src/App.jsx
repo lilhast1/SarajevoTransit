@@ -15,15 +15,18 @@ import { TimetablePage } from './pages/TimetablePage.jsx'
 import { VehiclesPage } from './pages/VehiclesPage.jsx'
 import { VehicleDetailPage } from './pages/VehicleDetailPage.jsx'
 import { DriverPage } from './pages/DriverPage.jsx'
+import { TicketsPage } from './pages/TicketsPage.jsx'
+
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.jsx'
 import { AdminReportsPage } from './pages/admin/AdminReportsPage.jsx'
+import { AdminReportDetailPage } from './pages/admin/AdminReportDetailPage.jsx'
 import { AdminReviewsPage } from './pages/admin/AdminReviewsPage.jsx'
 import { AdminLinesPage } from './pages/admin/AdminLinesPage.jsx'
 import { AdminStationsPage } from './pages/admin/AdminStationsPage.jsx'
 import { AdminTimetablePage } from './pages/admin/AdminTimetablePage.jsx'
 import { AdminUsersPage } from './pages/admin/AdminUsersPage.jsx'
 import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage.jsx'
-import { AdminReportDetailPage } from './pages/admin/AdminReportDetailPage.jsx'
+
 
 function App() {
   return (
@@ -57,6 +60,15 @@ function App() {
           element={
             <ProtectedRoute>
               <ReportProblemPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/tickets"
+          element={
+            <ProtectedRoute>
+              <TicketsPage />
             </ProtectedRoute>
           }
         />

@@ -1,6 +1,6 @@
 import { LoadingSpinner } from '../common/LoadingStates'
 
-export function DataTable({ columns, rows, page, totalPages, onPageChange, loading }) {
+export function DataTable({ columns, rows, page, totalPages, onPageChange, loading, expandedRowId, renderExpandedRow }) {
   if (loading) return <LoadingSpinner />
 
   return (
@@ -23,15 +23,27 @@ export function DataTable({ columns, rows, page, totalPages, onPageChange, loadi
               </td>
             </tr>
           ) : (
-            rows.map((row, i) => (
-              <tr key={row.id ?? i} className="border-b border-border last:border-0 hover:bg-surface-alt/50">
-                {columns.map((col) => (
-                  <td key={col.key} className="px-3 py-2 text-ink">
-                    {col.render ? col.render(row) : row[col.key] ?? '—'}
-                  </td>
-                ))}
-              </tr>
-            ))
+            rows.map((row, i) => {
+              const isExpanded = expandedRowId != null && (row.id ?? i) === expandedRowId
+              return (
+                <>
+                  <tr key={row.id ?? i} className="border-b border-border last:border-0 hover:bg-surface-alt/50">
+                    {columns.map((col) => (
+                      <td key={col.key} className="px-3 py-2 text-ink">
+                        {col.render ? col.render(row) : row[col.key] ?? '—'}
+                      </td>
+                    ))}
+                  </tr>
+                  {isExpanded && renderExpandedRow && (
+                    <tr key={`${row.id ?? i}-expanded`} className="border-b border-border bg-surface-alt/30">
+                      <td colSpan={columns.length} className="px-3 py-3">
+                        {renderExpandedRow(row)}
+                      </td>
+                    </tr>
+                  )}
+                </>
+              )
+            })
           )}
         </tbody>
       </table>

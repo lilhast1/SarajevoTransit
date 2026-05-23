@@ -152,6 +152,34 @@ export const gatewayClient = {
       token: getAccessToken(),
     }),
 
+  // ── Finance / Tickets ──────────────────────────────────────────────────
+  /** POST /api/finance/purchase */
+  purchaseTicket: (payload) =>
+    request('/api/finance/purchase', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/finance/wallet/{userId}?page=0&size=20 */
+  getWallet: (userId, query = '') =>
+    request(`/api/finance/wallet/${userId}${query}`, { token: getAccessToken() }),
+  /** GET /api/payments/methods/{userId} */
+  getPaymentMethods: (userId) =>
+    request(`/api/payments/methods/${userId}`, { token: getAccessToken() }),
+  /** POST /api/payments/methods */
+  addPaymentMethod: (payload) =>
+    request('/api/payments/methods', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** DELETE /api/payments/methods/{id} */
+  removePaymentMethod: (methodId) =>
+    request(`/api/payments/methods/${methodId}`, {
+      method: 'DELETE',
+      token: getAccessToken(),
+    }),
+
   // ── Problem reports ───────────────────────────────────────────────────
   /** POST /api/v1/reports */
   createProblemReport: (payload) =>
@@ -224,6 +252,10 @@ export const gatewayClient = {
   deleteTimetable: (id) =>
     request(`/api/v1/timetables/${id}`, { method: 'DELETE', token: getAccessToken() }),
 
+  // ── Admin: Subscriptions ─────────────────────────────────────────────────
+  getSubscriptionsByLine: (lineId, page = 0, size = 10) =>
+    request(`/subscriptions/line/${lineId}?page=${page}&size=${size}&sort=createdAt,desc`, { token: getAccessToken() }),
+
   // ── Admin: Users ──────────────────────────────────────────────────────────
   getAllUsers: (query = '') => request(`/api/v1/users${query}`, { token: getAccessToken() }),
   getUserById: (id) => request(`/api/v1/users/${id}`, { token: getAccessToken() }),
@@ -233,6 +265,12 @@ export const gatewayClient = {
   // ── Admin: Notifications ──────────────────────────────────────────────────
   getAllNotifications: (query = '') =>
     request(`/notifications${query}`, { token: getAccessToken() }),
+  createNotification: (payload) =>
+    request('/notifications', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
   broadcastNotification: (payload) =>
     request('/notifications/broadcast', {
       method: 'POST',

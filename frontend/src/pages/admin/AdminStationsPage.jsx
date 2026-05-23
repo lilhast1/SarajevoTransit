@@ -3,7 +3,10 @@ import { Plus, X } from 'lucide-react'
 import { DataTable } from '../../components/admin/DataTable'
 import { PanelCard } from '../../components/common/PanelCard'
 import { ErrorAlert } from '../../components/common/Alerts'
+import { VEHICLE_TYPE_META_BY_ID } from '../../constants/vehicleColors'
 import { gatewayClient } from '../../services/gatewayClient'
+
+const VEHICLE_TYPES = Object.values(VEHICLE_TYPE_META_BY_ID)
 
 const EMPTY_FORM = { code: '', name: '', address: '', latitude: '', longitude: '', isActive: true }
 
@@ -15,6 +18,14 @@ export function AdminStationsPage() {
   const [editingStation, setEditingStation] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+
+  // line filter state
+  const [vehicleTypeId, setVehicleTypeId] = useState('')
+  const [lines, setLines] = useState([])
+  const [lineId, setLineId] = useState('')
+  const [directions, setDirections] = useState([])
+  const [directionId, setDirectionId] = useState('')
+  const [directionStationIds, setDirectionStationIds] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -30,6 +41,43 @@ export function AdminStationsPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // vehicle type → lines
+  useEffect(() => {
+    const q = vehicleTypeId ? `?vehicleTypeId=${vehicleTypeId}` : ''
+    setLineId('')
+    setDirections([])
+    setDirectionId('')
+    setDirectionStationIds(null)
+    gatewayClient.getLines(q).then(setLines).catch(() => {})
+  }, [vehicleTypeId])
+
+  // line → directions
+  useEffect(() => {
+    if (!lineId) {
+      setDirections([])
+      setDirectionId('')
+      setDirectionStationIds(null)
+      return
+    }
+    gatewayClient.getDirections(`?lineId=${lineId}&activeOnly=true`)
+      .then(setDirections)
+      .catch(() => setDirections([]))
+    setDirectionId('')
+    setDirectionStationIds(null)
+  }, [lineId])
+
+  // direction → station IDs
+  useEffect(() => {
+    if (!directionId) { setDirectionStationIds(null); return }
+    gatewayClient.getDirectionStations(directionId)
+      .then((res) => setDirectionStationIds(new Set(res.map((s) => s.stationId))))
+      .catch(() => setDirectionStationIds(null))
+  }, [directionId])
+
+  const filteredStations = directionStationIds
+    ? stations.filter((s) => directionStationIds.has(s.id))
+    : stations
 
   function openCreate() {
     setEditingStation(null)
@@ -157,6 +205,58 @@ export function AdminStationsPage() {
         </button>
       </div>
 
+      {/* vehicle type filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted">Type:</span>
+        {[{ id: '', label: 'All' }, ...VEHICLE_TYPES].map((vt) => (
+          <button
+            key={vt.id}
+            type="button"
+            onClick={() => setVehicleTypeId(vt.id)}
+            className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
+              vehicleTypeId === vt.id
+                ? 'border-accent bg-accent text-white'
+                : 'border-border text-muted hover:bg-surface-alt'
+            }`}
+          >
+            {vt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* line + direction filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted">Line:</span>
+          <select
+            value={lineId}
+            onChange={(e) => setLineId(e.target.value)}
+            className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink"
+          >
+            <option value="">— All lines —</option>
+            {lines.map((l) => <option key={l.id} value={l.id}>{l.code} – {l.name}</option>)}
+          </select>
+        </div>
+        {lineId && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted">Direction:</span>
+            <select
+              value={directionId}
+              onChange={(e) => setDirectionId(e.target.value)}
+              className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink"
+            >
+              <option value="">— All directions —</option>
+              {directions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </div>
+        )}
+        {directionStationIds && (
+          <span className="text-xs text-muted">
+            Showing {filteredStations.length} of {stations.length} stations
+          </span>
+        )}
+      </div>
+
       {formOpen && (
         <PanelCard tone="soft">
           <div className="mb-3 flex items-center justify-between">
@@ -212,7 +312,7 @@ export function AdminStationsPage() {
 
       <DataTable
         columns={columns}
-        rows={stations}
+        rows={filteredStations}
         page={0}
         totalPages={1}
         onPageChange={() => {}}

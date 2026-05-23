@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import { DataTable } from '../../components/admin/DataTable'
 import { PanelCard } from '../../components/common/PanelCard'
 import { ErrorAlert } from '../../components/common/Alerts'
@@ -10,7 +10,67 @@ const VEHICLE_TYPES = Object.values(VEHICLE_TYPE_META_BY_ID)
 
 const EMPTY_FORM = { code: '', name: '', vehicleTypeId: 1, isActive: true }
 
+function SubscribersPanel({ line }) {
+  const [page, setPage] = useState(0)
+  const [data, setData] = useState({ content: [], totalPages: 0 })
+  const [loading, setLoading] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await gatewayClient.getSubscriptionsByLine(line.id, page)
+      setData(res)
+    } catch {
+      // silently ignore
+    } finally {
+      setLoading(false)
+    }
+  }, [line.id, page])
+
+  useEffect(() => { load() }, [load])
+
+  const columns = [
+    { key: 'userFullName', label: 'Name', render: (r) => r.userFullName ?? '—' },
+    { key: 'userEmail', label: 'Email', render: (r) => r.userEmail ?? '—' },
+    { key: 'daysOfWeek', label: 'Days', render: (r) => r.daysOfWeek ?? '—' },
+    {
+      key: 'interval', label: 'Time window', render: (r) =>
+        r.startInterval && r.endInterval ? `${r.startInterval.slice(0, 5)} – ${r.endInterval.slice(0, 5)}` : '—'
+    },
+    {
+      key: 'isActive', label: 'Active', render: (r) => (
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+          {r.isActive ? 'Yes' : 'No'}
+        </span>
+      )
+    },
+  ]
+
+  return (
+    <div>
+      <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">
+        Subscribers — {line.code} {line.name}
+      </p>
+      {loading && <p className="text-sm text-muted">Loading…</p>}
+      {!loading && (data.content ?? []).length === 0 && (
+        <p className="text-sm text-muted">No subscribers for this line.</p>
+      )}
+      {!loading && (data.content ?? []).length > 0 && (
+        <DataTable
+          columns={columns}
+          rows={data.content ?? []}
+          page={page}
+          totalPages={data.totalPages ?? 0}
+          onPageChange={setPage}
+          loading={loading}
+        />
+      )}
+    </div>
+  )
+}
+
 export function AdminLinesPage() {
+  const [vehicleTypeId, setVehicleTypeId] = useState('')
   const [lines, setLines] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -18,19 +78,21 @@ export function AdminLinesPage() {
   const [editingLine, setEditingLine] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [expandedLineId, setExpandedLineId] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await gatewayClient.getLines('')
+      const q = vehicleTypeId ? `?vehicleTypeId=${vehicleTypeId}` : ''
+      const res = await gatewayClient.getLines(q)
       setLines(res)
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [vehicleTypeId])
 
   useEffect(() => { load() }, [load])
 
@@ -58,6 +120,13 @@ export function AdminLinesPage() {
 
   async function handleSave(e) {
     e.preventDefault()
+    const duplicate = lines.find(
+      (l) => l.code.trim().toLowerCase() === form.code.trim().toLowerCase() && l.id !== editingLine?.id
+    )
+    if (duplicate) {
+      setError(`A line with code "${form.code.trim()}" already exists.`)
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -90,6 +159,10 @@ export function AdminLinesPage() {
     } catch (err) {
       setError(err.message)
     }
+  }
+
+  function toggleSubscribers(lineId) {
+    setExpandedLineId((prev) => (prev === lineId ? null : lineId))
   }
 
   const columns = [
@@ -127,6 +200,19 @@ export function AdminLinesPage() {
           >
             {r.isActive ? 'Deactivate' : 'Activate'}
           </button>
+          <button
+            type="button"
+            onClick={() => toggleSubscribers(r.id)}
+            className={`flex items-center gap-1 rounded border px-2 py-0.5 text-xs transition ${
+              expandedLineId === r.id
+                ? 'border-accent bg-accent text-white'
+                : 'border-border text-muted hover:bg-surface-alt hover:text-ink'
+            }`}
+          >
+            <Users size={11} />
+            Subscribers
+            {expandedLineId === r.id ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+          </button>
         </div>
       )
     },
@@ -146,6 +232,24 @@ export function AdminLinesPage() {
         >
           <Plus size={15} /> New Line
         </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted">Type:</span>
+        {[{ id: '', label: 'All' }, ...VEHICLE_TYPES].map((vt) => (
+          <button
+            key={vt.id}
+            type="button"
+            onClick={() => setVehicleTypeId(vt.id)}
+            className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
+              vehicleTypeId === vt.id
+                ? 'border-accent bg-accent text-white'
+                : 'border-border text-muted hover:bg-surface-alt'
+            }`}
+          >
+            {vt.label}
+          </button>
+        ))}
       </div>
 
       {formOpen && (
@@ -218,6 +322,8 @@ export function AdminLinesPage() {
         totalPages={1}
         onPageChange={() => {}}
         loading={loading}
+        expandedRowId={expandedLineId}
+        renderExpandedRow={(row) => <SubscribersPanel line={row} />}
       />
     </div>
   )
