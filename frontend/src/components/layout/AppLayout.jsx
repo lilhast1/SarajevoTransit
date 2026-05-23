@@ -19,7 +19,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { SessionExpiryModal } from '../common/SessionExpiryModal'
-
+import { saveAuthSession, getAuthSession, clearAuthSession, enrichSessionWithMetadata, secondsUntilExpiry } from '../../utils/authStorage'
 
 const publicNavItems = [
   { to: '/', label: 'Route Planner', icon: Route },
@@ -47,11 +47,11 @@ function NavItem({ item, onClick }) {
       className={({ isActive }) =>
         `flex items-center justify-between gap-2 rounded-panel border px-3 py-2 text-sm font-medium transition ${
           isActive
-            ? 'border-accent bg-accent text-white'
-            : 'border-border text-muted hover:bg-surface-alt hover:text-ink'
+          ? 'border-accent bg-accent text-white'
+          : 'border-border text-muted hover:bg-surface-alt hover:text-ink'
         }`
       }
-    >
+      >
       <span className="flex items-center gap-2">
         <Icon size={16} />
         <span>{item.label}</span>
@@ -63,10 +63,10 @@ function NavItem({ item, onClick }) {
 
 export function AppLayout() {
   const { theme, toggleTheme, isAuthenticated, isAdmin } = useAppContext()
-  const navItems = isAdmin ? [...publicNavItems, ...adminNavItems] : publicNavItems
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
-
+  const [session, setSession] = useState(() => getAuthSession())
+  
   useEffect(() => {
     setMenuOpen(false)
   }, [location.pathname])

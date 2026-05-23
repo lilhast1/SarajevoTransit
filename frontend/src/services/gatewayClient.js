@@ -96,6 +96,9 @@ export const gatewayClient = {
   /** GET /api/v1/routes/optimal?fromLat=&fromLon=&toLat=&toLon=&… */
   getOptimalRoute: (query) => request(`/api/v1/routes/optimal?${query}`),
 
+  getStopLines: (stopId) => request(`/api/v1/routes/stop-lines?stopId=1:stop-${stopId}`),
+  getStopDepartures: (stopId, limit = 5) => request(`/api/v1/routes/stop-departures?stopId=1:stop-${stopId}&limit=${limit}`),
+
   /** GET /api/v1/users/me */
   getCurrentUser: () => request('/api/v1/users/me'),
 
