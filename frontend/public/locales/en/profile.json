@@ -39,5 +39,12 @@
   "day_thu": "Thu",
   "day_fri": "Fri",
   "day_sat": "Sat",
-  "day_sun": "Sun"
+  "day_sun": "Sun",
+  "rate_title": "Rate a line",
+  "rate_subtitle": "Quickly review lines you are subscribed to.",
+  "rate_no_subs": "No subscribed lines yet.",
+  "rate_browse_lines": "Browse all lines",
+  "rate_write_review": "Write review",
+  "rate_modal_title": "Review {{line}}",
+  "rate_modal_close": "Close"
 }

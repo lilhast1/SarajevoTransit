@@ -1,4 +1,4 @@
-import { AlertCircle, RefreshCw, Heart, Route, Loader2, LogIn } from 'lucide-react'
+import { AlertCircle, RefreshCw, Heart, Route, Loader2, LogIn, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -10,6 +10,9 @@ import { LineDetailLayout } from '../components/lines/LineDetailLayout'
 import { SubscriptionModal } from '../components/common/SubscriptionModal'
 import { useAppContext } from '../context/AppContext'
 import { transitApi } from '../services/transitApi'
+import { ReviewForm } from '../components/reviews/ReviewForm'
+import { ReviewsList } from '../components/reviews/ReviewsList'
+import { StarRating } from '../components/reviews/StarRating'
 
 const typeFilterKeys = ['all', 'tram', 'bus', 'trolleybus', 'minibus']
 
@@ -40,6 +43,17 @@ export function LinesPage() {
   const [subscribing, setSubscribing] = useState(false)
   const [subscriptionMsg, setSubscriptionMsg] = useState(null)
   const { session } = useAppContext()
+
+  const [reviewSummary, setReviewSummary] = useState(null)
+  const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0)
+
+  useEffect(() => {
+    if (!selectedLineId) return
+    setReviewSummary(null)
+    transitApi.getReviewSummary(selectedLineId)
+      .then(setReviewSummary)
+      .catch(() => {})
+  }, [selectedLineId, reviewsRefreshKey])
 
   const detailMode = selectedLineId !== null
 
@@ -206,7 +220,6 @@ export function LinesPage() {
   async function handleSubscriptionSubmit(data) {
     if (!selectedLine || !session?.userId) return
     await subscribeToLine(
-      session.userId,
       selectedLineId,
       selectedLine.code,
       selectedLine.name,
@@ -346,6 +359,63 @@ export function LinesPage() {
             </button>
           )}
         />
+      )}
+
+      {/* Reviews section — shown when a line is selected */}
+      {detailMode && (
+        <PanelCard tone="default">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-ink">{t('review_section_title')}</h3>
+              {reviewSummary && reviewSummary.reviewCount > 0 ? (
+                <div className="mt-1 flex items-center gap-2">
+                  <StarRating value={reviewSummary.averageRating} readOnly size={16} />
+                  <span className="text-sm font-medium text-ink">
+                    {Number(reviewSummary.averageRating).toFixed(1)}
+                  </span>
+                  <span className="text-sm text-muted">
+                    ({reviewSummary.reviewCount === 1
+                      ? t('review_count_one', { count: reviewSummary.reviewCount })
+                      : t('review_count_other', { count: reviewSummary.reviewCount })})
+                  </span>
+                </div>
+              ) : (
+                <p className="mt-1 text-sm text-muted">{t('review_no_rating_yet')}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <ReviewsList lineId={selectedLineId} refreshKey={reviewsRefreshKey} />
+          </div>
+
+          <div className="mt-5 border-t border-border pt-4">
+            {isAuthenticated && session?.userId ? (
+              <>
+                <h4 className="mb-3 text-sm font-semibold text-ink">{t('review_write_title')}</h4>
+                <ReviewForm
+                  lineId={selectedLineId}
+                  reviewerUserId={session.userId}
+                  onSuccess={() => setReviewsRefreshKey((k) => k + 1)}
+                />
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Star size={18} className="text-amber-400" fill="currentColor" aria-hidden="true" />
+                <p className="text-sm text-muted">
+                  {t('review_login_prompt')}{' '}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/auth')}
+                    className="text-accent underline-offset-2 hover:underline"
+                  >
+                    {t('go_to_login')}
+                  </button>
+                </p>
+              </div>
+            )}
+          </div>
+        </PanelCard>
       )}
 
       <SubscriptionModal

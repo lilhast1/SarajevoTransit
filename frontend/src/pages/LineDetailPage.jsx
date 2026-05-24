@@ -1,11 +1,15 @@
-import { Heart, AlertCircle, Loader2, LogIn } from 'lucide-react'
+import { Heart, AlertCircle, Loader2, LogIn, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { LineDetailLayout } from '../components/lines/LineDetailLayout'
 import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
 import { EmptyState } from '../components/common/LoadingStates'
+import { PanelCard } from '../components/common/PanelCard'
 import { SubscriptionModal } from '../components/common/SubscriptionModal'
+import { ReviewForm } from '../components/reviews/ReviewForm'
+import { ReviewsList } from '../components/reviews/ReviewsList'
+import { StarRating } from '../components/reviews/StarRating'
 import { useAppContext } from '../context/AppContext'
 import { transitApi } from '../services/transitApi'
 
@@ -14,7 +18,7 @@ export function LineDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const lineId = Number(id)
-  const { isAuthenticated, isLineSubscribed, subscribeToLine, unsubscribeFromLine } = useAppContext()
+  const { isAuthenticated, session, isLineSubscribed, subscribeToLine, unsubscribeFromLine } = useAppContext()
 
   const [line, setLine] = useState(null)
   const [directions, setDirections] = useState([])
@@ -27,8 +31,16 @@ export function LineDetailPage() {
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false)
   const [loginPromptOpen, setLoginPromptOpen] = useState(false)
   const [subscribing, setSubscribing] = useState(false)
+
+  const [reviewSummary, setReviewSummary] = useState(null)
+  const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0)
+
+  useEffect(() => {
+    transitApi.getReviewSummary(lineId)
+      .then(setReviewSummary)
+      .catch(() => {})
+  }, [lineId, reviewsRefreshKey])
   const [subscriptionMsg, setSubscriptionMsg] = useState(null)
-  const { session } = useAppContext()
 
   useEffect(() => {
     let active = true
@@ -134,7 +146,6 @@ export function LineDetailPage() {
   async function handleSubscriptionSubmit(data) {
     if (!line || !session?.userId) return
     await subscribeToLine(
-      session.userId,
       lineId,
       line.code,
       line.name,
@@ -260,6 +271,59 @@ export function LineDetailPage() {
           </div>
         </div>
       )}
+
+      {/* ── Reviews section ─────────────────────────────────────────────── */}
+      <PanelCard tone="default">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-ink">{t('review_section_title')}</h3>
+            {reviewSummary && reviewSummary.reviewCount > 0 ? (
+              <div className="mt-1 flex items-center gap-2">
+                <StarRating value={reviewSummary.averageRating} readOnly size={16} />
+                <span className="text-sm font-medium text-ink">
+                  {Number(reviewSummary.averageRating).toFixed(1)}
+                </span>
+                <span className="text-sm text-muted">
+                  ({reviewSummary.reviewCount === 1
+                    ? t('review_count_one', { count: reviewSummary.reviewCount })
+                    : t('review_count_other', { count: reviewSummary.reviewCount })})
+                </span>
+              </div>
+            ) : (
+              <p className="mt-1 text-sm text-muted">{t('review_no_rating_yet')}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <ReviewsList lineId={lineId} refreshKey={reviewsRefreshKey} />
+        </div>
+
+        <div className="mt-5 border-t border-border pt-4">
+          {isAuthenticated && session?.userId ? (
+            <>
+              <h4 className="mb-3 text-sm font-semibold text-ink">{t('review_write_title')}</h4>
+              <ReviewForm
+                lineId={lineId}
+                reviewerUserId={session.userId}
+                onSuccess={() => {
+                  setReviewsRefreshKey((k) => k + 1)
+                }}
+              />
+            </>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Star size={18} className="text-amber-400" fill="currentColor" aria-hidden="true" />
+              <p className="text-sm text-muted">
+                {t('review_login_prompt')}{' '}
+                <Link to="/auth" className="text-accent underline-offset-2 hover:underline">
+                  {t('go_to_login')}
+                </Link>
+              </p>
+            </div>
+          )}
+        </div>
+      </PanelCard>
     </div>
   )
 }

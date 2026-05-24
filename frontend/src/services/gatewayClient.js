@@ -203,6 +203,19 @@ export const gatewayClient = {
   deleteReport: (id) =>
     request(`/api/v1/reports/${id}`, { method: 'DELETE', token: getAccessToken() }),
 
+  // ── Reviews ───────────────────────────────────────────────────────────────
+  createReview: (payload) =>
+    request('/api/v1/reviews', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  getReviewsByLine: (lineId, page = 0) =>
+    request(`/api/v1/reviews?lineId=${lineId}&page=${page}&size=10&sort=createdAt,desc`),
+  getReviewSummary: (lineId) =>
+    request(`/api/v1/reviews/summary/${lineId}`),
+  getUserReviews: (userId) =>
+    request(`/api/v1/reviews/reviewer/${userId}`, { token: getAccessToken() }),
   // ── Admin: Reviews ────────────────────────────────────────────────────────
   getReviews: (query = '') => request(`/api/v1/reviews${query}`, { token: getAccessToken() }),
   updateReviewModeration: (id, moderationStatus) =>

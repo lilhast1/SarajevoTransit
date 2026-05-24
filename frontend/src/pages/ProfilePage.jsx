@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, Navigate } from 'react-router-dom'
-import { Loader2, AlertCircle, RefreshCw, Trash2, Pencil, Clock, CalendarDays } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, Trash2, Pencil, Clock, CalendarDays, Star, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LineBadge } from '../components/common/LineBadge'
 import { PanelCard } from '../components/common/PanelCard'
 import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
 import { SubscriptionModal } from '../components/common/SubscriptionModal'
+import { ReviewForm } from '../components/reviews/ReviewForm'
 import { useAppContext } from '../context/AppContext'
 import { transitApi } from '../services/transitApi'
 
@@ -14,9 +15,9 @@ function formatTime(time) {
   return time.length > 5 ? time.slice(0, 5) : time
 }
 
-function formatDays(daysStr) {
+function formatDays(daysStr, labels) {
   if (!daysStr) return ''
-  return daysStr.split(',').map((d) => DAY_LABELS[d.trim()] || d.trim()).filter(Boolean).join(' · ')
+  return daysStr.split(',').map((d) => labels[d.trim()] || d.trim()).filter(Boolean).join(' · ')
 }
 
 import { gatewayClient } from '../services/gatewayClient'
@@ -52,6 +53,8 @@ export function ProfilePage() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [processing, setProcessing] = useState(false)
   const [msg, setMsg] = useState(null)
+
+  const [reviewTarget, setReviewTarget] = useState(null)
 
   const fetchSubscriptions = useCallback(async () => {
     if (!session?.userId) return
@@ -255,7 +258,7 @@ export function ProfilePage() {
                           </span>
                           <span className="inline-flex items-center gap-1">
                             <CalendarDays size={12} />
-                            {formatDays(sub.daysOfWeek)}
+                            {formatDays(sub.daysOfWeek, DAY_LABELS)}
                           </span>
                         </div>
 
@@ -398,6 +401,82 @@ export function ProfilePage() {
           </div>
         )}
       </PanelCard>
+
+      {/* ── Rate a line ─────────────────────────────────────────────────── */}
+      <PanelCard tone="default">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Star size={16} className="text-amber-400" fill="currentColor" aria-hidden="true" />
+            <h3 className="text-base font-semibold text-ink">{t('rate_title')}</h3>
+          </div>
+          <Link to="/lines" className="text-xs text-accent underline-offset-2 hover:underline">
+            {t('rate_browse_lines')}
+          </Link>
+        </div>
+        <p className="mt-1 text-sm text-muted">{t('rate_subtitle')}</p>
+
+        <div className="mt-3">
+          {subscriptions.length === 0 ? (
+            <p className="text-sm text-muted">
+              {t('rate_no_subs')}{' '}
+              <Link to="/lines" className="text-accent underline-offset-2 hover:underline">
+                {t('rate_browse_lines')}
+              </Link>
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {subscriptions.map((sub) => (
+                <div key={sub.id} className="flex items-center justify-between rounded-lg border border-border bg-surface-soft px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <LineBadge line={{ code: sub.lineCode || String(sub.lineId), vehicleTypeName: 'bus', name: sub.lineName || `Line ${sub.lineId}` }} />
+                    <span className="truncate text-sm text-ink">{sub.lineName || `Line ${sub.lineId}`}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReviewTarget(sub)}
+                    className="ml-2 flex-shrink-0 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-ink transition hover:bg-surface-alt"
+                  >
+                    <Star size={11} className="text-amber-400" fill="currentColor" aria-hidden="true" />
+                    {t('rate_write_review')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </PanelCard>
+
+      {/* ── Review modal ─────────────────────────────────────────────────── */}
+      {reviewTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setReviewTarget(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-panel border border-border bg-surface p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-ink">
+                {t('rate_modal_title', { line: reviewTarget.lineName || `Line ${reviewTarget.lineId}` })}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setReviewTarget(null)}
+                className="text-muted transition hover:text-ink"
+                aria-label={t('rate_modal_close')}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <ReviewForm
+              lineId={reviewTarget.lineId}
+              reviewerUserId={session.userId}
+              onSuccess={() => setReviewTarget(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -225,7 +225,7 @@ export function AppProvider({ children }) {
       subscribedLines,
       isLineSubscribed: (lineId) => Object.prototype.hasOwnProperty.call(subscribedLines, lineId),
       subscribeToLine: async (lineId, lineCode, lineName, startInterval, endInterval, daysOfWeek) => {
-        const sub = await transitApi.subscribeToLine({ lineId, lineCode, lineName, startInterval, endInterval, daysOfWeek })
+        const sub = await transitApi.subscribeToLine({ userId: session?.userId, lineId, lineCode, lineName, startInterval, endInterval, daysOfWeek })
         setSubscribedLines((prev) => ({ ...prev, [lineId]: sub.id }))
         setFavorites((prev) => ({
           ...prev,

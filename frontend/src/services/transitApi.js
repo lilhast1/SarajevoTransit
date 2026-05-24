@@ -543,6 +543,23 @@ export const transitApi = {
     return gatewayClient.getAllUserSubscriptions(userId)
   },
 
+  // ── Reviews ───────────────────────────────────────────────────────────────
+  async createReview(payload) {
+    return gatewayClient.createReview(payload)
+  },
+
+  async getReviewsByLine(lineId, page = 0) {
+    return gatewayClient.getReviewsByLine(lineId, page)
+  },
+
+  async getReviewSummary(lineId) {
+    return gatewayClient.getReviewSummary(lineId)
+  },
+
+  async getUserReviews(userId) {
+    return gatewayClient.getUserReviews(userId)
+  },
+
   async getSubscriptionById(id) {
     return gatewayClient.getSubscriptionById(id)
   },

@@ -35,6 +35,8 @@ public interface LineReviewRepository extends JpaRepository<LineReview, Long> {
                         Long lineId,
                         ModerationStatus moderationStatus);
 
+        Optional<LineReview> findByReviewerUserIdAndLineId(Long reviewerUserId, Long lineId);
+
         @Query("""
                         select new com.sarajevotransit.feedbackservice.dto.LineRatingSummaryResponse(
                             lr.lineId,

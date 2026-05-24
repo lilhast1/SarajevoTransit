@@ -39,5 +39,12 @@
   "day_thu": "Čet",
   "day_fri": "Pet",
   "day_sat": "Sub",
-  "day_sun": "Ned"
+  "day_sun": "Ned",
+  "rate_title": "Ocijeni liniju",
+  "rate_subtitle": "Brzo ocijenite linije na koje ste pretplaćeni.",
+  "rate_no_subs": "Nema pretplaćenih linija.",
+  "rate_browse_lines": "Pregledaj sve linije",
+  "rate_write_review": "Napiši recenziju",
+  "rate_modal_title": "Recenzija za {{line}}",
+  "rate_modal_close": "Zatvori"
 }
