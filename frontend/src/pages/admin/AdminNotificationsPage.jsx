@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { DataTable } from '../../components/admin/DataTable'
 import { PanelCard } from '../../components/common/PanelCard'
 import { ErrorAlert, SuccessAlert } from '../../components/common/Alerts'
@@ -26,10 +27,11 @@ function trunc(str, n) {
 }
 
 function VehicleTypePills({ value, onChange }) {
+  const { t } = useTranslation('admin-notifications')
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm text-muted">Type:</span>
-      {[{ id: '', label: 'All' }, ...VEHICLE_TYPES].map((vt) => (
+      <span className="text-sm text-muted">{t('type_label')}</span>
+      {[{ id: '', label: t('all') }, ...VEHICLE_TYPES].map((vt) => (
         <button
           key={vt.id}
           type="button"
@@ -48,6 +50,7 @@ function VehicleTypePills({ value, onChange }) {
 }
 
 export function AdminNotificationsPage() {
+  const { t } = useTranslation('admin-notifications')
   // ── send form state ──────────────────────────────────────────────────────
   const [sendMode, setSendMode] = useState('broadcast')
 
@@ -174,7 +177,7 @@ export function AdminNotificationsPage() {
   }
 
   async function handleDelete(id) {
-    if (!window.confirm('Delete this notification?')) return
+    if (!window.confirm(t('delete_confirm'))) return
     try {
       await gatewayClient.deleteNotification(id)
       load()
@@ -187,32 +190,32 @@ export function AdminNotificationsPage() {
   const INPUT_CLS = 'mt-1 w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink'
 
   const columns = [
-    { key: 'sentAt', label: 'Date', render: (r) => r.sentAt ? new Date(r.sentAt).toLocaleString() : '—' },
-    { key: 'title', label: 'Title' },
-    { key: 'content', label: 'Message', render: (r) => trunc(r.content, 60) },
+    { key: 'sentAt', label: t('col_date'), render: (r) => r.sentAt ? new Date(r.sentAt).toLocaleString() : '—' },
+    { key: 'title', label: t('col_title') },
+    { key: 'content', label: t('col_message'), render: (r) => trunc(r.content, 60) },
     {
-      key: 'type', label: 'Type', render: (r) => (
+      key: 'type', label: t('col_type'), render: (r) => (
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[r.type] ?? 'bg-gray-100 text-gray-600'}`}>
           {r.type}
         </span>
       )
     },
     {
-      key: 'line', label: 'Line', render: (r) =>
+      key: 'line', label: t('col_line'), render: (r) =>
         r.lineId ? `${r.lineCode ?? ''} – ${r.lineName ?? ''}`.trim().replace(/^–\s*/, '') : '—'
     },
     {
-      key: 'recipient', label: 'Recipient', render: (r) =>
+      key: 'recipient', label: t('col_recipient'), render: (r) =>
         r.userFullName ?? r.userEmail ?? `ID ${r.userId}`
     },
     {
-      key: 'actions', label: 'Actions', render: (r) => (
+      key: 'actions', label: t('col_actions'), render: (r) => (
         <button
           type="button"
           onClick={() => handleDelete(r.id)}
           className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
         >
-          Delete
+          {t('delete')}
         </button>
       )
     },
@@ -221,14 +224,14 @@ export function AdminNotificationsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-ink">Notifications</h2>
-        <p className="mt-1 text-sm text-muted">Send notifications and view history.</p>
+        <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
+        <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
       </div>
 
       <PanelCard tone="soft">
         {/* mode tabs */}
         <div className="mb-4 flex gap-1 border-b border-border">
-          {[{ key: 'broadcast', label: 'Broadcast to Line' }, { key: 'single', label: 'To Specific User' }].map((tab) => (
+          {[{ key: 'broadcast', label: t('tab_broadcast') }, { key: 'single', label: t('tab_user') }].map((tab) => (
             <button
               key={tab.key}
               type="button"
@@ -249,19 +252,19 @@ export function AdminNotificationsPage() {
             <VehicleTypePills value={bVehicleTypeId} onChange={setBVehicleTypeId} />
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className="text-xs text-muted">Line</span>
+                <span className="text-xs text-muted">{t('line_label')}</span>
                 <select
                   required
                   value={broadcastForm.lineId}
                   onChange={(e) => setBroadcastForm((f) => ({ ...f, lineId: e.target.value }))}
                   className={SELECT_CLS}
                 >
-                  <option value="">— Select line —</option>
+                  <option value="">{t('select_line')}</option>
                   {bLines.map((l) => <option key={l.id} value={l.id}>{l.code} – {l.name}</option>)}
                 </select>
               </label>
               <label className="block">
-                <span className="text-xs text-muted">Type</span>
+                <span className="text-xs text-muted">{t('type_label')}</span>
                 <select
                   value={broadcastForm.type}
                   onChange={(e) => setBroadcastForm((f) => ({ ...f, type: e.target.value }))}
@@ -271,7 +274,7 @@ export function AdminNotificationsPage() {
                 </select>
               </label>
               <label className="block sm:col-span-2">
-                <span className="text-xs text-muted">Title</span>
+                <span className="text-xs text-muted">{t('title_label')}</span>
                 <input
                   required
                   value={broadcastForm.title}
@@ -280,7 +283,7 @@ export function AdminNotificationsPage() {
                 />
               </label>
               <label className="block sm:col-span-2">
-                <span className="text-xs text-muted">Message</span>
+                <span className="text-xs text-muted">{t('message_label')}</span>
                 <textarea
                   required
                   rows={3}
@@ -295,7 +298,7 @@ export function AdminNotificationsPage() {
               disabled={sending}
               className="rounded-panel border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
             >
-              {sending ? 'Sending…' : 'Send Broadcast'}
+              {sending ? t('sending') : t('send_broadcast')}
             </button>
           </form>
         )}
@@ -304,14 +307,14 @@ export function AdminNotificationsPage() {
           <form onSubmit={handleSingle} className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block sm:col-span-2">
-                <span className="text-xs text-muted">User</span>
+                <span className="text-xs text-muted">{t('user_label')}</span>
                 <select
                   required
                   value={singleForm.userId}
                   onChange={(e) => setSingleForm((f) => ({ ...f, userId: e.target.value }))}
                   className={SELECT_CLS}
                 >
-                  <option value="">— Select user —</option>
+                  <option value="">{t('select_user')}</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>
                   ))}
@@ -323,18 +326,18 @@ export function AdminNotificationsPage() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className="text-xs text-muted">Line (optional)</span>
+                <span className="text-xs text-muted">{t('line_optional')}</span>
                 <select
                   value={singleForm.lineId}
                   onChange={(e) => setSingleForm((f) => ({ ...f, lineId: e.target.value }))}
                   className={SELECT_CLS}
                 >
-                  <option value="">— No specific line —</option>
+                  <option value="">{t('no_line')}</option>
                   {sLines.map((l) => <option key={l.id} value={l.id}>{l.code} – {l.name}</option>)}
                 </select>
               </label>
               <label className="block">
-                <span className="text-xs text-muted">Type</span>
+                <span className="text-xs text-muted">{t('type_label')}</span>
                 <select
                   value={singleForm.type}
                   onChange={(e) => setSingleForm((f) => ({ ...f, type: e.target.value }))}
@@ -344,7 +347,7 @@ export function AdminNotificationsPage() {
                 </select>
               </label>
               <label className="block sm:col-span-2">
-                <span className="text-xs text-muted">Title</span>
+                <span className="text-xs text-muted">{t('title_label')}</span>
                 <input
                   required
                   value={singleForm.title}
@@ -353,7 +356,7 @@ export function AdminNotificationsPage() {
                 />
               </label>
               <label className="block sm:col-span-2">
-                <span className="text-xs text-muted">Message</span>
+                <span className="text-xs text-muted">{t('message_label')}</span>
                 <textarea
                   required
                   rows={3}
@@ -368,7 +371,7 @@ export function AdminNotificationsPage() {
               disabled={sending}
               className="rounded-panel border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
             >
-              {sending ? 'Sending…' : 'Send Notification'}
+              {sending ? t('sending') : t('send_user')}
             </button>
           </form>
         )}
@@ -380,12 +383,12 @@ export function AdminNotificationsPage() {
       </PanelCard>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-ink">Notification History</h3>
+        <h3 className="mb-2 text-sm font-semibold text-ink">{t('history_title')}</h3>
 
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1">
-            <span className="text-sm text-muted">Sort:</span>
-            {[{ value: 'desc', label: 'Latest first' }, { value: 'asc', label: 'Earliest first' }].map((opt) => (
+            <span className="text-sm text-muted">{t('sort')}</span>
+            {[{ value: 'desc', label: t('latest_first') }, { value: 'asc', label: t('earliest_first') }].map((opt) => (
               <button
                 key={opt.value}
                 type="button"
@@ -402,7 +405,7 @@ export function AdminNotificationsPage() {
           </div>
           <input
             type="search"
-            placeholder="Search by recipient name…"
+            placeholder={t('search_placeholder')}
             value={nameSearch}
             onChange={(e) => setNameSearch(e.target.value)}
             className="w-72 rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted"

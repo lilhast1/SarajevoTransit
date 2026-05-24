@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { DataTable } from '../../components/admin/DataTable'
 import { PanelCard } from '../../components/common/PanelCard'
 import { ErrorAlert } from '../../components/common/Alerts'
@@ -8,12 +9,12 @@ import { VEHICLE_TYPE_META_BY_ID } from '../../constants/vehicleColors'
 
 const VEHICLE_TYPES = Object.values(VEHICLE_TYPE_META_BY_ID)
 
-const DAY_LABELS = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' }
+const DAY_KEYS = { 1: 'day_mon', 2: 'day_tue', 3: 'day_wed', 4: 'day_thu', 5: 'day_fri', 6: 'day_sat', 7: 'day_sun' }
 const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7]
 const DAY_TYPES = [
-  { key: 'weekday', label: 'Weekday', days: [1, 2, 3, 4, 5] },
-  { key: 'saturday', label: 'Saturday', days: [6] },
-  { key: 'sunday', label: 'Sunday', days: [7] },
+  { key: 'weekday', days: [1, 2, 3, 4, 5] },
+  { key: 'saturday', days: [6] },
+  { key: 'sunday', days: [7] },
 ]
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
 const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55']
@@ -31,6 +32,7 @@ const EMPTY_FORM = {
 }
 
 export function AdminTimetablePage() {
+  const { t } = useTranslation('admin-timetable')
   // filter state (table view)
   const [vehicleTypeId, setVehicleTypeId] = useState('')
   const [lines, setLines] = useState([])
@@ -83,7 +85,7 @@ export function AdminTimetablePage() {
       if (directionId) params.directionId = directionId
       const res = await gatewayClient.getTimetables(`?${new URLSearchParams(params)}`)
       const dayNums = DAY_TYPES.find((d) => d.key === dayType)?.days ?? []
-      const filtered = res.filter((t) => (t.daysOfWeek ?? []).some((d) => dayNums.includes(d)))
+      const filtered = res.filter((tt) => (tt.daysOfWeek ?? []).some((d) => dayNums.includes(d)))
       setTimetables(filtered.sort((a, b) => String(a.departureTime).localeCompare(String(b.departureTime))))
     } catch (err) {
       setError(err.message)
@@ -105,7 +107,7 @@ export function AdminTimetablePage() {
   }
 
   async function handleDelete(id) {
-    if (!window.confirm('Delete this timetable entry?')) return
+    if (!window.confirm(t('delete_confirm'))) return
     try {
       await gatewayClient.deleteTimetable(id)
       load()
@@ -150,27 +152,27 @@ export function AdminTimetablePage() {
   }
 
   const columns = [
-    { key: 'departureTime', label: 'Departure', render: (r) => String(r.departureTime ?? '—').slice(0, 5) },
-    { key: 'name', label: 'Name', render: (r) => r.name ?? '—' },
+    { key: 'departureTime', label: t('col_departure'), render: (r) => String(r.departureTime ?? '—').slice(0, 5) },
+    { key: 'name', label: t('col_name'), render: (r) => r.name ?? '—' },
     {
-      key: 'daysOfWeek', label: 'Days', render: (r) =>
-        (r.daysOfWeek ?? []).map((d) => DAY_LABELS[d]).join(', ')
+      key: 'daysOfWeek', label: t('col_days'), render: (r) =>
+        (r.daysOfWeek ?? []).map((d) => t(DAY_KEYS[d])).join(', ')
     },
     {
-      key: 'isActive', label: 'Active', render: (r) => (
+      key: 'isActive', label: t('col_active'), render: (r) => (
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
           {r.isActive ? 'Yes' : 'No'}
         </span>
       )
     },
     {
-      key: 'actions', label: 'Actions', render: (r) => (
+      key: 'actions', label: t('col_actions'), render: (r) => (
         <button
           type="button"
           onClick={() => handleDelete(r.id)}
           className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
         >
-          Delete
+          {t('delete')}
         </button>
       )
     },
@@ -180,22 +182,22 @@ export function AdminTimetablePage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-ink">Timetables</h2>
-          <p className="mt-1 text-sm text-muted">View, add, and remove timetable entries per line and direction.</p>
+          <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
+          <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
         </div>
         <button
           type="button"
           onClick={openForm}
           className="flex items-center gap-1.5 rounded-panel border border-accent bg-accent px-3 py-2 text-sm font-medium text-white"
         >
-          <Plus size={15} /> New Entry
+          <Plus size={15} /> {t('new_entry')}
         </button>
       </div>
 
       {/* vehicle type filter */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-muted">Type:</span>
-        {[{ id: '', label: 'All' }, ...VEHICLE_TYPES].map((vt) => (
+        <span className="text-sm text-muted">{t('type_label')}</span>
+        {[{ id: '', label: t('all') }, ...VEHICLE_TYPES].map((vt) => (
           <button
             key={vt.id}
             type="button"
@@ -214,25 +216,25 @@ export function AdminTimetablePage() {
       {/* table filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted">Line:</span>
+          <span className="text-sm text-muted">{t('line_label')}</span>
           <select
             value={lineId}
             onChange={(e) => setLineId(e.target.value)}
             className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink"
           >
-            <option value="">— All lines —</option>
+            <option value="">{t('all_lines')}</option>
             {lines.map((l) => <option key={l.id} value={l.id}>{l.code} – {l.name}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted">Direction:</span>
+          <span className="text-sm text-muted">{t('direction_label')}</span>
           <select
             value={directionId}
             onChange={(e) => setDirectionId(e.target.value)}
             disabled={!lineId}
             className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink disabled:opacity-50"
           >
-            <option value="">— All directions —</option>
+            <option value="">{t('all_directions')}</option>
             {directions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
@@ -250,7 +252,7 @@ export function AdminTimetablePage() {
                 : 'border-border text-muted hover:bg-surface-alt'
             }`}
           >
-            {dt.label}
+            {t(dt.key)}
           </button>
         ))}
       </div>
@@ -258,26 +260,26 @@ export function AdminTimetablePage() {
       {formOpen && (
         <PanelCard tone="soft">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-ink">New Timetable Entry</h3>
+            <h3 className="text-sm font-semibold text-ink">{t('new_entry_title')}</h3>
             <button type="button" onClick={() => setFormOpen(false)} className="text-muted hover:text-ink"><X size={16} /></button>
           </div>
           <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2">
 
             {/* line + direction */}
             <label className="block">
-              <span className="text-xs text-muted">Line</span>
+              <span className="text-xs text-muted">{t('field_line')}</span>
               <select
                 required
                 value={form.formLineId}
                 onChange={(e) => setForm((f) => ({ ...f, formLineId: e.target.value }))}
                 className="mt-1 w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink"
               >
-                <option value="">— Select —</option>
+                <option value="">{t('select_placeholder')}</option>
                 {lines.map((l) => <option key={l.id} value={l.id}>{l.code} – {l.name}</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="text-xs text-muted">Direction</span>
+              <span className="text-xs text-muted">{t('field_direction')}</span>
               <select
                 required
                 value={form.formDirectionId}
@@ -285,14 +287,14 @@ export function AdminTimetablePage() {
                 disabled={!form.formLineId}
                 className="mt-1 w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink disabled:opacity-50"
               >
-                <option value="">— Select —</option>
+                <option value="">{t('select_placeholder')}</option>
                 {formDirections.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </label>
 
             {/* 24h time picker */}
             <div className="block">
-              <span className="text-xs text-muted">Departure Time (24h)</span>
+              <span className="text-xs text-muted">{t('field_departure')}</span>
               <div className="mt-1 flex items-center gap-1">
                 <select
                   value={form.hour}
@@ -314,7 +316,7 @@ export function AdminTimetablePage() {
 
             {/* name */}
             <label className="block">
-              <span className="text-xs text-muted">Name (optional)</span>
+              <span className="text-xs text-muted">{t('field_name')}</span>
               <input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -324,7 +326,7 @@ export function AdminTimetablePage() {
 
             {/* days of week */}
             <div className="sm:col-span-2">
-              <span className="text-xs text-muted">Days of Week</span>
+              <span className="text-xs text-muted">{t('field_days')}</span>
               <div className="mt-1 flex flex-wrap gap-2">
                 {ALL_DAYS.map((d) => (
                   <button
@@ -337,7 +339,7 @@ export function AdminTimetablePage() {
                         : 'border-border text-muted hover:bg-surface-alt'
                     }`}
                   >
-                    {DAY_LABELS[d]}
+                    {t(DAY_KEYS[d])}
                   </button>
                 ))}
               </div>
@@ -347,15 +349,15 @@ export function AdminTimetablePage() {
             <div className="flex flex-wrap gap-4 sm:col-span-2">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={form.ridesOnHolidays} onChange={(e) => setForm((f) => ({ ...f, ridesOnHolidays: e.target.checked }))} />
-                <span className="text-sm text-ink">Rides on holidays</span>
+                <span className="text-sm text-ink">{t('field_holidays')}</span>
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={form.receivesPassengers} onChange={(e) => setForm((f) => ({ ...f, receivesPassengers: e.target.checked }))} />
-                <span className="text-sm text-ink">Receives passengers</span>
+                <span className="text-sm text-ink">{t('field_receives')}</span>
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))} />
-                <span className="text-sm text-ink">Active</span>
+                <span className="text-sm text-ink">{t('field_active')}</span>
               </label>
             </div>
 
@@ -365,10 +367,10 @@ export function AdminTimetablePage() {
                 disabled={saving || form.daysOfWeek.length === 0 || !form.formLineId || !form.formDirectionId}
                 className="rounded-panel border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
               >
-                {saving ? 'Saving…' : 'Save'}
+                {saving ? t('saving') : t('save')}
               </button>
               <button type="button" onClick={() => setFormOpen(false)} className="rounded-panel border border-border px-4 py-1.5 text-sm text-ink">
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </form>

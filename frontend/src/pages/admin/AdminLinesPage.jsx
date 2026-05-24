@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, X, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { DataTable } from '../../components/admin/DataTable'
 import { PanelCard } from '../../components/common/PanelCard'
 import { ErrorAlert } from '../../components/common/Alerts'
@@ -11,6 +12,7 @@ const VEHICLE_TYPES = Object.values(VEHICLE_TYPE_META_BY_ID)
 const EMPTY_FORM = { code: '', name: '', vehicleTypeId: 1, isActive: true }
 
 function SubscribersPanel({ line }) {
+  const { t } = useTranslation('admin-lines')
   const [page, setPage] = useState(0)
   const [data, setData] = useState({ content: [], totalPages: 0 })
   const [loading, setLoading] = useState(false)
@@ -49,11 +51,11 @@ function SubscribersPanel({ line }) {
   return (
     <div>
       <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">
-        Subscribers — {line.code} {line.name}
+        {t('subscribers_title', { code: line.code, name: line.name })}
       </p>
-      {loading && <p className="text-sm text-muted">Loading…</p>}
+      {loading && <p className="text-sm text-muted">{t('loading')}</p>}
       {!loading && (data.content ?? []).length === 0 && (
-        <p className="text-sm text-muted">No subscribers for this line.</p>
+        <p className="text-sm text-muted">{t('no_subscribers')}</p>
       )}
       {!loading && (data.content ?? []).length > 0 && (
         <DataTable
@@ -70,6 +72,7 @@ function SubscribersPanel({ line }) {
 }
 
 export function AdminLinesPage() {
+  const { t } = useTranslation('admin-lines')
   const [vehicleTypeId, setVehicleTypeId] = useState('')
   const [lines, setLines] = useState([])
   const [loading, setLoading] = useState(false)
@@ -166,28 +169,28 @@ export function AdminLinesPage() {
   }
 
   const columns = [
-    { key: 'code', label: 'Code' },
-    { key: 'name', label: 'Name' },
+    { key: 'code', label: t('col_code') },
+    { key: 'name', label: t('col_name') },
     {
-      key: 'vehicleTypeId', label: 'Type', render: (r) =>
+      key: 'vehicleTypeId', label: t('col_type'), render: (r) =>
         VEHICLE_TYPE_META_BY_ID[r.vehicleTypeId]?.label ?? r.vehicleTypeName ?? '—'
     },
     {
-      key: 'isActive', label: 'Active', render: (r) => (
+      key: 'isActive', label: t('col_active'), render: (r) => (
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
           {r.isActive ? 'Yes' : 'No'}
         </span>
       )
     },
     {
-      key: 'actions', label: 'Actions', render: (r) => (
+      key: 'actions', label: t('col_actions'), render: (r) => (
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => openEdit(r)}
             className="rounded border border-border px-2 py-0.5 text-xs text-ink hover:bg-surface-alt"
           >
-            Edit
+            {t('edit')}
           </button>
           <button
             type="button"
@@ -198,7 +201,7 @@ export function AdminLinesPage() {
                 : 'border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950'
             }`}
           >
-            {r.isActive ? 'Deactivate' : 'Activate'}
+            {r.isActive ? t('deactivate') : t('activate')}
           </button>
           <button
             type="button"
@@ -210,7 +213,7 @@ export function AdminLinesPage() {
             }`}
           >
             <Users size={11} />
-            Subscribers
+            {t('subscribers')}
             {expandedLineId === r.id ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
           </button>
         </div>
@@ -222,21 +225,21 @@ export function AdminLinesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-ink">Lines</h2>
-          <p className="mt-1 text-sm text-muted">Create, edit, and activate/deactivate transit lines.</p>
+          <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
+          <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
         </div>
         <button
           type="button"
           onClick={openCreate}
           className="flex items-center gap-1.5 rounded-panel border border-accent bg-accent px-3 py-2 text-sm font-medium text-white"
         >
-          <Plus size={15} /> New Line
+          <Plus size={15} /> {t('new_line')}
         </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-muted">Type:</span>
-        {[{ id: '', label: 'All' }, ...VEHICLE_TYPES].map((vt) => (
+        <span className="text-sm text-muted">{t('type_label')}</span>
+        {[{ id: '', label: t('all') }, ...VEHICLE_TYPES].map((vt) => (
           <button
             key={vt.id}
             type="button"
@@ -255,12 +258,12 @@ export function AdminLinesPage() {
       {formOpen && (
         <PanelCard tone="soft">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-ink">{editingLine ? 'Edit Line' : 'New Line'}</h3>
+            <h3 className="text-sm font-semibold text-ink">{editingLine ? t('edit_title') : t('new_title')}</h3>
             <button type="button" onClick={closeForm} className="text-muted hover:text-ink"><X size={16} /></button>
           </div>
           <form onSubmit={handleSave} className="grid gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="text-xs text-muted">Code</span>
+              <span className="text-xs text-muted">{t('col_code')}</span>
               <input
                 required
                 value={form.code}
@@ -269,7 +272,7 @@ export function AdminLinesPage() {
               />
             </label>
             <label className="block">
-              <span className="text-xs text-muted">Name</span>
+              <span className="text-xs text-muted">{t('col_name')}</span>
               <input
                 required
                 value={form.name}
@@ -278,7 +281,7 @@ export function AdminLinesPage() {
               />
             </label>
             <label className="block">
-              <span className="text-xs text-muted">Vehicle Type</span>
+              <span className="text-xs text-muted">{t('col_type')}</span>
               <select
                 value={form.vehicleTypeId}
                 onChange={(e) => setForm((f) => ({ ...f, vehicleTypeId: Number(e.target.value) }))}
@@ -295,7 +298,7 @@ export function AdminLinesPage() {
                 checked={form.isActive}
                 onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
               />
-              <span className="text-sm text-ink">Active</span>
+              <span className="text-sm text-ink">{t('col_active')}</span>
             </label>
             <div className="flex gap-2 sm:col-span-2">
               <button
@@ -303,10 +306,10 @@ export function AdminLinesPage() {
                 disabled={saving}
                 className="rounded-panel border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
               >
-                {saving ? 'Saving…' : 'Save'}
+                {saving ? t('saving') : t('save')}
               </button>
               <button type="button" onClick={closeForm} className="rounded-panel border border-border px-4 py-1.5 text-sm text-ink">
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </form>

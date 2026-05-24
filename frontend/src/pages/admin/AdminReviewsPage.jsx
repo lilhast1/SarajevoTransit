@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { DataTable } from '../../components/admin/DataTable'
 import { ErrorAlert } from '../../components/common/Alerts'
 import { gatewayClient } from '../../services/gatewayClient'
@@ -13,6 +14,7 @@ function trunc(str, n) {
 }
 
 export function AdminReviewsPage() {
+  const { t } = useTranslation('admin-reviews')
   const [vehicleTypeId, setVehicleTypeId] = useState('')
   const [lines, setLines] = useState([])
   const [lineId, setLineId] = useState('')
@@ -99,7 +101,7 @@ export function AdminReviewsPage() {
   }
 
   async function handleDelete(id) {
-    if (!window.confirm('Delete this review?')) return
+    if (!window.confirm(t('delete_confirm'))) return
     try {
       await gatewayClient.deleteReview(id)
       load()
@@ -109,13 +111,13 @@ export function AdminReviewsPage() {
   }
 
   const columns = [
-    { key: 'createdAt', label: 'Date', render: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—' },
-    { key: 'reviewer', label: 'Reviewer', render: (r) => reviewerNames[r.reviewerUserId] ?? (r.reviewerUserId ? `#${r.reviewerUserId}` : '—') },
-    { key: 'line', label: 'Line', render: (r) => lineNames[r.lineId] ?? (r.lineId ? `#${r.lineId}` : '—') },
-    { key: 'rating', label: 'Rating', render: (r) => '⭐'.repeat(r.rating ?? 0) },
-    { key: 'comment', label: 'Comment', render: (r) => trunc(r.reviewText, 80) },
+    { key: 'createdAt', label: t('col_date'), render: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—' },
+    { key: 'reviewer', label: t('col_reviewer'), render: (r) => reviewerNames[r.reviewerUserId] ?? (r.reviewerUserId ? `#${r.reviewerUserId}` : '—') },
+    { key: 'line', label: t('col_line'), render: (r) => lineNames[r.lineId] ?? (r.lineId ? `#${r.lineId}` : '—') },
+    { key: 'rating', label: t('col_rating'), render: (r) => '⭐'.repeat(r.rating ?? 0) },
+    { key: 'comment', label: t('col_comment'), render: (r) => trunc(r.reviewText, 80) },
     {
-      key: 'moderationStatus', label: 'Status', render: (r) => (
+      key: 'moderationStatus', label: t('col_status'), render: (r) => (
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
           r.moderationStatus === 'VISIBLE'
             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
@@ -126,11 +128,11 @@ export function AdminReviewsPage() {
       )
     },
     {
-      key: 'actions', label: 'Actions', render: (r) => (
+      key: 'actions', label: t('col_actions'), render: (r) => (
         <div className="flex items-center gap-2">
           <button
             type="button"
-            title={r.moderationStatus === 'VISIBLE' ? 'Hide' : 'Show'}
+            title={r.moderationStatus === 'VISIBLE' ? t('hide') : t('show')}
             onClick={() => handleToggleVisibility(r)}
             className="rounded border border-border p-1 text-muted hover:bg-surface-alt"
           >
@@ -141,7 +143,7 @@ export function AdminReviewsPage() {
             onClick={() => handleDelete(r.id)}
             className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
           >
-            Delete
+            {t('delete')}
           </button>
         </div>
       )
@@ -151,14 +153,14 @@ export function AdminReviewsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-ink">Review Moderation</h2>
-        <p className="mt-1 text-sm text-muted">Show or hide user reviews per line.</p>
+        <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
+        <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
       </div>
 
       {/* vehicle type filter */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-muted">Type:</span>
-        {[{ id: '', label: 'All' }, ...VEHICLE_TYPES].map((vt) => (
+        <span className="text-sm text-muted">{t('type_label')}</span>
+        {[{ id: '', label: t('all') }, ...VEHICLE_TYPES].map((vt) => (
           <button
             key={vt.id}
             type="button"
@@ -177,13 +179,13 @@ export function AdminReviewsPage() {
       {/* line + sort row */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <label className="text-sm text-muted">Line:</label>
+          <label className="text-sm text-muted">{t('line_label')}</label>
           <select
             value={lineId}
             onChange={(e) => { setLineId(e.target.value); setPage(0) }}
             className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink"
           >
-            <option value="">— All lines —</option>
+            <option value="">{t('all_lines')}</option>
             {lines.map((l) => (
               <option key={l.id} value={l.id}>{l.code} – {l.name}</option>
             ))}
@@ -191,8 +193,8 @@ export function AdminReviewsPage() {
         </div>
 
         <div className="flex items-center gap-1">
-          <span className="text-sm text-muted">Sort:</span>
-          {[{ value: 'desc', label: 'Latest first' }, { value: 'asc', label: 'Earliest first' }].map((opt) => (
+          <span className="text-sm text-muted">{t('sort')}</span>
+          {[{ value: 'desc', label: t('latest_first') }, { value: 'asc', label: t('earliest_first') }].map((opt) => (
             <button
               key={opt.value}
               type="button"
@@ -211,9 +213,9 @@ export function AdminReviewsPage() {
 
       {/* date range filter */}
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-muted">Date range:</span>
+        <span className="text-sm text-muted">{t('date_range')}</span>
         <label className="flex items-center gap-1.5 text-sm text-muted">
-          From
+          {t('from')}
           <input
             type="date"
             value={dateFrom}
@@ -222,7 +224,7 @@ export function AdminReviewsPage() {
           />
         </label>
         <label className="flex items-center gap-1.5 text-sm text-muted">
-          To
+          {t('to')}
           <input
             type="date"
             value={dateTo}
@@ -236,7 +238,7 @@ export function AdminReviewsPage() {
             onClick={() => { setDateFrom(''); setDateTo('') }}
             className="text-xs text-muted underline hover:text-ink"
           >
-            Clear
+            {t('clear')}
           </button>
         )}
       </div>
