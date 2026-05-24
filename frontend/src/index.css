@@ -75,3 +75,54 @@ h4 {
     background-size: 36px 36px, 36px 36px;
   }
 }
+
+/* Focus rings */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* High contrast mode (manual toggle via .high-contrast on <html>) */
+.high-contrast {
+  --ink: oklch(0.08 0.02 240);
+  --muted: oklch(0.25 0.02 240);
+  --border: oklch(0.5 0.02 232);
+  --surface-alt: oklch(0.88 0.012 228);
+}
+.high-contrast.dark {
+  --ink: oklch(0.98 0.01 235);
+  --muted: oklch(0.88 0.015 236);
+  --border: oklch(0.6 0.02 238);
+  --surface-alt: oklch(0.32 0.02 240);
+}
+.high-contrast *,
+.high-contrast .dark * {
+  border-width: 2px;
+}
+
+/* System high contrast */
+@media (prefers-contrast: more) {
+  :root {
+    --ink: oklch(0.08 0.02 240);
+    --muted: oklch(0.25 0.02 240);
+    --border: oklch(0.5 0.02 232);
+  }
+  .dark {
+    --ink: oklch(0.98 0.01 235);
+    --muted: oklch(0.88 0.015 236);
+    --border: oklch(0.6 0.02 238);
+  }
+}
+
+/* Screen-reader-only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

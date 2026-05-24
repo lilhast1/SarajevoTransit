@@ -1,15 +1,9 @@
 import { AlertCircle, CheckCircle, CreditCard, RefreshCw, Ticket, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
 import { useAppContext } from '../context/AppContext'
 import { gatewayClient } from '../services/gatewayClient'
-
-const TICKET_TYPES = [
-  { type: 'SINGLE', label: 'Single', price: '1.80 BAM', duration: 'Valid 1 hour' },
-  { type: 'DAILY', label: 'Daily', price: '5.00 BAM', duration: 'Valid 24 hours' },
-  { type: 'WEEKLY', label: 'Weekly', price: '20.00 BAM', duration: 'Valid 7 days' },
-  { type: 'MONTHLY', label: 'Monthly', price: '50.00 BAM', duration: 'Valid 30 days' },
-]
 
 const TICKET_STATUS_STYLES = {
   ACTIVE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -30,8 +24,15 @@ function formatDatetime(iso) {
 }
 
 function TicketRow({ ticket }) {
+  const { t } = useTranslation('tickets')
+  const TICKET_TYPES_LOCAL = [
+    { type: 'SINGLE', label: t('type_single') },
+    { type: 'DAILY', label: t('type_daily') },
+    { type: 'WEEKLY', label: t('type_weekly') },
+    { type: 'MONTHLY', label: t('type_monthly') },
+  ]
   const statusStyle = TICKET_STATUS_STYLES[ticket.status] || 'bg-surface-alt text-muted'
-  const typeInfo = TICKET_TYPES.find((t) => t.type === ticket.type)
+  const typeInfo = TICKET_TYPES_LOCAL.find((ti) => ti.type === ticket.type)
 
   return (
     <div className="rounded-panel border border-border px-4 py-3">
@@ -49,14 +50,14 @@ function TicketRow({ ticket }) {
       </div>
 
       <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted">
-        <span>Purchased: {formatDatetime(ticket.purchaseDate)}</span>
-        {ticket.validUntil && <span>Valid until: {formatDatetime(ticket.validUntil)}</span>}
+        <span>{t('purchased', { date: formatDatetime(ticket.purchaseDate) })}</span>
+        {ticket.validUntil && <span>{t('valid_until', { date: formatDatetime(ticket.validUntil) })}</span>}
       </div>
 
       {ticket.status === 'ACTIVE' && ticket.qrCodeData && (
         <div className="mt-2 rounded border border-emerald-200 bg-emerald-50 p-2 dark:border-emerald-900 dark:bg-emerald-950/20">
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-            Ticket Code
+            {t('ticket_code')}
           </p>
           <code className="break-all text-xs text-emerald-800 dark:text-emerald-300">
             {ticket.qrCodeData}
@@ -68,6 +69,7 @@ function TicketRow({ ticket }) {
 }
 
 function PaymentMethodCard({ method, selected, onSelect, onRemove, removing }) {
+  const { t } = useTranslation('tickets')
   return (
     <button
       type="button"
@@ -89,7 +91,7 @@ function PaymentMethodCard({ method, selected, onSelect, onRemove, removing }) {
         <span className="text-xs text-muted">{method.cardType}</span>
         {method.isDefault && (
           <span className="rounded bg-surface-alt px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-            Default
+            {t('default_label')}
           </span>
         )}
       </div>
@@ -98,15 +100,16 @@ function PaymentMethodCard({ method, selected, onSelect, onRemove, removing }) {
         onClick={(e) => { e.stopPropagation(); onRemove(method.id) }}
         disabled={removing}
         className="rounded p-1 text-muted transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950/30"
-        aria-label="Remove card"
+        aria-label={t('remove_card')}
       >
-        <Trash2 size={13} />
+        <Trash2 size={13} aria-hidden="true" />
       </button>
     </button>
   )
 }
 
 function AddCardForm({ onAdded, userId }) {
+  const { t } = useTranslation('tickets')
   const [lastFour, setLastFour] = useState('')
   const [cardType, setCardType] = useState('VISA')
   const [isDefault, setIsDefault] = useState(false)
@@ -140,14 +143,14 @@ function AddCardForm({ onAdded, userId }) {
 
   return (
     <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-2 rounded-panel border border-dashed border-border p-3">
-      <p className="text-xs font-semibold text-muted">Add Mock Card</p>
+      <p className="text-xs font-semibold text-muted">{t('add_mock_card')}</p>
       <div className="flex gap-2">
         <input
           type="text"
           inputMode="numeric"
           maxLength={4}
           pattern="\d{4}"
-          placeholder="Last 4 digits"
+          placeholder={t('last_4')}
           value={lastFour}
           onChange={(e) => setLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
           required
@@ -168,7 +171,7 @@ function AddCardForm({ onAdded, userId }) {
           onChange={(e) => setIsDefault(e.target.checked)}
           className="accent-accent"
         />
-        Set as default
+        {t('set_default')}
       </label>
       {error && <ErrorAlert error={error} onDismiss={() => setError(null)} />}
       <button
@@ -176,7 +179,7 @@ function AddCardForm({ onAdded, userId }) {
         disabled={submitting || lastFour.length !== 4}
         className="self-end rounded-panel bg-accent px-4 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
       >
-        {submitting ? 'Adding…' : 'Add Card'}
+        {submitting ? t('adding') : t('add_card')}
       </button>
     </form>
   )
@@ -184,6 +187,13 @@ function AddCardForm({ onAdded, userId }) {
 
 export function TicketsPage() {
   const { isAuthenticated, session } = useAppContext()
+  const { t } = useTranslation('tickets')
+  const TICKET_TYPES = [
+    { type: 'SINGLE', label: t('type_single'), price: t('price_single'), duration: t('validity_single') },
+    { type: 'DAILY', label: t('type_daily'), price: t('price_daily'), duration: t('validity_daily') },
+    { type: 'WEEKLY', label: t('type_weekly'), price: t('price_weekly'), duration: t('validity_weekly') },
+    { type: 'MONTHLY', label: t('type_monthly'), price: t('price_monthly'), duration: t('validity_monthly') },
+  ]
 
   const [selectedType, setSelectedType] = useState(null)
   const [selectedMethodId, setSelectedMethodId] = useState(null)
@@ -249,7 +259,7 @@ export function TicketsPage() {
         ticketType: selectedType,
         paymentMethodId: selectedMethodId,
       })
-      setPurchaseSuccess('Ticket purchased! It may take a moment to activate.')
+      setPurchaseSuccess(t('ticket_purchased'))
       setSelectedType(null)
       await loadTickets()
     } catch (err) {
@@ -285,7 +295,7 @@ export function TicketsPage() {
     return (
       <div className="flex items-center gap-2 rounded-panel border border-border px-4 py-10 text-muted">
         <AlertCircle size={16} />
-        <span className="text-sm">Sign in to access your tickets and wallet.</span>
+        <span className="text-sm">{t('login_required')}</span>
       </div>
     )
   }
@@ -294,15 +304,15 @@ export function TicketsPage() {
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <div>
         <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
-          <Ticket size={18} />
-          Tickets
+          <Ticket size={18} aria-hidden="true" />
+          {t('title')}
         </h2>
         <p className="text-xs text-muted">{session?.email}</p>
       </div>
 
       {/* ── Buy a ticket ── */}
       <section className="rounded-panel border border-border p-4">
-        <h3 className="mb-3 text-sm font-semibold text-ink">Buy a Ticket</h3>
+        <h3 className="mb-3 text-sm font-semibold text-ink">{t('buy_title')}</h3>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {TICKET_TYPES.map((t) => (
@@ -325,10 +335,10 @@ export function TicketsPage() {
 
         {selectedType && (
           <div className="mt-4 flex flex-col gap-2">
-            <p className="text-xs font-semibold text-muted">Pay with</p>
+            <p className="text-xs font-semibold text-muted">{t('pay_with')}</p>
 
             {methodsLoading ? (
-              <p className="text-sm text-muted">Loading payment methods…</p>
+              <p className="text-sm text-muted">{t('loading_payment')}</p>
             ) : (
               <>
                 {methods.map((m) => (
@@ -348,7 +358,7 @@ export function TicketsPage() {
                     onClick={() => setShowAddCard((v) => !v)}
                     className="self-start text-xs text-accent underline-offset-2 hover:underline"
                   >
-                    {showAddCard ? 'Cancel' : '+ Add another card'}
+                    {showAddCard ? t('close') : t('add_card_link')}
                   </button>
                 )}
 
@@ -376,7 +386,7 @@ export function TicketsPage() {
                 disabled={purchasing || !selectedMethodId}
                 className="rounded-panel bg-accent px-5 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
               >
-                {purchasing ? 'Processing…' : `Buy — ${TICKET_TYPES.find((t) => t.type === selectedType)?.price}`}
+                {purchasing ? t('processing') : t('buy_btn', { price: TICKET_TYPES.find((tt) => tt.type === selectedType)?.price })}
               </button>
             </div>
           </div>
@@ -386,13 +396,13 @@ export function TicketsPage() {
       {/* ── My Tickets ── */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-ink">My Tickets</h3>
+          <h3 className="text-sm font-semibold text-ink">{t('my_tickets')}</h3>
           <button
             type="button"
             onClick={loadTickets}
             disabled={ticketsLoading}
             className="rounded-panel border border-border p-1.5 text-muted transition hover:bg-surface-alt hover:text-ink"
-            aria-label="Refresh tickets"
+            aria-label={t('refresh_tickets')}
           >
             <RefreshCw size={13} className={ticketsLoading ? 'animate-spin' : ''} />
           </button>
@@ -401,7 +411,7 @@ export function TicketsPage() {
         {ticketsError && <ErrorAlert error={ticketsError} />}
 
         {!ticketsLoading && tickets.length === 0 && !ticketsError && (
-          <p className="text-sm text-muted">No tickets yet. Buy your first ticket above.</p>
+          <p className="text-sm text-muted">{t('no_tickets')}</p>
         )}
 
         {tickets.map((t) => <TicketRow key={t.id} ticket={t} />)}
@@ -410,11 +420,11 @@ export function TicketsPage() {
       {/* ── Payment Methods ── */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-ink">Payment Methods</h3>
+          <h3 className="text-sm font-semibold text-ink">{t('payment_methods')}</h3>
         </div>
 
         {!methodsLoading && methods.length === 0 && !showAddCard && (
-          <p className="text-sm text-muted">No payment methods saved.</p>
+          <p className="text-sm text-muted">{t('no_payment_methods')}</p>
         )}
 
         {methods.map((m) => (
@@ -424,7 +434,7 @@ export function TicketsPage() {
             <span className="text-xs text-muted">{m.cardType}</span>
             {m.isDefault && (
               <span className="rounded bg-surface-alt px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-                Default
+                {t('default_label')}
               </span>
             )}
             <button
@@ -432,9 +442,9 @@ export function TicketsPage() {
               onClick={() => handleRemoveMethod(m.id)}
               disabled={removingId === m.id}
               className="rounded p-1 text-muted transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950/30"
-              aria-label="Remove card"
+              aria-label={t('remove_card')}
             >
-              <Trash2 size={13} />
+              <Trash2 size={13} aria-hidden="true" />
             </button>
           </div>
         ))}
@@ -445,7 +455,7 @@ export function TicketsPage() {
             onClick={() => setShowAddCard(true)}
             className="self-start text-xs text-accent underline-offset-2 hover:underline"
           >
-            + Add card
+            {t('add_card_btn')}
           </button>
         )}
 

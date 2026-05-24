@@ -1,5 +1,6 @@
 import { ArrowLeft, Loader2, MapPin, Route, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { TransitMap } from '../components/map/TransitMap'
 import { sarajevoCenter } from '../data/mockTransitData'
 import { useAppContext } from '../context/AppContext'
@@ -57,6 +58,7 @@ function headingFromPositions(previous, next) {
 }
 
 function PollingStatusBadge({ status, lastUpdatedAt, theme }) {
+  const { t } = useTranslation('routePlanner')
   const [now, setNow] = useState(Date.now())
 
   useEffect(() => {
@@ -72,14 +74,14 @@ function PollingStatusBadge({ status, lastUpdatedAt, theme }) {
 
   const fillColor = theme === 'dark' ? '#cbd5e1' : '#334155'
 
-  let text = 'Idle'
+  let text = t('status_idle')
 
   if (status === 'loading') {
-    text = 'Updating'
+    text = t('status_updating')
   } else if (status === 'ok') {
-    text = `Updated ${Math.floor(elapsedMs / 1000)}s`
+    text = t('status_updated', { seconds: Math.floor(elapsedMs / 1000) })
   } else if (status === 'error') {
-    text = 'Retrying'
+    text = t('status_retrying')
   }
 
   const fillDeg = status === 'error' ? 360 : progressDeg
@@ -101,6 +103,7 @@ function PollingStatusBadge({ status, lastUpdatedAt, theme }) {
 }
 
 export function RoutePlannerPage() {
+  const { t } = useTranslation('routePlanner')
   const { addTripHistoryItem, theme } = useAppContext()
   const [stops, setStops] = useState([])
   const [fromQuery, setFromQuery] = useState('')
@@ -378,13 +381,13 @@ export function RoutePlannerPage() {
               className="mb-3 inline-flex items-center gap-2 rounded-panel border border-border bg-surface-soft px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
             >
               <ArrowLeft size={14} />
-              Back to live map
+              {t('back_to_map')}
             </button>
 
             {loading ? (
               <div className="flex h-48 items-center justify-center gap-2 text-sm text-muted">
                 <Loader2 size={16} className="animate-spin" />
-                Finding routes...
+                {t('finding')}
               </div>
             ) : selectedDetailIndex !== null && results[selectedDetailIndex] ? (
               <div className="space-y-3">
@@ -397,10 +400,10 @@ export function RoutePlannerPage() {
                   className="inline-flex items-center gap-2 rounded-panel border border-border bg-surface-soft px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
                 >
                   <ArrowLeft size={14} />
-                  Back to routes
+                  {t('back_to_routes')}
                 </button>
 
-                <h3 className="text-base font-semibold text-ink">Route details</h3>
+                <h3 className="text-base font-semibold text-ink">{t('route_details')}</h3>
                 <div className="grid gap-2">
                   {results[selectedDetailIndex].legs?.map((leg, idx) => (
                     <button
@@ -423,16 +426,16 @@ export function RoutePlannerPage() {
                       <p className="mt-1 text-muted">
                         {leg.fromName} {'->'} {leg.toName}
                       </p>
-                      <p className="mt-1 text-xs text-muted">Distance: {Math.round(leg.distanceMeters)} m</p>
+                      <p className="mt-1 text-xs text-muted">{t('distance', { distance: Math.round(leg.distanceMeters) })}</p>
                     </button>
                   ))}
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
-                <h3 className="text-base font-semibold text-ink">Found routes</h3>
+                <h3 className="text-base font-semibold text-ink">{t('found_routes')}</h3>
                 {results.length === 0 ? (
-                  <p className="text-sm text-muted">No routes found yet.</p>
+                  <p className="text-sm text-muted">{t('no_routes')}</p>
                 ) : (
                   results.map((itinerary, index) => (
                     (() => {
@@ -465,10 +468,10 @@ export function RoutePlannerPage() {
                     >
                       <div className="flex flex-wrap gap-3 text-sm">
                         <span className="font-semibold text-ink">{formatDurationFromSeconds(itinerary.durationSeconds)}</span>
-                        <span className="text-muted">Transfers: {itinerary.transfers}</span>
+                        <span className="text-muted">{t('transfers', { count: itinerary.transfers })}</span>
                       </div>
                       <p className="mt-1 text-xs text-muted">
-                        Departure: {formatDepartureFromTimestamp(itinerary.legs?.[0]?.startTime)}
+                        {t('departure', { time: formatDepartureFromTimestamp(itinerary.legs?.[0]?.startTime) })}
                       </p>
                       <ol className="mt-2 space-y-1">
                         {itinerary.legs?.map((leg, legIndex) => (
@@ -540,13 +543,13 @@ export function RoutePlannerPage() {
           <div className="absolute left-1/2 top-0 z-[1000] w-[min(680px,94vw)] max-h-[72vh] -translate-x-1/2 -translate-y-1/2 overflow-visible rounded-[18px] border border-border bg-surface/95 p-3 shadow-xl backdrop-blur sm:p-4 md:max-h-none">
             <div className="mb-3 flex items-center gap-2 text-ink">
               <Route size={18} />
-              <h2 className="text-base font-semibold sm:text-lg">Plan your trip</h2>
+              <h2 className="text-base font-semibold sm:text-lg">{t('title')}</h2>
             </div>
 
             <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
               <div className="relative">
                 <label htmlFor="planner-from" className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                  From
+                  {t('from')}
                 </label>
                 <div className="mt-1 flex gap-2">
                   <input
@@ -556,13 +559,13 @@ export function RoutePlannerPage() {
                       setFromQuery(event.target.value)
                       setFromStop(null)
                     }}
-                    placeholder="Start stop"
+                    placeholder={t('from_placeholder')}
                     className="w-full rounded-panel border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setPickingMode(pickingMode === 'from' ? 'none' : 'from')}
-                    title="Pick from map"
+                    title={t('pick_from_map')}
                     className={`flex items-center justify-center rounded-panel border px-3 transition ${
                       pickingMode === 'from'
                         ? 'border-accent bg-accent text-white'
@@ -593,7 +596,7 @@ export function RoutePlannerPage() {
 
               <div className="relative">
                 <label htmlFor="planner-to" className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                  To
+                  {t('to')}
                 </label>
                 <div className="mt-1 flex gap-2">
                   <input
@@ -603,13 +606,13 @@ export function RoutePlannerPage() {
                       setToQuery(event.target.value)
                       setToStop(null)
                     }}
-                    placeholder="Destination stop"
+                    placeholder={t('to_placeholder')}
                     className="w-full rounded-panel border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setPickingMode(pickingMode === 'to' ? 'none' : 'to')}
-                    title="Pick from map"
+                    title={t('pick_from_map')}
                     className={`flex items-center justify-center rounded-panel border px-3 transition ${
                       pickingMode === 'to'
                         ? 'border-accent bg-accent text-white'
@@ -645,7 +648,7 @@ export function RoutePlannerPage() {
                 className="mt-2 inline-flex h-fit items-center justify-center gap-2 rounded-panel border border-accent bg-accent px-4 py-2 text-sm font-semibold text-white transition md:mt-6 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Search size={15} />
-                {loading ? 'Planning...' : 'Find route'}
+                {loading ? t('planning') : t('find_route')}
               </button>
             </div>
 

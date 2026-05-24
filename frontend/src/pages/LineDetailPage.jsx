@@ -1,6 +1,7 @@
 import { Heart, AlertCircle, Loader2, LogIn } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { LineDetailLayout } from '../components/lines/LineDetailLayout'
 import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
 import { EmptyState } from '../components/common/LoadingStates'
@@ -9,6 +10,7 @@ import { useAppContext } from '../context/AppContext'
 import { transitApi } from '../services/transitApi'
 
 export function LineDetailPage() {
+  const { t } = useTranslation('lines')
   const { id } = useParams()
   const navigate = useNavigate()
   const lineId = Number(id)
@@ -118,9 +120,9 @@ export function LineDetailPage() {
       setSubscribing(true)
       try {
         await unsubscribeFromLine(lineId)
-        setSubscriptionMsg({ type: 'success', text: 'Unsubscribed from notifications for this line.' })
+        setSubscriptionMsg({ type: 'success', text: t('unsubscribed_success') })
       } catch (err) {
-        setSubscriptionMsg({ type: 'error', text: err.message || 'Failed to unsubscribe.' })
+        setSubscriptionMsg({ type: 'error', text: err.message || t('unsubscribed_failed') })
       } finally {
         setSubscribing(false)
       }
@@ -150,7 +152,7 @@ export function LineDetailPage() {
           onDismiss={() => setError(null)}
         />
         <Link to="/lines" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline">
-          ← Back to lines
+          ← {t('back_to_lines')}
         </Link>
       </div>
     )
@@ -160,14 +162,14 @@ export function LineDetailPage() {
     return (
       <EmptyState
         icon={AlertCircle}
-        title="Line not found"
-        description="The line you're looking for doesn't exist or has been removed."
+        title={t('line_not_found')}
+        description={t('line_not_found_msg')}
         action={
           <Link
             to="/lines"
             className="inline-flex items-center gap-2 rounded-lg border border-accent bg-accent px-3 py-2 text-sm font-medium text-white transition hover:bg-accent/90"
           >
-            Back to lines
+            {t('back_to_lines')}
           </Link>
         }
       />
@@ -192,9 +194,9 @@ export function LineDetailPage() {
         polyline={polyline}
         detailLoading={loading}
         onBack={() => navigate('/lines')}
-        backLabel="Back to lines"
+        backLabel={t('back_to_lines')}
         onStopClick={handleStopClick}
-        subtitle="Direction-aware stop list and route preview."
+        subtitle={t('direction_hint')}
         directionAction={(
           <button
             type="button"
@@ -207,11 +209,11 @@ export function LineDetailPage() {
             }`}
           >
             {subscribing ? (
-              <Loader2 size={16} className="animate-spin" />
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
             ) : (
-              <Heart size={16} fill={subscribed ? 'currentColor' : 'none'} />
+              <Heart size={16} fill={subscribed ? 'currentColor' : 'none'} aria-hidden="true" />
             )}
-            {subscribing ? 'Unsubscribing...' : subscribed ? 'Subscribed' : 'Subscribe'}
+            {subscribing ? t('unsubscribing') : subscribed ? t('subscribed') : t('subscribe')}
           </button>
         )}
       />
@@ -233,11 +235,11 @@ export function LineDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2">
-              <LogIn size={18} className="text-accent" />
-              <h2 className="text-base font-semibold text-ink">Login required</h2>
+              <LogIn size={18} className="text-accent" aria-hidden="true" />
+              <h2 className="text-base font-semibold text-ink">{t('login_required')}</h2>
             </div>
             <p className="mb-5 mt-2 text-sm text-muted">
-              Please log in to subscribe to line notifications and receive updates.
+              {t('login_required_msg')}
             </p>
             <div className="flex gap-2">
               <button
@@ -245,14 +247,14 @@ export function LineDetailPage() {
                 onClick={() => navigate('/auth')}
                 className="flex-1 rounded-panel border border-accent bg-accent py-2 text-sm font-medium text-white"
               >
-                Go to Login
+                {t('go_to_login')}
               </button>
               <button
                 type="button"
                 onClick={() => setLoginPromptOpen(false)}
                 className="flex-1 rounded-panel border border-border py-2 text-sm font-medium text-ink hover:bg-surface-alt"
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </div>

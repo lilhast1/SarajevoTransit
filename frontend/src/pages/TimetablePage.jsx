@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { PanelCard } from '../components/common/PanelCard'
 import { transitApi } from '../services/transitApi'
 
-const dayTypes = [
-  { id: 'weekday', label: 'Weekday' },
-  { id: 'saturday', label: 'Saturday' },
-  { id: 'sunday', label: 'Sunday' },
-]
-
 export function TimetablePage() {
+  const { t } = useTranslation('timetable')
+  const dayTypes = [
+    { id: 'weekday', label: t('weekday') },
+    { id: 'saturday', label: t('saturday') },
+    { id: 'sunday', label: t('sunday') },
+  ]
   const [lines, setLines] = useState([])
   const [directions, setDirections] = useState([])
   const [lineId, setLineId] = useState('')
@@ -49,12 +50,12 @@ export function TimetablePage() {
   return (
     <div className="space-y-4">
       <PanelCard tone="soft">
-        <h2 className="text-xl font-semibold text-ink">Timetable</h2>
-        <p className="mt-1 text-sm text-muted">Select line, direction, and day type.</p>
+        <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
+        <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <label htmlFor="timetable-line" className="sr-only">
-            Select line
+            {t('select_line')}
           </label>
           <select
             id="timetable-line"
@@ -70,7 +71,7 @@ export function TimetablePage() {
           </select>
 
           <label htmlFor="timetable-direction" className="sr-only">
-            Select direction
+            {t('select_direction')}
           </label>
           <select
             id="timetable-direction"
@@ -86,7 +87,7 @@ export function TimetablePage() {
           </select>
 
           <label htmlFor="timetable-daytype" className="sr-only">
-            Select day type
+            {t('select_day')}
           </label>
           <select
             id="timetable-daytype"
@@ -104,10 +105,10 @@ export function TimetablePage() {
       </PanelCard>
 
       <PanelCard>
-        <h3 className="text-base font-semibold text-ink">Departure grid</h3>
+        <h3 className="text-base font-semibold text-ink">{t('departure_grid')}</h3>
 
         {groupedByHour.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No departures found for this selection.</p>
+          <p className="mt-3 text-sm text-muted">{t('no_departures')}</p>
         ) : (
           <div className="mt-3 grid gap-2">
             {groupedByHour.map(([hour, minutes]) => (

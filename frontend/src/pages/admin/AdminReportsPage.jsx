@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Image } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { DataTable } from '../../components/admin/DataTable'
 import { ErrorAlert } from '../../components/common/Alerts'
 import { gatewayClient } from '../../services/gatewayClient'
@@ -20,6 +21,7 @@ function trunc(str, n) {
 
 
 export function AdminReportsPage() {
+  const { t } = useTranslation('admin-reports')
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sortDir, setSortDir] = useState('desc')
@@ -74,7 +76,7 @@ export function AdminReportsPage() {
   }
 
   async function handleDelete(id) {
-    if (!window.confirm('Delete this report?')) return
+    if (!window.confirm(t('delete_confirm'))) return
     try {
       await gatewayClient.deleteReport(id)
       load()

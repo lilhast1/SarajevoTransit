@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAppContext } from '../../context/AppContext'
 
 export function SessionExpiryModal() {
   const { sessionModal, refreshSession, logout } = useAppContext()
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
 
@@ -22,19 +24,22 @@ export function SessionExpiryModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="session-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+    >
       <div className="w-full max-w-sm rounded-panel border border-border bg-surface p-6 shadow-xl">
         <div className="mb-1 flex items-center gap-2">
-          <span className="text-lg">🔒</span>
-          <h2 className="text-base font-semibold text-ink">
-            {sessionModal.refreshExpired ? 'Session Expired' : 'Session Expiring'}
+          <span className="text-lg" aria-hidden="true">🔒</span>
+          <h2 id="session-modal-title" className="text-base font-semibold text-ink">
+            {sessionModal.refreshExpired ? t('session_expired_title') : t('session_expiring_title')}
           </h2>
         </div>
 
         <p className="mb-5 mt-2 text-sm text-muted">
-          {sessionModal.refreshExpired
-            ? 'Your session has fully expired. Please log in again to continue.'
-            : 'Your session is about to expire. Extend it to stay logged in.'}
+          {sessionModal.refreshExpired ? t('session_expired_msg') : t('session_expiring_msg')}
         </p>
 
         <div className="flex flex-col gap-2">
@@ -45,7 +50,7 @@ export function SessionExpiryModal() {
               disabled={loading}
               className="w-full rounded-panel border border-accent bg-accent py-2 text-sm font-medium text-white disabled:opacity-60"
             >
-              {loading ? 'Extending…' : 'Extend Session'}
+              {loading ? t('extending') : t('extend_session')}
             </button>
           )}
           <button
@@ -57,7 +62,7 @@ export function SessionExpiryModal() {
                 : 'border-border text-muted hover:bg-surface-alt'
             }`}
           >
-            Login Again
+            {t('login_again')}
           </button>
         </div>
       </div>

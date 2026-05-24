@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { Loader2, AlertCircle, RefreshCw, Trash2, Pencil, Clock, CalendarDays } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { LineBadge } from '../components/common/LineBadge'
 import { PanelCard } from '../components/common/PanelCard'
 import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
 import { SubscriptionModal } from '../components/common/SubscriptionModal'
 import { useAppContext } from '../context/AppContext'
 import { transitApi } from '../services/transitApi'
-
-const DAY_LABELS = { MON: 'Mon', TUE: 'Tue', WED: 'Wed', THU: 'Thu', FRI: 'Fri', SAT: 'Sat', SUN: 'Sun' }
 
 function formatTime(time) {
   if (!time) return '--:--'
@@ -37,7 +36,13 @@ function formatDate(iso) {
 
 export function ProfilePage() {
   const { isAuthenticated, session, logout, refreshSubscriptions } = useAppContext()
+  const { t } = useTranslation('profile')
   const navigate = useNavigate()
+
+  const DAY_LABELS = {
+    MON: t('day_mon'), TUE: t('day_tue'), WED: t('day_wed'),
+    THU: t('day_thu'), FRI: t('day_fri'), SAT: t('day_sat'), SUN: t('day_sun'),
+  }
 
   const [subscriptions, setSubscriptions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -106,9 +111,9 @@ export function ProfilePage() {
       setEditTarget(null); 
       await fetchSubscriptions()
       refreshSubscriptions()
-      setMsg({ type: 'success', text: 'Subscription updated successfully.' })
+      setMsg({ type: 'success', text: t('sub_updated_ok') })
     } catch (err) {
-      setMsg({ type: 'error', text: err.message || 'Failed to update.' })
+      setMsg({ type: 'error', text: err.message || t('sub_update_failed') })
     } finally {
       setProcessing(false);
     }
@@ -125,9 +130,9 @@ export function ProfilePage() {
       }
       await fetchSubscriptions()
       refreshSubscriptions()
-      setMsg({ type: 'success', text: sub.isActive ? 'Subscription deactivated.' : 'Subscription reactivated.' })
+      setMsg({ type: 'success', text: sub.isActive ? t('sub_deactivated') : t('sub_reactivated') })
     } catch (err) {
-      setMsg({ type: 'error', text: err.message || 'Operation failed.' })
+      setMsg({ type: 'error', text: err.message || t('op_failed') })
     } finally {
       setProcessing(false)
     }
@@ -142,9 +147,9 @@ export function ProfilePage() {
       setDeleteTarget(null)
       await fetchSubscriptions()
       refreshSubscriptions()
-      setMsg({ type: 'success', text: 'Subscription deleted.' })
+      setMsg({ type: 'success', text: t('sub_deleted') })
     } catch (err) {
-      setMsg({ type: 'error', text: err.message || 'Failed to delete subscription.' })
+      setMsg({ type: 'error', text: err.message || t('sub_delete_failed') })
     } finally {
       setProcessing(false)
     }
@@ -171,14 +176,14 @@ export function ProfilePage() {
               onClick={() => navigate('/auth')}
               className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
             >
-              Account
+              {t('account')}
             </button>
             <button
               type="button"
               onClick={logout}
               className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
             >
-              Logout
+              {t('logout')}
             </button>
           </div>
         </div>
@@ -187,13 +192,13 @@ export function ProfilePage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <PanelCard tone="default">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-ink">Subscriptions</h3>
+            <h3 className="text-base font-semibold text-ink">{t('subscriptions')}</h3>
             <button
               type="button"
               onClick={fetchSubscriptions}
               disabled={loading}
               className="rounded-lg border border-border p-1.5 text-muted transition hover:bg-surface-alt hover:text-ink disabled:opacity-50"
-              aria-label="Refresh subscriptions"
+              aria-label={t('refresh_subs')}
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             </button>
@@ -202,24 +207,24 @@ export function ProfilePage() {
           <div className="mt-3 space-y-3 text-sm">
             {loading && subscriptions.length === 0 ? (
               <div className="flex items-center justify-center gap-2 py-8 text-muted">
-                <Loader2 size={16} className="animate-spin" />
-                Loading subscriptions...
+                <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                {t('loading_subs')}
               </div>
             ) : error ? (
               <div className="flex flex-col items-center gap-3 py-6">
-                <AlertCircle size={24} className="text-red-500" />
+                <AlertCircle size={24} className="text-red-500" aria-hidden="true" />
                 <p className="text-sm text-muted">{error}</p>
                 <button
                   type="button"
                   onClick={fetchSubscriptions}
                   className="inline-flex items-center gap-2 rounded-lg border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-white"
                 >
-                  <RefreshCw size={12} />
-                  Retry
+                  <RefreshCw size={12} aria-hidden="true" />
+                  {t('retry')}
                 </button>
               </div>
             ) : subscriptions.length === 0 ? (
-              <p className="py-4 text-center text-muted">No subscriptions yet. Browse lines and subscribe to receive notifications.</p>
+              <p className="py-4 text-center text-muted">{t('no_subs')}</p>
             ) : (
               <div className="space-y-2">
                 {subscriptions.map((sub) => (
@@ -236,9 +241,9 @@ export function ProfilePage() {
                         <div className="flex items-center gap-2">
                           <LineBadge line={{ code: sub.lineCode || String(sub.lineId), vehicleTypeName: 'bus', name: sub.lineName || `Line ${sub.lineId}` }} />
                           {sub.isActive ? (
-                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400">Active</span>
+                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400">{t('active')}</span>
                           ) : (
-                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-400">Inactive</span>
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-400">{t('inactive')}</span>
                           )}
                         </div>
                         <p className="mt-1.5 font-semibold text-ink">{sub.lineName || `Line ${sub.lineId}`}</p>
@@ -254,7 +259,7 @@ export function ProfilePage() {
                           </span>
                         </div>
 
-                        <p className="mt-1 text-[11px] text-muted">Created {formatDate(sub.createdAt)}</p>
+                        <p className="mt-1 text-[11px] text-muted">{t('created', { date: formatDate(sub.createdAt) })}</p>
                       </div>
 
                       <div className="flex flex-col gap-1">
@@ -262,32 +267,32 @@ export function ProfilePage() {
                           type="button"
                           onClick={() => setEditTarget(sub)}
                           className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-ink transition hover:bg-surface-alt"
-                          aria-label="Edit subscription"
+                          aria-label={t('edit_sub')}
                         >
-                          <Pencil size={12} />
-                          <span className="text-ink">Edit</span>
+                          <Pencil size={12} aria-hidden="true" />
+                          <span className="text-ink">{t('edit')}</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => handleToggleActive(sub)}
                           disabled={processing}
                           className="rounded-md border border-border px-2 py-1 text-xs font-medium text-ink transition hover:bg-surface-alt disabled:opacity-50"
-                          aria-label={sub.isActive ? 'Deactivate' : 'Activate'}
+                          aria-label={sub.isActive ? t('deactivate') : t('activate')}
                         >
                           {sub.isActive ? (
-                            <span className="text-gray-500">Deactivate</span>
+                            <span className="text-gray-500">{t('deactivate')}</span>
                           ) : (
-                            <span className="text-green-600">Activate</span>
+                            <span className="text-green-600">{t('activate')}</span>
                           )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(sub)}
                           className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-red-600 transition hover:bg-surface-alt"
-                          aria-label="Delete subscription"
+                          aria-label={t('delete_sub')}
                         >
-                          <Trash2 size={12} />
-                          <span className="text-red-600">Delete</span>
+                          <Trash2 size={12} aria-hidden="true" />
+                          <span className="text-red-600">{t('delete')}</span>
                         </button>
                       </div>
                     </div>
@@ -299,9 +304,9 @@ export function ProfilePage() {
         </PanelCard>
 
         <PanelCard tone="default">
-          <h3 className="text-base font-semibold text-ink">Trip history</h3>
+          <h3 className="text-base font-semibold text-ink">{t('trip_history')}</h3>
           <div className="mt-3 space-y-2 text-sm">
-            <p className="text-muted">No trips yet. Plan a route to populate history.</p>
+            <p className="text-muted">{t('no_trips')}</p>
           </div>
         </PanelCard>
       </div>
@@ -325,11 +330,11 @@ export function ProfilePage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2">
-              <Trash2 size={18} className="text-red-500" />
-              <h2 className="text-base font-semibold text-ink">Delete subscription</h2>
+              <Trash2 size={18} className="text-red-500" aria-hidden="true" />
+              <h2 className="text-base font-semibold text-ink">{t('delete_sub')}</h2>
             </div>
             <p className="mb-5 mt-2 text-sm text-muted">
-              Are you sure you want to permanently delete the subscription for <span className="font-medium text-ink">{deleteTarget.lineName || `Line ${deleteTarget.lineId}`}</span>? This action cannot be undone.
+              {t('delete_confirm', { line: deleteTarget.lineName || `Line ${deleteTarget.lineId}` })}
             </p>
             <div className="flex gap-2">
               <button
@@ -340,10 +345,10 @@ export function ProfilePage() {
               >
                 {processing ? (
                   <span className="inline-flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin" />
-                    Deleting...
+                    <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                    {t('deleting')}
                   </span>
-                ) : 'Delete'}
+                ) : t('delete')}
               </button>
               <button
                 type="button"
@@ -351,7 +356,7 @@ export function ProfilePage() {
                 disabled={processing}
                 className="flex-1 rounded-panel border border-border py-2 text-sm font-medium text-ink hover:bg-surface-alt disabled:opacity-50"
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </div>
@@ -360,33 +365,33 @@ export function ProfilePage() {
 
       <PanelCard tone="default">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-ink">Wallet</h3>
+          <h3 className="text-base font-semibold text-ink">{t('wallet')}</h3>
           <Link to="/tickets" className="text-xs text-accent underline-offset-2 hover:underline">
-            View all tickets →
+            {t('view_all_tickets')}
           </Link>
         </div>
 
         {ticketsLoading ? (
-          <p className="mt-3 text-sm text-muted">Loading…</p>
+          <p className="mt-3 text-sm text-muted">{t('loading')}</p>
         ) : recentTickets.length === 0 ? (
           <p className="mt-3 text-sm text-muted">
-            No tickets yet.{' '}
+            {t('no_tickets')}{' '}
             <Link to="/tickets" className="text-accent underline-offset-2 hover:underline">
-              Buy your first ticket
+              {t('buy_first_ticket')}
             </Link>
           </p>
         ) : (
           <div className="mt-3 space-y-2">
-            {recentTickets.map((t) => (
-              <div key={t.id} className="flex items-center justify-between rounded-lg border border-border bg-surface-soft px-3 py-2 text-sm">
+            {recentTickets.map((ticket) => (
+              <div key={ticket.id} className="flex items-center justify-between rounded-lg border border-border bg-surface-soft px-3 py-2 text-sm">
                 <div>
-                  <span className="font-medium text-ink capitalize">{t.type?.toLowerCase()}</span>
-                  {t.validUntil && (
-                    <span className="ml-2 text-xs text-muted">valid until {formatDate(t.validUntil)}</span>
+                  <span className="font-medium text-ink capitalize">{ticket.type?.toLowerCase()}</span>
+                  {ticket.validUntil && (
+                    <span className="ml-2 text-xs text-muted">{t('valid_until', { date: formatDate(ticket.validUntil) })}</span>
                   )}
                 </div>
-                <span className={`rounded px-2 py-0.5 text-xs font-semibold ${TICKET_STATUS_STYLES[t.status] || ''}`}>
-                  {t.status}
+                <span className={`rounded px-2 py-0.5 text-xs font-semibold ${TICKET_STATUS_STYLES[ticket.status] || ''}`}>
+                  {ticket.status}
                 </span>
               </div>
             ))}

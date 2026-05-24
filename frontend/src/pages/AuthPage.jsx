@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { PanelCard } from '../components/common/PanelCard'
 import { useAppContext } from '../context/AppContext'
 import { transitApi } from '../services/transitApi'
@@ -17,6 +18,7 @@ function validateEmail(email) {
 
 export function AuthPage() {
   const { isAuthenticated, login } = useAppContext()
+  const { t } = useTranslation('auth')
   const [mode, setMode] = useState('login')
   const [form, setForm] = useState(initialState)
   const [error, setError] = useState('')
@@ -36,7 +38,7 @@ export function AuthPage() {
 
     try {
       if (!validateEmail(form.email)) {
-        setError('Please enter a valid email address')
+        setError(t('invalid_email'))
         return
       }
       const payload =
@@ -49,7 +51,7 @@ export function AuthPage() {
             })
       login(payload)
     } catch (submitError) {
-      setError(submitError.message || 'Authentication failed')
+      setError(submitError.message || t('auth_failed'))
     } finally {
       setLoading(false)
     }
@@ -58,38 +60,42 @@ export function AuthPage() {
   return (
     <div className="mx-auto max-w-xl space-y-4">
       <PanelCard tone="soft">
-        <h2 className="text-xl font-semibold text-ink">Login / Register</h2>
-        <p className="mt-1 text-sm text-muted">
-          Optional authentication. App remains fully available in guest mode.
-        </p>
+        <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
+        <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
 
         <div className="mt-4 inline-flex rounded-lg border border-border bg-surface-soft p-1">
-          {['login', 'register'].map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setMode(option)}
-              className={`rounded-md px-3 py-1 text-sm font-medium transition ${
-                mode === option ? 'bg-accent text-white' : 'text-muted hover:text-ink'
-              }`}
-            >
-              {option[0].toUpperCase() + option.slice(1)}
-            </button>
-          ))}
+          <button
+            type="button"
+            onClick={() => setMode('login')}
+            className={`rounded-md px-3 py-1 text-sm font-medium transition ${
+              mode === 'login' ? 'bg-accent text-white' : 'text-muted hover:text-ink'
+            }`}
+          >
+            {t('login_tab')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('register')}
+            className={`rounded-md px-3 py-1 text-sm font-medium transition ${
+              mode === 'register' ? 'bg-accent text-white' : 'text-muted hover:text-ink'
+            }`}
+          >
+            {t('register_tab')}
+          </button>
         </div>
 
         <form onSubmit={onSubmit} className="mt-4 space-y-3">
           {mode === 'register' ? (
             <div>
               <label htmlFor="auth-full-name" className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-muted">
-                Full name
+                {t('full_name')}
               </label>
               <input
                 id="auth-full-name"
                 name="fullName"
                 value={form.fullName}
                 onChange={onChange}
-                placeholder="Full name"
+                placeholder={t('full_name_placeholder')}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
                 required
               />
@@ -98,7 +104,7 @@ export function AuthPage() {
 
           <div>
             <label htmlFor="auth-email" className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-muted">
-              Email
+              {t('email')}
             </label>
             <input
               id="auth-email"
@@ -106,7 +112,7 @@ export function AuthPage() {
               type="email"
               value={form.email}
               onChange={onChange}
-              placeholder="Email"
+              placeholder={t('email_placeholder')}
               className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
               required
             />
@@ -114,7 +120,7 @@ export function AuthPage() {
 
           <div>
             <label htmlFor="auth-password" className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-muted">
-              Password
+              {t('password')}
             </label>
             <input
               id="auth-password"
@@ -122,20 +128,20 @@ export function AuthPage() {
               type="password"
               value={form.password}
               onChange={onChange}
-              placeholder="Password"
+              placeholder={t('password_placeholder')}
               className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
               required
             />
           </div>
 
-          {error ? <p className="text-sm text-accent">{error}</p> : null}
+          {error ? <p role="alert" className="text-sm text-accent">{error}</p> : null}
 
           <button
             type="submit"
             disabled={loading}
             className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition disabled:opacity-70"
           >
-            {loading ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create account'}
+            {loading ? t('please_wait') : mode === 'login' ? t('login_button') : t('register_button')}
           </button>
         </form>
       </PanelCard>

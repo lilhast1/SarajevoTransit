@@ -1,0 +1,12 @@
+{
+  "title": "Red vožnje",
+  "subtitle": "Odaberite liniju, smer i tip dana.",
+  "select_line": "Odaberite liniju",
+  "select_direction": "Odaberite smer",
+  "select_day": "Odaberite tip dana",
+  "weekday": "Radni dan",
+  "saturday": "Subota",
+  "sunday": "Nedelja",
+  "departure_grid": "Pregled polazaka",
+  "no_departures": "Nema polazaka za odabrani kriterijum."
+}

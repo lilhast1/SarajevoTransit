@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { gatewayClient } from '../services/gatewayClient'
 import { useAppContext } from '../context/AppContext'
 import { SearchableSelect } from '../components/common/SearchableSelect'
@@ -8,21 +9,22 @@ import { VEHICLE_TYPE_META_BY_ID } from '../constants/vehicleColors'
 
 const VEHICLE_TYPES = Object.values(VEHICLE_TYPE_META_BY_ID)
 
-const CATEGORIES = [
-  { value: 'BREAKDOWN', label: 'Breakdown' },
-  { value: 'CROWDING', label: 'Crowding' },
-  { value: 'HYGIENE', label: 'Hygiene' },
-  { value: 'AGGRESSIVE_BEHAVIOR', label: 'Aggressive Behavior' },
-  { value: 'DELAY', label: 'Delay' },
-  { value: 'OTHER', label: 'Other' },
-]
-
 const INPUT_CLS = 'w-full rounded-panel border border-border bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none'
 const LABEL_CLS = 'block text-sm text-muted'
 
 export function ReportProblemPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation('report')
   const { session } = useAppContext()
+
+  const CATEGORIES = [
+    { value: 'BREAKDOWN', label: t('cat_breakdown') },
+    { value: 'CROWDING', label: t('cat_crowding') },
+    { value: 'HYGIENE', label: t('cat_hygiene') },
+    { value: 'AGGRESSIVE_BEHAVIOR', label: t('cat_aggressive') },
+    { value: 'DELAY', label: t('cat_delay') },
+    { value: 'OTHER', label: t('cat_other') },
+  ]
 
   const [vehicleTypeId, setVehicleTypeId] = useState(null)
   const [lines, setLines] = useState([])
@@ -87,7 +89,7 @@ export function ReportProblemPage() {
     setError(null)
 
     if (!session?.userId) {
-      setError('You must be logged in to submit a report.')
+      setError(t('login_required'))
       return
     }
 
@@ -112,12 +114,12 @@ export function ReportProblemPage() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-lg font-semibold text-ink">Report Problem</h2>
-      <p className="mt-1 text-sm text-muted">Report a breakdown, crowding, or other unusual situation.</p>
+      <h2 className="text-lg font-semibold text-ink">{t('title')}</h2>
+      <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
 
       <form className="mt-4 grid gap-4" onSubmit={handleSubmit}>
         <label className="block">
-          <span className={LABEL_CLS}>Category</span>
+          <span className={LABEL_CLS}>{t('category')}</span>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
@@ -130,7 +132,7 @@ export function ReportProblemPage() {
         </label>
 
         <label className="block">
-          <span className={LABEL_CLS}>Description</span>
+          <span className={LABEL_CLS}>{t('description')}</span>
           <textarea
             required
             value={description}
@@ -142,7 +144,7 @@ export function ReportProblemPage() {
         </label>
 
         <div>
-          <span className={LABEL_CLS}>Vehicle type (optional)</span>
+          <span className={LABEL_CLS}>{t('vehicle_type')}</span>
           <div className="mt-1 flex flex-wrap gap-1.5">
             <button
               type="button"
@@ -153,7 +155,7 @@ export function ReportProblemPage() {
                   : 'border-border text-muted hover:bg-surface-alt'
               }`}
             >
-              All
+              {t('all')}
             </button>
             {VEHICLE_TYPES.map((vt) => (
               <button
@@ -174,7 +176,7 @@ export function ReportProblemPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <span className={LABEL_CLS}>Line (optional)</span>
+            <span className={LABEL_CLS}>{t('line')}</span>
             <div className="mt-1">
               <SearchableSelect
                 value={selectedLine}
@@ -182,14 +184,14 @@ export function ReportProblemPage() {
                 options={lines}
                 getLabel={(l) => `${l.code} – ${l.name}`}
                 getValue={(l) => l.id}
-                placeholder="Select line…"
+                placeholder={t('select_line')}
               />
             </div>
           </div>
 
           <div>
             <span className={LABEL_CLS}>
-              Station (optional){selectedLine ? ` — ${lineStations.length} stops` : ''}
+              {t('station')}{selectedLine ? ` ${t('stops_count', { count: lineStations.length })}` : ''}
             </span>
             <div className="mt-1">
               {selectedLine ? (
@@ -199,7 +201,7 @@ export function ReportProblemPage() {
                   options={lineStations}
                   getLabel={(s) => s.name}
                   getValue={(s) => s.id}
-                  placeholder="Select stop…"
+                  placeholder={t('select_stop')}
                 />
               ) : (
                 <SearchableSelect
@@ -208,7 +210,7 @@ export function ReportProblemPage() {
                   loadOptions={loadStations}
                   getLabel={(s) => s.name}
                   getValue={(s) => s.id}
-                  placeholder="Search station…"
+                  placeholder={t('search_station')}
                 />
               )}
             </div>
@@ -216,17 +218,17 @@ export function ReportProblemPage() {
         </div>
 
         <label className="block">
-          <span className={LABEL_CLS}>Vehicle Registration (optional)</span>
+          <span className={LABEL_CLS}>{t('vehicle_reg')}</span>
           <input
             value={vehicleReg}
             onChange={(e) => setVehicleReg(e.target.value)}
             className={`mt-1 ${INPUT_CLS}`}
-            placeholder="e.g. A12-E-345"
+            placeholder={t('vehicle_reg_placeholder')}
           />
         </label>
 
         <div>
-          <span className={LABEL_CLS}>Photos (optional)</span>
+          <span className={LABEL_CLS}>{t('photos')}</span>
           <div className="mt-1">
             <PhotoUpload photos={photos} onChange={setPhotos} />
           </div>
@@ -240,14 +242,14 @@ export function ReportProblemPage() {
             disabled={submitting}
             className="rounded-panel border border-accent bg-accent px-4 py-2 text-sm text-white disabled:opacity-60"
           >
-            {submitting ? 'Submitting…' : 'Submit Report'}
+            {submitting ? t('submitting') : t('submit')}
           </button>
           <button
             type="button"
             onClick={() => navigate(-1)}
             className="rounded-panel border border-border bg-surface px-4 py-2 text-sm text-ink hover:bg-surface-alt"
           >
-            Cancel
+            {t('cancel')}
           </button>
         </div>
       </form>

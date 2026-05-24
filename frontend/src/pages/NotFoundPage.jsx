@@ -1,13 +1,15 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { PanelCard } from '../components/common/PanelCard'
 
 export function NotFoundPage() {
+  const { t } = useTranslation('notFound')
   return (
     <PanelCard>
-      <h2 className="text-xl font-semibold text-ink">Page not found</h2>
-      <p className="mt-2 text-sm text-muted">The route you requested does not exist.</p>
+      <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
+      <p className="mt-2 text-sm text-muted">{t('subtitle')}</p>
       <Link to="/" className="mt-3 inline-block text-sm font-medium text-accent">
-        Go back home
+        {t('home')}
       </Link>
     </PanelCard>
   )

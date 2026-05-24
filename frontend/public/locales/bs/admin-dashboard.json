@@ -1,0 +1,15 @@
+{
+  "title": "Admin panel",
+  "open_reports": "Otvorene prijave",
+  "in_progress": "U toku",
+  "total_users": "Ukupno korisnika",
+  "management": "Sekcije upravljanja",
+  "reports": "Prijave problema",
+  "reviews": "Moderacija recenzija",
+  "lines": "Linije",
+  "stations": "Stanice",
+  "timetables": "Vozni red",
+  "users": "Korisnici",
+  "notifications": "Obavijesti",
+  "subtitle": "Pregled stanja sistema i brzi pristup sekcijama upravljanja."
+}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, BellDot, CheckCheck, ExternalLink, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useAppContext } from '../../context/AppContext'
 
 const TYPE_COLORS = {
@@ -12,17 +13,17 @@ const TYPE_COLORS = {
   TIMETABLE_CHANGE: 'bg-purple-500',
 }
 
-function timeAgo(dateStr) {
+function timeAgo(dateStr, t) {
   if (!dateStr) return ''
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
+  if (mins < 1) return t('just_now')
+  if (mins < 60) return t('minutes_ago', { count: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return t('hours_ago', { count: hours })
   const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  if (days < 30) return t('days_ago', { count: days })
+  return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
 export function NotificationBell() {
@@ -30,6 +31,7 @@ export function NotificationBell() {
     isAuthenticated, unreadCount, recentNotifications,
     fetchRecentNotifications, markAsRead, markAllAsRead, requestNotificationPermission,
   } = useAppContext()
+  const { t } = useTranslation('notifications')
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -55,6 +57,14 @@ export function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === 'Escape' && open) setOpen(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [open])
+
   async function toggleNotifications() {
     const result = await requestNotificationPermission()
     setNotifEnabled(result === 'granted')
@@ -68,11 +78,17 @@ export function NotificationBell() {
         type="button"
         onClick={handleToggle}
         className="relative rounded-panel border border-border p-2 text-muted transition hover:bg-surface-alt hover:text-ink"
-        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+        aria-label={unreadCount > 0 ? `${t('bell_title')} (${unreadCount})` : t('bell_title')}
+        aria-expanded={open}
+        aria-haspopup="true"
       >
-        {unreadCount > 0 ? <BellDot size={17} /> : <Bell size={17} />}
+        {unreadCount > 0 ? <BellDot size={17} aria-hidden="true" /> : <Bell size={17} aria-hidden="true" />}
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+          <span
+            aria-live="polite"
+            aria-atomic="true"
+            className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white"
+          >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -81,7 +97,7 @@ export function NotificationBell() {
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-panel border border-border bg-surface shadow-xl">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h3 className="text-sm font-semibold text-ink">Notifications</h3>
+            <h3 className="text-sm font-semibold text-ink">{t('bell_title')}</h3>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
@@ -89,8 +105,8 @@ export function NotificationBell() {
                   onClick={markAllAsRead}
                   className="inline-flex items-center gap-1 text-xs text-muted hover:text-ink"
                 >
-                  <CheckCheck size={13} />
-                  Mark all read
+                  <CheckCheck size={13} aria-hidden="true" />
+                  {t('mark_all')}
                 </button>
               )}
             </div>
@@ -99,26 +115,26 @@ export function NotificationBell() {
           <div className="max-h-80 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8 text-muted">
-                <Loader2 size={16} className="animate-spin" />
+                <Loader2 size={16} className="animate-spin" aria-hidden="true" />
               </div>
             ) : recentNotifications.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted">No new notifications.</p>
+              <p className="py-8 text-center text-sm text-muted">{t('no_new')}</p>
             ) : (
               <div className="divide-y divide-border">
                 {recentNotifications.slice(0, 8).map((n) => (
                   <button
                     key={n.id}
                     type="button"
-                    onClick={() => { markAsRead(n.id); setOpen(false); navigate(`/notifications`) }}
+                    onClick={() => { markAsRead(n.id); setOpen(false); navigate('/notifications') }}
                     className="flex w-full gap-3 px-4 py-3 text-left transition hover:bg-surface-alt"
                   >
-                    <span className={`mt-1 h-2 w-2 flex-shrink-0 rounded-full ${TYPE_COLORS[n.type] || 'bg-gray-400'}`} />
+                    <span className={`mt-1 h-2 w-2 flex-shrink-0 rounded-full ${TYPE_COLORS[n.type] || 'bg-gray-400'}`} aria-hidden="true" />
                     <div className="min-w-0 flex-1">
                       <p className={`truncate text-sm ${n.isRead ? 'text-muted' : 'font-semibold text-ink'}`}>
                         {n.title}
                       </p>
                       <p className="mt-0.5 line-clamp-2 text-xs text-muted">{n.content}</p>
-                      <p className="mt-1 text-[11px] text-muted">{timeAgo(n.sentAt)}</p>
+                      <p className="mt-1 text-[11px] text-muted">{timeAgo(n.sentAt, t)}</p>
                     </div>
                   </button>
                 ))}
@@ -132,15 +148,15 @@ export function NotificationBell() {
               onClick={toggleNotifications}
               className={`text-xs ${notifEnabled ? 'text-green-600' : 'text-muted'} hover:text-ink`}
             >
-              {notifEnabled ? 'Desktop on' : 'Enable desktop'}
+              {notifEnabled ? t('desktop_on') : t('enable_desktop')}
             </button>
             <button
               type="button"
               onClick={() => { setOpen(false); navigate('/notifications') }}
               className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
             >
-              View all
-              <ExternalLink size={11} />
+              {t('view_all')}
+              <ExternalLink size={11} aria-hidden="true" />
             </button>
           </div>
         </div>

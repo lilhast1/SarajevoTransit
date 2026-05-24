@@ -2,11 +2,23 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback } 
 import { saveAuthSession, getAuthSession, clearAuthSession, enrichSessionWithMetadata, secondsUntilExpiry } from '../utils/authStorage'
 import { gatewayClient } from '../services/gatewayClient'
 import { transitApi } from '../services/transitApi'
+import i18n from '../i18n'
 
 const STORAGE_KEYS = {
   theme: 'sarajevo-transit-theme',
   favorites: 'sarajevo-transit-favorites',
   history: 'sarajevo-transit-history',
+  language: 'sarajevo-transit-language',
+  textSize: 'sarajevo-transit-text-size',
+  highContrast: 'sarajevo-transit-high-contrast',
+}
+
+const SUPPORTED_LANGUAGES = ['en', 'bs', 'sr', 'hr']
+
+function getInitialLanguage() {
+  const stored = window.localStorage.getItem(STORAGE_KEYS.language)
+  if (SUPPORTED_LANGUAGES.includes(stored)) return stored
+  return 'en'
 }
 
 const AppContext = createContext(null)
@@ -29,6 +41,9 @@ function readStorage(key, fallback) {
 
 export function AppProvider({ children }) {
   const [theme, setTheme] = useState(getInitialTheme)
+  const [language, setLanguageState] = useState(getInitialLanguage)
+  const [textSize, setTextSize] = useState(() => window.localStorage.getItem(STORAGE_KEYS.textSize) || 'normal')
+  const [highContrast, setHighContrast] = useState(() => window.localStorage.getItem(STORAGE_KEYS.highContrast) === 'true')
   const [session, setSession] = useState(() => getAuthSession())
   const [favorites, setFavorites] = useState(() => readStorage(STORAGE_KEYS.favorites, { lines: [], stops: [] }))
   const [tripHistory, setTripHistory] = useState(() => readStorage(STORAGE_KEYS.history, []))
@@ -42,6 +57,22 @@ export function AppProvider({ children }) {
     document.documentElement.classList.toggle('dark', theme === 'dark')
     window.localStorage.setItem(STORAGE_KEYS.theme, theme)
   }, [theme])
+
+  useEffect(() => {
+    document.documentElement.lang = language
+    window.localStorage.setItem(STORAGE_KEYS.language, language)
+    i18n.changeLanguage(language)
+  }, [language])
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = textSize === 'large' ? '112%' : ''
+    window.localStorage.setItem(STORAGE_KEYS.textSize, textSize)
+  }, [textSize])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('high-contrast', highContrast)
+    window.localStorage.setItem(STORAGE_KEYS.highContrast, String(highContrast))
+  }, [highContrast])
 
   useEffect(() => {
     if (session) {
@@ -160,6 +191,12 @@ export function AppProvider({ children }) {
       theme,
       setTheme,
       toggleTheme: () => setTheme((current) => (current === 'dark' ? 'light' : 'dark')),
+      language,
+      setLanguage: (lang) => { if (SUPPORTED_LANGUAGES.includes(lang)) setLanguageState(lang) },
+      textSize,
+      toggleTextSize: () => setTextSize((s) => (s === 'normal' ? 'large' : 'normal')),
+      highContrast,
+      toggleHighContrast: () => setHighContrast((v) => !v),
       session,
       isAuthenticated: Boolean(session?.accessToken),
       isAdmin: session?.role === 'ADMIN',
@@ -246,7 +283,7 @@ export function AppProvider({ children }) {
       tripHistory,
       addTripHistoryItem: (item) => setTripHistory((current) => [item, ...current].slice(0, 30)),
     }),
-    [favorites, session, sessionModal, refreshSession, theme, tripHistory, subscribedLines, subscriptionsRefreshKey, unreadCount, recentNotifications],
+    [favorites, session, sessionModal, refreshSession, theme, language, textSize, highContrast, tripHistory, subscribedLines, subscriptionsRefreshKey, unreadCount, recentNotifications],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

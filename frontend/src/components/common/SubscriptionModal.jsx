@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Heart, X, Loader2, CheckCircle, AlertCircle, Pencil } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
-const DAY_LABELS = { MON: 'Mon', TUE: 'Tue', WED: 'Wed', THU: 'Thu', FRI: 'Fri', SAT: 'Sat', SUN: 'Sun' }
 
 export function SubscriptionModal({ isOpen, onClose, onSubmit, lineName, mode = 'create', initialValues }) {
+  const { t } = useTranslation('lines')
   const [startInterval, setStartInterval] = useState('00:00')
   const [endInterval, setEndInterval] = useState('23:59')
   const [daysOfWeek, setDaysOfWeek] = useState(() => new Set(DAYS))
@@ -13,14 +14,17 @@ export function SubscriptionModal({ isOpen, onClose, onSubmit, lineName, mode = 
 
   const isEdit = mode === 'edit'
 
+  const DAY_LABELS = {
+    MON: t('days_mon'), TUE: t('days_tue'), WED: t('days_wed'),
+    THU: t('days_thu'), FRI: t('days_fri'), SAT: t('days_sat'), SUN: t('days_sun'),
+  }
+
   useEffect(() => {
     if (!isOpen) return
     if (isEdit && initialValues) {
       setStartInterval(initialValues.startInterval || '00:00')
       setEndInterval(initialValues.endInterval || '23:59')
-      setDaysOfWeek(new Set(
-        (initialValues.daysOfWeek || '').split(',').filter(Boolean),
-      ))
+      setDaysOfWeek(new Set((initialValues.daysOfWeek || '').split(',').filter(Boolean)))
     } else {
       setStartInterval('00:00')
       setEndInterval('23:59')
@@ -64,20 +68,22 @@ export function SubscriptionModal({ isOpen, onClose, onSubmit, lineName, mode = 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={handleClose}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={handleClose}
+    >
       <div className="w-full max-w-sm rounded-panel border border-border bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         {result === 'success' ? (
           <>
             <div className="flex flex-col items-center gap-3 py-4">
-              <CheckCircle size={40} className="text-green-500" />
+              <CheckCircle size={40} className="text-green-500" aria-hidden="true" />
               <h2 className="text-base font-semibold text-ink">
-                {isEdit ? 'Updated!' : 'Subscribed!'}
+                {isEdit ? t('sub_updated') : t('sub_subscribed')}
               </h2>
               <p className="text-center text-sm text-muted">
-                {isEdit
-                  ? 'Your notification preferences have been saved.'
-                  : `You will now receive notifications for ${lineName}.`
-                }
+                {isEdit ? t('sub_preferences_saved') : t('sub_will_receive', { line: lineName })}
               </p>
             </div>
             <button
@@ -85,21 +91,21 @@ export function SubscriptionModal({ isOpen, onClose, onSubmit, lineName, mode = 
               onClick={handleClose}
               className="mt-4 w-full rounded-panel border border-accent bg-accent py-2 text-sm font-medium text-white"
             >
-              Done
+              {t('sub_done')}
             </button>
           </>
         ) : result && result.type === 'error' ? (
           <>
             <div className="flex items-start gap-3">
-              <AlertCircle size={20} className="mt-0.5 flex-shrink-0 text-red-500" />
+              <AlertCircle size={20} className="mt-0.5 flex-shrink-0 text-red-500" aria-hidden="true" />
               <div className="flex-1">
                 <h2 className="text-base font-semibold text-ink">
-                  {isEdit ? 'Update failed' : 'Subscription failed'}
+                  {isEdit ? t('sub_update_failed') : t('sub_subscribe_failed')}
                 </h2>
                 <p className="mt-1 text-sm text-muted">{result.message}</p>
               </div>
-              <button type="button" onClick={handleClose} className="text-muted hover:text-ink">
-                <X size={16} />
+              <button type="button" onClick={handleClose} className="text-muted hover:text-ink" aria-label={t('sub_cancel')}>
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
             <div className="mt-4 flex gap-2">
@@ -108,14 +114,14 @@ export function SubscriptionModal({ isOpen, onClose, onSubmit, lineName, mode = 
                 onClick={handleSubmit}
                 className="flex-1 rounded-panel border border-accent bg-accent py-2 text-sm font-medium text-white"
               >
-                Retry
+                {t('sub_retry')}
               </button>
               <button
                 type="button"
                 onClick={handleClose}
                 className="flex-1 rounded-panel border border-border py-2 text-sm font-medium text-ink hover:bg-surface-alt"
               >
-                Cancel
+                {t('sub_cancel')}
               </button>
             </div>
           </>
@@ -124,26 +130,26 @@ export function SubscriptionModal({ isOpen, onClose, onSubmit, lineName, mode = 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {isEdit ? (
-                  <Pencil size={18} className="text-accent" />
+                  <Pencil size={18} className="text-accent" aria-hidden="true" />
                 ) : (
-                  <Heart size={18} className="text-accent" fill="currentColor" />
+                  <Heart size={18} className="text-accent" fill="currentColor" aria-hidden="true" />
                 )}
                 <h2 className="text-base font-semibold text-ink">
-                  {isEdit ? `Edit subscription` : `Subscribe to ${lineName}`}
+                  {isEdit ? t('sub_edit_title') : t('sub_subscribe_title', { line: lineName })}
                 </h2>
               </div>
-              <button type="button" onClick={handleClose} className="text-muted hover:text-ink">
-                <X size={16} />
+              <button type="button" onClick={handleClose} className="text-muted hover:text-ink" aria-label={t('sub_cancel')}>
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
 
             <p className="mb-4 mt-2 text-sm text-muted">
-              {isEdit ? 'Update your notification preferences for this line.' : 'Set your notification preferences for this line.'}
+              {isEdit ? t('sub_edit_hint') : t('sub_set_hint')}
             </p>
 
             <div className="mb-4 grid grid-cols-2 gap-3">
               <label className="space-y-1">
-                <span className="text-xs font-medium text-muted">Start time</span>
+                <span className="text-xs font-medium text-muted">{t('sub_start_time')}</span>
                 <input
                   type="time"
                   value={startInterval}
@@ -152,7 +158,7 @@ export function SubscriptionModal({ isOpen, onClose, onSubmit, lineName, mode = 
                 />
               </label>
               <label className="space-y-1">
-                <span className="text-xs font-medium text-muted">End time</span>
+                <span className="text-xs font-medium text-muted">{t('sub_end_time')}</span>
                 <input
                   type="time"
                   value={endInterval}
@@ -163,13 +169,14 @@ export function SubscriptionModal({ isOpen, onClose, onSubmit, lineName, mode = 
             </div>
 
             <div className="mb-5">
-              <p className="mb-2 text-xs font-medium text-muted">Days of week</p>
+              <p className="mb-2 text-xs font-medium text-muted">{t('sub_days')}</p>
               <div className="flex flex-wrap gap-2">
                 {DAYS.map((day) => (
                   <button
                     key={day}
                     type="button"
                     onClick={() => toggleDay(day)}
+                    aria-pressed={daysOfWeek.has(day)}
                     className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                       daysOfWeek.has(day)
                         ? 'border-accent bg-accent text-white'
@@ -181,7 +188,7 @@ export function SubscriptionModal({ isOpen, onClose, onSubmit, lineName, mode = 
                 ))}
               </div>
               {daysOfWeek.size === 0 && (
-                <p className="mt-1 text-xs text-red-500">Select at least one day</p>
+                <p role="alert" className="mt-1 text-xs text-red-500">{t('sub_select_day')}</p>
               )}
             </div>
 
@@ -194,11 +201,11 @@ export function SubscriptionModal({ isOpen, onClose, onSubmit, lineName, mode = 
               >
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin" />
-                    {isEdit ? 'Saving...' : 'Subscribing...'}
+                    <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                    {isEdit ? t('sub_saving') : t('sub_subscribing')}
                   </span>
                 ) : (
-                  isEdit ? 'Save changes' : 'Subscribe'
+                  isEdit ? t('sub_save_changes') : t('sub_subscribe_btn')
                 )}
               </button>
               <button
@@ -207,7 +214,7 @@ export function SubscriptionModal({ isOpen, onClose, onSubmit, lineName, mode = 
                 disabled={loading}
                 className="flex-1 rounded-panel border border-border py-2 text-sm font-medium text-ink hover:bg-surface-alt disabled:opacity-50"
               >
-                Cancel
+                {t('sub_cancel')}
               </button>
             </div>
           </>

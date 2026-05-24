@@ -1,0 +1,15 @@
+{
+  "title": "Admin Panel",
+  "subtitle": "Overview of system state and quick access to management sections.",
+  "open_reports": "Open Reports",
+  "in_progress": "In Progress",
+  "total_users": "Total Users",
+  "management": "Management Sections",
+  "reports": "Problem Reports",
+  "reviews": "Review Moderation",
+  "lines": "Lines",
+  "stations": "Stations",
+  "timetables": "Timetables",
+  "users": "Users",
+  "notifications": "Notifications"
+}
