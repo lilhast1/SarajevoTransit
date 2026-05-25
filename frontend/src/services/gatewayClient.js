@@ -1,4 +1,5 @@
 import { getAccessToken } from '../utils/authStorage'
+import { ApiError, getErrorMessage } from '../utils/apiErrors'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -32,20 +33,28 @@ async function buildErrorMessage(response) {
 async function request(path, options = {}) {
   const { token, headers: customHeaders, ...restOptions } = options
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(customHeaders || {}),
-    },
-    ...restOptions,
-  })
+  let response
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(customHeaders || {}),
+      },
+      ...restOptions,
+    })
+  } catch (error) {
+    const networkError = new ApiError('Network request failed', 'NETWORK', error)
+    throw new ApiError(getErrorMessage(networkError), 'NETWORK', error)
+  }
 
   if (!response.ok) {
     if (response.status === 401) {
       window.dispatchEvent(new CustomEvent('session-expired'))
     }
-    throw new Error(await buildErrorMessage(response))
+
+    const responseError = new ApiError(await buildErrorMessage(response), response.status)
+    throw new ApiError(getErrorMessage(responseError), response.status, responseError)
   }
 
   if (response.status === 204) return null

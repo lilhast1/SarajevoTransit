@@ -1,11 +1,5 @@
 import {
-  directionStations,
-  directions,
-  lines as mockLines,
-  routePolylines,
   sarajevoCenter,
-  stations,
-  timetables,
   vehicleTypes,
 } from '../data/mockTransitData'
 import { gatewayClient } from './gatewayClient'
@@ -38,59 +32,10 @@ function buildRouteQuery(params) {
   return query.toString()
 }
 
-// ─── mock helpers (fallback) ──────────────────────────────────────────────────
-
-function mockGetDirectionStations(directionId) {
-  const stationIds = directionStations[directionId] || []
-  return stationIds.map((stationId, index) => {
-    const station = stations.find((item) => item.id === stationId)
-    return {
-      id: Number(`${directionId}${index + 1}`),
-      directionId,
-      stationId: station.id,
-      stationName: station.name,
-      stopSequence: index + 1,
-      travelTimeFromPrevSeconds: index === 0 ? 0 : 180,
-    }
-  })
-}
-
-function mockGetStopsByLine(lineId) {
-  const lineDirections = directions.filter((d) => d.lineId === Number(lineId))
-  const stopIds = new Set()
-  lineDirections.forEach((d) => {
-    ; (directionStations[d.id] || []).forEach((sid) => stopIds.add(sid))
-  })
-  return stations.filter((s) => stopIds.has(s.id))
-}
-
 function getDayFilter(dayType) {
   if (dayType === 'saturday') return 6
   if (dayType === 'sunday') return 7
   return null
-}
-
-function mockGetNextDeparturesForStop(stopId) {
-  const relatedDirections = directions.filter((d) =>
-    (directionStations[d.id] || []).includes(Number(stopId)),
-  )
-  const relatedDirectionIds = relatedDirections.map((d) => d.id)
-
-  return timetables
-    .filter((row) => relatedDirectionIds.includes(row.directionId) && row.isActive)
-    .sort((a, b) => a.departureTime.localeCompare(b.departureTime))
-    .slice(0, 8)
-    .map((row) => {
-      const direction = directions.find((d) => d.id === row.directionId)
-      const line = mockLines.find((l) => l.id === row.lineId)
-      return {
-        id: row.id,
-        departureTime: row.departureTime,
-        lineCode: line.code,
-        lineName: line.name,
-        directionName: direction.name,
-      }
-    })
 }
 
 // ─── GeoJSON → Leaflet polyline conversion ────────────────────────────────────
@@ -242,22 +187,14 @@ export const transitApi = {
       vehicleTypeId: vehicleTypes.find((type) => type.name === vehicleType)?.id,
     })
 
-    try {
-      const response = await gatewayClient.getLines(query ? `?${query}` : '')
-      const shaped = response.map(withVehicleType)
-      return filterLinesByQuery(shaped, search, vehicleType)
-    } catch {
-      return filterLinesByQuery(mockLines, search, vehicleType)
-    }
+    const response = await gatewayClient.getLines(query ? `?${query}` : '')
+    const shaped = response.map(withVehicleType)
+    return filterLinesByQuery(shaped, search, vehicleType)
   },
 
   async getLineById(lineId) {
-    try {
-      const line = await gatewayClient.getLineById(lineId)
-      return withVehicleType(line)
-    } catch {
-      return mockLines.find((line) => line.id === Number(lineId)) || null
-    }
+    const line = await gatewayClient.getLineById(lineId)
+    return withVehicleType(line)
   },
 
   // ── Directions ───────────────────────────────────────────────────────────
@@ -267,12 +204,8 @@ export const transitApi = {
    */
   async getDirectionsByLine(lineId) {
     const query = buildRouteQuery({ lineId, activeOnly: true })
-    try {
-      const response = await gatewayClient.getDirections(`?${query}`)
-      return response.filter((d) => d.isActive)
-    } catch {
-      return directions.filter((d) => d.lineId === Number(lineId) && d.isActive)
-    }
+    const response = await gatewayClient.getDirections(`?${query}`)
+    return response.filter((d) => d.isActive)
   },
 
   /**
@@ -281,11 +214,7 @@ export const transitApi = {
    * stopSequence, travelTimeFromPrevSeconds
    */
   async getDirectionStations(directionId) {
-    try {
-      return await gatewayClient.getDirectionStations(directionId)
-    } catch {
-      return mockGetDirectionStations(Number(directionId))
-    }
+    return gatewayClient.getDirectionStations(directionId)
   },
 
   /**
@@ -294,13 +223,9 @@ export const transitApi = {
    * We convert to [[lat,lon], …] for Leaflet.
    */
   async getDirectionPolyline(directionId) {
-    try {
-      const feature = await gatewayClient.getDirectionGeoJson(directionId)
-      const polyline = geoJsonToLeafletPolyline(feature)
-      return polyline || [sarajevoCenter]
-    } catch {
-      return routePolylines[Number(directionId)] || [sarajevoCenter]
-    }
+    const feature = await gatewayClient.getDirectionGeoJson(directionId)
+    const polyline = geoJsonToLeafletPolyline(feature)
+    return polyline || [sarajevoCenter]
   },
 
   // ── Stations ─────────────────────────────────────────────────────────────
@@ -310,15 +235,11 @@ export const transitApi = {
    */
   async getStops({ search = '' } = {}) {
     const query = buildRouteQuery({ activeOnly: true, name: search || undefined })
-    try {
-      const response = await gatewayClient.getStations(query ? `?${query}` : '')
-      // Client-side filter is kept as belt-and-suspenders since the backend filters by exact prefix
-      return response.filter(
-        (s) => !search || s.name.toLowerCase().includes(search.toLowerCase()),
-      )
-    } catch {
-      return stations.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
-    }
+    const response = await gatewayClient.getStations(query ? `?${query}` : '')
+    // Client-side filter is kept as belt-and-suspenders since the backend filters by exact prefix
+    return response.filter(
+      (s) => !search || s.name.toLowerCase().includes(search.toLowerCase()),
+    )
   },
 
   /**
@@ -326,12 +247,7 @@ export const transitApi = {
    * Enriched with lines + next departures (assembled client-side from directions/timetables).
    */
   async getStopById(stopId) {
-    let stop = null
-    try {
-      stop = await gatewayClient.getStationById(stopId)
-    } catch {
-      stop = stations.find((s) => s.id === Number(stopId)) || null
-    }
+    const stop = await gatewayClient.getStationById(stopId)
     if (!stop) return null
 
     let lines = []
@@ -367,32 +283,25 @@ export const transitApi = {
   },
 
   async getStopDepartures(stopId, limit = 5) {
-    let departures = []
-    try {
-      const depResponse = await gatewayClient.getStopDepartures(stopId, limit)
-      if (depResponse && depResponse.departures) {
-        departures = depResponse.departures.map((d, idx) => {
-          const totalSeconds = d.realtimeDeparture ?? d.scheduledDeparture ?? 0
-          const hours = Math.floor(totalSeconds / 3600) % 24
-          const minutes = Math.floor((totalSeconds % 3600) / 60)
-          const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
-          const gtfsId = Number(d.gtfsId.split('-')[1])
+    const depResponse = await gatewayClient.getStopDepartures(stopId, limit)
+    if (!depResponse?.departures) return []
 
-          return {
-            id: `${d.lineShortName}-${totalSeconds}-${idx}`,
-            gtfsId: gtfsId,
-            departureTime: timeStr,
-            lineCode: d.lineShortName || '?',
-            lineName: d.headsign || d.lineShortName,
-            directionName: d.headsign || 'Unknown',
-          }
-        })
+    return depResponse.departures.map((d, idx) => {
+      const totalSeconds = d.realtimeDeparture ?? d.scheduledDeparture ?? 0
+      const hours = Math.floor(totalSeconds / 3600) % 24
+      const minutes = Math.floor((totalSeconds % 3600) / 60)
+      const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+      const gtfsId = Number(d.gtfsId.split('-')[1])
+
+      return {
+        id: `${d.lineShortName}-${totalSeconds}-${idx}`,
+        gtfsId: gtfsId,
+        departureTime: timeStr,
+        lineCode: d.lineShortName || '?',
+        lineName: d.headsign || d.lineShortName,
+        directionName: d.headsign || 'Unknown',
       }
-    } catch (e) {
-      console.warn('Failed to fetch stop departures from GraphQL proxy:', e)
-      departures = mockGetNextDeparturesForStop(stopId)
-    }
-    return departures
+    })
   },
 
   // ── Timetables ───────────────────────────────────────────────────────────
@@ -408,32 +317,18 @@ export const transitApi = {
     const dayFilter = getDayFilter(dayType)
     const query = buildRouteQuery({ lineId, directionId, activeOnly: true })
 
-    try {
-      const response = await gatewayClient.getTimetables(query ? `?${query}` : '')
-      return response
-        .filter((item) => {
-          if (!item.isActive) return false
-          const days = item.daysOfWeek || []
-          if (dayFilter) return days.includes(dayFilter)
-          return days.some((d) => d >= 1 && d <= 5)
-        })
-        .sort((a, b) => {
-          // departureTime comes back as "HH:mm:ss" or "HH:mm" from Spring LocalTime serialisation
-          return String(a.departureTime).localeCompare(String(b.departureTime))
-        })
-    } catch {
-      const requestedLineId = Number(lineId)
-      const requestedDirectionId = Number(directionId)
-      return timetables
-        .filter((item) => {
-          if (!item.isActive) return false
-          if (requestedLineId && item.lineId !== requestedLineId) return false
-          if (requestedDirectionId && item.directionId !== requestedDirectionId) return false
-          if (dayFilter) return item.daysOfWeek.includes(dayFilter)
-          return item.daysOfWeek.some((d) => d >= 1 && d <= 5)
-        })
-        .sort((a, b) => a.departureTime.localeCompare(b.departureTime))
-    }
+    const response = await gatewayClient.getTimetables(query ? `?${query}` : '')
+    return response
+      .filter((item) => {
+        if (!item.isActive) return false
+        const days = item.daysOfWeek || []
+        if (dayFilter) return days.includes(dayFilter)
+        return days.some((d) => d >= 1 && d <= 5)
+      })
+      .sort((a, b) => {
+        // departureTime comes back as "HH:mm:ss" or "HH:mm" from Spring LocalTime serialisation
+        return String(a.departureTime).localeCompare(String(b.departureTime))
+      })
   },
 
   // ── Route planning ────────────────────────────────────────────────────────
@@ -442,58 +337,18 @@ export const transitApi = {
    */
   async getOptimalRoute(params) {
     const query = buildRouteQuery(params)
-    try {
-      const response = await gatewayClient.getOptimalRoute(query)
-      // Enrich legs with decoded polylines
-      if (response.itineraries) {
-        response.itineraries.forEach((itinerary) => {
-          if (itinerary.legs) {
-            itinerary.legs.forEach((leg) => {
-              leg.path = decodePolyline(leg.points)
-            })
-          }
-        })
-      }
-      return response
-    } catch {
-      return {
-        source: 'mock',
-        requestedItineraries: 1,
-        itineraries: [
-          {
-            durationSeconds: 1800,
-            walkDistanceMeters: 320,
-            transfers: 1,
-            legs: [
-              {
-                mode: 'WALK',
-                fromName: 'Start',
-                toName: 'Otoka',
-                startTime: Date.now(),
-                endTime: Date.now() + 360000,
-                distanceMeters: 250,
-              },
-              {
-                mode: 'TRAM',
-                fromName: 'Otoka',
-                toName: 'Skenderija',
-                startTime: Date.now() + 360000,
-                endTime: Date.now() + 1260000,
-                distanceMeters: 3200,
-              },
-              {
-                mode: 'WALK',
-                fromName: 'Skenderija',
-                toName: 'Destination',
-                startTime: Date.now() + 1260000,
-                endTime: Date.now() + 1800000,
-                distanceMeters: 70,
-              },
-            ],
-          },
-        ],
-      }
+    const response = await gatewayClient.getOptimalRoute(query)
+    // Enrich legs with decoded polylines
+    if (response.itineraries) {
+      response.itineraries.forEach((itinerary) => {
+        if (itinerary.legs) {
+          itinerary.legs.forEach((leg) => {
+            leg.path = decodePolyline(leg.points)
+          })
+        }
+      })
     }
+    return response
   },
 
   // ── Auth ───────────────────────────────────────────────────────────────────
@@ -586,15 +441,38 @@ export const transitApi = {
   },
 
   async getProfileSnapshot(favorites) {
+    const [favoriteLines, favoriteStops, suggestedLines] = await Promise.all([
+      Promise.all((favorites.lines || []).map((lineId) => this.getLineById(lineId).catch(() => null))),
+      Promise.all((favorites.stops || []).map((stopId) => gatewayClient.getStationById(stopId).catch(() => null))),
+      this.getLines({ activeOnly: true }).then((items) => items.slice(0, 3)),
+    ])
+
     return {
-      favoriteLines: mockLines.filter((line) => favorites.lines.includes(line.id)),
-      favoriteStops: stations.filter((stop) => favorites.stops.includes(stop.id)),
-      suggestedLines: mockLines.slice(0, 3),
+      favoriteLines: favoriteLines.filter(Boolean),
+      favoriteStops: favoriteStops.filter(Boolean),
+      suggestedLines,
     }
   },
 
   async getStopsByLine(lineId) {
-    return mockGetStopsByLine(lineId)
+    const directionItems = await this.getDirectionsByLine(lineId)
+    if (!directionItems.length) return []
+
+    const directionStops = await Promise.all(
+      directionItems.map((direction) => this.getDirectionStations(direction.id).catch(() => [])),
+    )
+
+    const byStationId = new Map()
+    directionStops.flat().forEach((stop) => {
+      if (!byStationId.has(stop.stationId)) {
+        byStationId.set(stop.stationId, {
+          id: stop.stationId,
+          name: stop.stationName,
+        })
+      }
+    })
+
+    return Array.from(byStationId.values())
   },
 
   async getVehiclePositions(vehicleTypeIds = [1, 2, 3, 4]) {

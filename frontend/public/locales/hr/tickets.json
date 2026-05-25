@@ -17,6 +17,8 @@
   "ticket_code": "Kod karte",
   "pay_with": "Plati putem",
   "loading_payment": "Učitavanje načina plaćanja…",
+  "payment_methods_load_failed": "Nije moguce ucitati nacine placanja. Pokusajte ponovno.",
+  "remove_card_failed": "Nije moguce ukloniti ovu karticu trenutno. Pokusajte ponovno.",
   "close": "Zatvori",
   "add_card_link": "+ Dodaj drugu karticu",
   "last_4": "Zadnje 4 znamenke",

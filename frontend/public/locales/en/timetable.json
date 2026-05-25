@@ -8,5 +8,6 @@
   "saturday": "Saturday",
   "sunday": "Sunday",
   "departure_grid": "Departure grid",
-  "no_departures": "No departures found for this selection."
+  "no_departures": "No departures found for this selection.",
+  "load_failed": "Unable to load timetable data. Please try again."
 }

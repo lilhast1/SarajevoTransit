@@ -29,5 +29,8 @@
   "field_address": "Adresa",
   "field_lat": "Geografska širina",
   "field_lng": "Geografska dužina",
-  "field_active": "Aktivno"
+  "field_active": "Aktivno",
+  "lines_load_failed": "Nije moguce ucitati linije. Pokusajte ponovno.",
+  "directions_load_failed": "Nije moguce ucitati smjerove. Pokusajte ponovno.",
+  "stations_filter_failed": "Nije moguce ucitati stajalista za odabrani smjer."
 }

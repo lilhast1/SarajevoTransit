@@ -30,5 +30,7 @@
   "col_actions": "Actions",
   "delete": "Delete",
   "delete_confirm": "Delete this notification?",
-  "id_prefix": "ID #{{id}}"
+  "id_prefix": "ID #{{id}}",
+  "lines_load_failed": "Unable to load lines. Please try again.",
+  "users_load_failed": "Unable to load users. Please try again."
 }

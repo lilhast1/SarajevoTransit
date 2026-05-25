@@ -30,5 +30,7 @@
   "col_actions": "Radnje",
   "delete": "Obriši",
   "delete_confirm": "Obrisati ovu obavijest?",
-  "id_prefix": "ID #{{id}}"
+  "id_prefix": "ID #{{id}}",
+  "lines_load_failed": "Nije moguce ucitati linije. Pokusajte ponovno.",
+  "users_load_failed": "Nije moguce ucitati korisnike. Pokusajte ponovno."
 }

@@ -75,28 +75,86 @@ export function AdminNotificationsPage() {
   const [listError, setListError] = useState(null)
   const [sortDir, setSortDir] = useState('desc')
   const [nameSearch, setNameSearch] = useState('')
+  const [broadcastLinesError, setBroadcastLinesError] = useState(null)
+  const [singleLinesError, setSingleLinesError] = useState(null)
+  const [usersError, setUsersError] = useState(null)
 
   // ── load lines for broadcast form ────────────────────────────────────────
   useEffect(() => {
+    let active = true
     const q = bVehicleTypeId ? `?vehicleTypeId=${bVehicleTypeId}` : ''
     setBroadcastForm((f) => ({ ...f, lineId: '' }))
-    gatewayClient.getLines(q).then(setBLines).catch(() => {})
-  }, [bVehicleTypeId])
+
+    const loadBroadcastLines = async () => {
+      try {
+        setBroadcastLinesError(null)
+        const response = await gatewayClient.getLines(q)
+        if (active) setBLines(response)
+      } catch (err) {
+        if (active) {
+          setBLines([])
+          setBroadcastLinesError(err.message || t('lines_load_failed'))
+        }
+      }
+    }
+
+    loadBroadcastLines()
+
+    return () => {
+      active = false
+    }
+  }, [bVehicleTypeId, t])
 
   // ── load lines for single form ───────────────────────────────────────────
   useEffect(() => {
+    let active = true
     const q = sVehicleTypeId ? `?vehicleTypeId=${sVehicleTypeId}` : ''
     setSingleForm((f) => ({ ...f, lineId: '' }))
-    gatewayClient.getLines(q).then(setSLines).catch(() => {})
-  }, [sVehicleTypeId])
+
+    const loadSingleLines = async () => {
+      try {
+        setSingleLinesError(null)
+        const response = await gatewayClient.getLines(q)
+        if (active) setSLines(response)
+      } catch (err) {
+        if (active) {
+          setSLines([])
+          setSingleLinesError(err.message || t('lines_load_failed'))
+        }
+      }
+    }
+
+    loadSingleLines()
+
+    return () => {
+      active = false
+    }
+  }, [sVehicleTypeId, t])
 
   // ── load users for single form ───────────────────────────────────────────
   useEffect(() => {
     if (sendMode !== 'single') return
-    gatewayClient.getAllUsers('?page=0&size=100')
-      .then((res) => setUsers(res.content ?? res))
-      .catch(() => {})
-  }, [sendMode])
+
+    let active = true
+    const loadUsers = async () => {
+      try {
+        setUsersError(null)
+        const res = await gatewayClient.getAllUsers('?page=0&size=100')
+        if (active) setUsers(res.content ?? res)
+      } catch (err) {
+        if (active) {
+          setUsers([])
+          setUsersError(err.message || t('users_load_failed'))
+        }
+      }
+    }
+
+    loadUsers()
+
+    return () => {
+      active = false
+    }
+  }, [sendMode, t])
 
   // ── load history ─────────────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -250,6 +308,7 @@ export function AdminNotificationsPage() {
         {sendMode === 'broadcast' && (
           <form onSubmit={handleBroadcast} className="space-y-3">
             <VehicleTypePills value={bVehicleTypeId} onChange={setBVehicleTypeId} />
+            {broadcastLinesError && <ErrorAlert error={broadcastLinesError} onDismiss={() => setBroadcastLinesError(null)} />}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="text-xs text-muted">{t('line_label')}</span>
@@ -306,6 +365,7 @@ export function AdminNotificationsPage() {
         {sendMode === 'single' && (
           <form onSubmit={handleSingle} className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
+              {usersError && <ErrorAlert error={usersError} onDismiss={() => setUsersError(null)} />}
               <label className="block sm:col-span-2">
                 <span className="text-xs text-muted">{t('user_label')}</span>
                 <select
@@ -323,6 +383,7 @@ export function AdminNotificationsPage() {
             </div>
 
             <VehicleTypePills value={sVehicleTypeId} onChange={setSVehicleTypeId} />
+            {singleLinesError && <ErrorAlert error={singleLinesError} onDismiss={() => setSingleLinesError(null)} />}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">

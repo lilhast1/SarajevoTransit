@@ -22,5 +22,6 @@
   "hide": "Hide",
   "show": "Show",
   "delete": "Delete",
-  "delete_confirm": "Delete this review?"
+  "delete_confirm": "Delete this review?",
+  "lines_load_failed": "Unable to load lines. Please try again."
 }

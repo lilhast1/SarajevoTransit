@@ -24,6 +24,7 @@
   "loading": "Učitavanje…",
   "no_tickets": "Nema karata.",
   "buy_first_ticket": "Kupite prvu kartu",
+  "tickets_load_failed": "Nije moguce ucitati nedavne karte. Pokusajte ponovno.",
   "valid_until": "vrijedi do {{date}}",
   "retry": "Pokušaj ponovo",
   "sub_updated_ok": "Pretplata uspješno ažurirana.",

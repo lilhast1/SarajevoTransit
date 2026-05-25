@@ -2,6 +2,7 @@ import { ArrowLeft, Loader2, MapPin, Route, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TransitMap } from '../components/map/TransitMap'
+import { ErrorAlert } from '../components/common/Alerts'
 import { sarajevoCenter } from '../data/mockTransitData'
 import { useAppContext } from '../context/AppContext'
 import { transitApi } from '../services/transitApi'
@@ -121,13 +122,33 @@ export function RoutePlannerPage() {
   const [vehicles, setVehicles] = useState([])
   const [pollingStatus, setPollingStatus] = useState('idle')
   const [lastVehiclesUpdatedAt, setLastVehiclesUpdatedAt] = useState(null)
+  const [plannerError, setPlannerError] = useState(null)
 
   const pollTimerRef = useRef(null)
   const vehicleMovementRef = useRef({})
 
   useEffect(() => {
-    transitApi.getStops().then(setStops)
-  }, [])
+    let active = true
+
+    const loadStops = async () => {
+      try {
+        setPlannerError(null)
+        const response = await transitApi.getStops()
+        if (active) setStops(response)
+      } catch (err) {
+        if (active) {
+          setStops([])
+          setPlannerError(err.message || t('load_failed'))
+        }
+      }
+    }
+
+    loadStops()
+
+    return () => {
+      active = false
+    }
+  }, [t])
 
   const fromMatches = useMemo(
     () => stops.filter((stop) => stop.name.toLowerCase().includes(fromQuery.toLowerCase())).slice(0, 6),
@@ -302,6 +323,7 @@ export function RoutePlannerPage() {
 
     setRouteMode(true)
     setLoading(true)
+    setPlannerError(null)
     try {
       const response = await transitApi.getOptimalRoute({
         fromLat: fromCoords.lat,
@@ -326,6 +348,12 @@ export function RoutePlannerPage() {
           traveledAt: new Date().toISOString(),
         })
       }
+    } catch (err) {
+      setResults([])
+      setSelectedItineraryIndex(0)
+      setSelectedDetailIndex(null)
+      setSelectedLegIndex(null)
+      setPlannerError(err.message || t('load_failed'))
     } finally {
       setLoading(false)
     }
@@ -545,6 +573,8 @@ export function RoutePlannerPage() {
               <Route size={18} />
               <h2 className="text-base font-semibold sm:text-lg">{t('title')}</h2>
             </div>
+
+            {plannerError ? <ErrorAlert error={plannerError} onDismiss={() => setPlannerError(null)} className="mb-3" /> : null}
 
             <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
               <div className="relative">

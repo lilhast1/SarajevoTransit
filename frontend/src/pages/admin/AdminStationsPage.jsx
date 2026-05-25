@@ -28,6 +28,9 @@ export function AdminStationsPage() {
   const [directions, setDirections] = useState([])
   const [directionId, setDirectionId] = useState('')
   const [directionStationIds, setDirectionStationIds] = useState(null)
+  const [lineFilterError, setLineFilterError] = useState(null)
+  const [directionFilterError, setDirectionFilterError] = useState(null)
+  const [directionStationsError, setDirectionStationsError] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -46,13 +49,32 @@ export function AdminStationsPage() {
 
   // vehicle type → lines
   useEffect(() => {
+    let active = true
     const q = vehicleTypeId ? `?vehicleTypeId=${vehicleTypeId}` : ''
     setLineId('')
     setDirections([])
     setDirectionId('')
     setDirectionStationIds(null)
-    gatewayClient.getLines(q).then(setLines).catch(() => {})
-  }, [vehicleTypeId])
+
+    const loadLines = async () => {
+      try {
+        setLineFilterError(null)
+        const response = await gatewayClient.getLines(q)
+        if (active) setLines(response)
+      } catch (err) {
+        if (active) {
+          setLines([])
+          setLineFilterError(err.message || t('lines_load_failed'))
+        }
+      }
+    }
+
+    loadLines()
+
+    return () => {
+      active = false
+    }
+  }, [vehicleTypeId, t])
 
   // line → directions
   useEffect(() => {
@@ -62,20 +84,53 @@ export function AdminStationsPage() {
       setDirectionStationIds(null)
       return
     }
-    gatewayClient.getDirections(`?lineId=${lineId}&activeOnly=true`)
-      .then(setDirections)
-      .catch(() => setDirections([]))
+    let active = true
+    const loadDirections = async () => {
+      try {
+        setDirectionFilterError(null)
+        const response = await gatewayClient.getDirections(`?lineId=${lineId}&activeOnly=true`)
+        if (active) setDirections(response)
+      } catch (err) {
+        if (active) {
+          setDirections([])
+          setDirectionFilterError(err.message || t('directions_load_failed'))
+        }
+      }
+    }
+
+    loadDirections()
     setDirectionId('')
     setDirectionStationIds(null)
-  }, [lineId])
+
+    return () => {
+      active = false
+    }
+  }, [lineId, t])
 
   // direction → station IDs
   useEffect(() => {
     if (!directionId) { setDirectionStationIds(null); return }
-    gatewayClient.getDirectionStations(directionId)
-      .then((res) => setDirectionStationIds(new Set(res.map((s) => s.stationId))))
-      .catch(() => setDirectionStationIds(null))
-  }, [directionId])
+    let active = true
+
+    const loadDirectionStations = async () => {
+      try {
+        setDirectionStationsError(null)
+        const response = await gatewayClient.getDirectionStations(directionId)
+        if (active) setDirectionStationIds(new Set(response.map((s) => s.stationId)))
+      } catch (err) {
+        if (active) {
+          setDirectionStationIds(null)
+          setDirectionStationsError(err.message || t('stations_filter_failed'))
+        }
+      }
+    }
+
+    loadDirectionStations()
+
+    return () => {
+      active = false
+    }
+  }, [directionId, t])
 
   const filteredStations = directionStationIds
     ? stations.filter((s) => directionStationIds.has(s.id))
@@ -311,6 +366,9 @@ export function AdminStationsPage() {
       )}
 
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
+      <ErrorAlert error={lineFilterError} onDismiss={() => setLineFilterError(null)} />
+      <ErrorAlert error={directionFilterError} onDismiss={() => setDirectionFilterError(null)} />
+      <ErrorAlert error={directionStationsError} onDismiss={() => setDirectionStationsError(null)} />
 
       <DataTable
         columns={columns}

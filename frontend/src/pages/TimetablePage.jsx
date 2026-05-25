@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ErrorAlert } from '../components/common/Alerts'
 import { PanelCard } from '../components/common/PanelCard'
 import { transitApi } from '../services/transitApi'
 
@@ -16,26 +17,85 @@ export function TimetablePage() {
   const [directionId, setDirectionId] = useState('')
   const [dayType, setDayType] = useState('weekday')
   const [rows, setRows] = useState([])
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    transitApi.getLines({ activeOnly: true }).then((response) => {
-      setLines(response)
-      if (response[0]) setLineId(String(response[0].id))
-    })
-  }, [])
+    let active = true
+
+    const loadLines = async () => {
+      try {
+        setError(null)
+        const response = await transitApi.getLines({ activeOnly: true })
+        if (!active) return
+        setLines(response)
+        if (response[0]) setLineId(String(response[0].id))
+      } catch (err) {
+        if (!active) return
+        setError(err.message || t('load_failed'))
+        setLines([])
+        setLineId('')
+      }
+    }
+
+    loadLines()
+
+    return () => {
+      active = false
+    }
+  }, [t])
 
   useEffect(() => {
     if (!lineId) return
-    transitApi.getDirectionsByLine(lineId).then((response) => {
-      setDirections(response)
-      if (response[0]) setDirectionId(String(response[0].id))
-    })
-  }, [lineId])
+
+    let active = true
+
+    const loadDirections = async () => {
+      try {
+        setError(null)
+        const response = await transitApi.getDirectionsByLine(lineId)
+        if (!active) return
+        setDirections(response)
+        if (response[0]) setDirectionId(String(response[0].id))
+        else setDirectionId('')
+      } catch (err) {
+        if (!active) return
+        setError(err.message || t('load_failed'))
+        setDirections([])
+        setDirectionId('')
+        setRows([])
+      }
+    }
+
+    loadDirections()
+
+    return () => {
+      active = false
+    }
+  }, [lineId, t])
 
   useEffect(() => {
     if (!lineId || !directionId) return
-    transitApi.getTimetable({ lineId, directionId, dayType }).then(setRows)
-  }, [dayType, directionId, lineId])
+
+    let active = true
+
+    const loadTimetable = async () => {
+      try {
+        setError(null)
+        const response = await transitApi.getTimetable({ lineId, directionId, dayType })
+        if (active) setRows(response)
+      } catch (err) {
+        if (!active) return
+        setError(err.message || t('load_failed'))
+        setRows([])
+      }
+    }
+
+    loadTimetable()
+
+    return () => {
+      active = false
+    }
+  }, [dayType, directionId, lineId, t])
 
   const groupedByHour = useMemo(() => {
     const map = new Map()
@@ -103,6 +163,8 @@ export function TimetablePage() {
           </select>
         </div>
       </PanelCard>
+
+      {error ? <ErrorAlert error={error} onDismiss={() => setError(null)} /> : null}
 
       <PanelCard>
         <h3 className="text-base font-semibold text-ink">{t('departure_grid')}</h3>

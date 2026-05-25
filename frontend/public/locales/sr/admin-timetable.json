@@ -37,5 +37,7 @@
   "col_active": "Aktivno",
   "col_actions": "Akcije",
   "delete": "Obriši",
-  "delete_confirm": "Obrisati ovaj unos u red vožnje?"
+  "delete_confirm": "Obrisati ovaj unos u red vožnje?",
+  "lines_load_failed": "Nije moguce ucitati linije. Pokusajte ponovo.",
+  "directions_load_failed": "Nije moguce ucitati smerove. Pokusajte ponovo."
 }

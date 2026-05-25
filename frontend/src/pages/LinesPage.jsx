@@ -50,9 +50,22 @@ export function LinesPage() {
   useEffect(() => {
     if (!selectedLineId) return
     setReviewSummary(null)
-    transitApi.getReviewSummary(selectedLineId)
-      .then(setReviewSummary)
-      .catch(() => {})
+
+    let active = true
+    const loadSummary = async () => {
+      try {
+        const summary = await transitApi.getReviewSummary(selectedLineId)
+        if (active) setReviewSummary(summary)
+      } catch {
+        if (active) setReviewSummary(null)
+      }
+    }
+
+    loadSummary()
+
+    return () => {
+      active = false
+    }
   }, [selectedLineId, reviewsRefreshKey])
 
   const detailMode = selectedLineId !== null

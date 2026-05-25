@@ -5,6 +5,7 @@
   "request_status": "Zahtjev za promjenu statusa",
   "vehicle_label": "Vozilo",
   "loading_vehicles": "Učitavanje vozila…",
+  "vehicles_load_failed": "Nije moguce ucitati vozila. Pokusajte ponovno.",
   "no_vehicles": "Nema dostupnih vozila",
   "requested_status": "Traženi status",
   "reason_notes": "Razlog / Napomene",

@@ -27,12 +27,32 @@ export function AdminReviewsPage() {
   const [lineNames, setLineNames] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [lineFilterError, setLineFilterError] = useState(null)
 
   useEffect(() => {
+    let active = true
     const q = vehicleTypeId ? `?vehicleTypeId=${vehicleTypeId}` : ''
     setLineId('')
-    gatewayClient.getLines(q).then(setLines).catch(() => {})
-  }, [vehicleTypeId])
+
+    const loadLines = async () => {
+      try {
+        setLineFilterError(null)
+        const response = await gatewayClient.getLines(q)
+        if (active) setLines(response)
+      } catch (err) {
+        if (active) {
+          setLines([])
+          setLineFilterError(err.message || t('lines_load_failed'))
+        }
+      }
+    }
+
+    loadLines()
+
+    return () => {
+      active = false
+    }
+  }, [vehicleTypeId, t])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -244,6 +264,7 @@ export function AdminReviewsPage() {
       </div>
 
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
+      <ErrorAlert error={lineFilterError} onDismiss={() => setLineFilterError(null)} />
 
       <DataTable
         columns={columns}

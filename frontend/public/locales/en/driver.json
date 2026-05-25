@@ -5,6 +5,7 @@
   "request_status": "Request Status Change",
   "vehicle_label": "Vehicle",
   "loading_vehicles": "Loading vehicles…",
+  "vehicles_load_failed": "Unable to load vehicles. Please try again.",
   "no_vehicles": "No vehicles available",
   "requested_status": "Requested Status",
   "reason_notes": "Reason / Notes",

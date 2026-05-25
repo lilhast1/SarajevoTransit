@@ -78,6 +78,7 @@ export function DriverPage() {
 
   const [vehicles, setVehicles] = useState([])
   const [vehiclesLoading, setVehiclesLoading] = useState(true)
+  const [vehiclesError, setVehiclesError] = useState(null)
 
   const [selectedVehicleId, setSelectedVehicleId] = useState('')
   const [requestedStatus, setRequestedStatus] = useState('IN_MAINTENANCE')
@@ -100,13 +101,16 @@ export function DriverPage() {
 
   async function loadVehicles() {
     setVehiclesLoading(true)
+    setVehiclesError(null)
     try {
       const response = await gatewayClient.getVehicles('?size=200&sort=registrationNumber,asc')
       const content = Array.isArray(response?.content) ? response.content : Array.isArray(response) ? response : []
       setVehicles(content)
       if (content.length > 0) setSelectedVehicleId(String(content[0].id))
-    } catch {
-      // silent — form won't have options
+    } catch (err) {
+      setVehicles([])
+      setSelectedVehicleId('')
+      setVehiclesError(err.message || t('vehicles_load_failed'))
     } finally {
       setVehiclesLoading(false)
     }
@@ -181,6 +185,8 @@ export function DriverPage() {
       <section className="rounded-panel border border-border p-4">
         <h3 className="mb-3 text-sm font-semibold text-ink">{t('request_status')}</h3>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          {vehiclesError && <ErrorAlert error={vehiclesError} onDismiss={() => setVehiclesError(null)} />}
+
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-muted">{t('vehicle_label')}</span>
             <select

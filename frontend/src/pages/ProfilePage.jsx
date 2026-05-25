@@ -75,18 +75,36 @@ export function ProfilePage() {
   }, [fetchSubscriptions])
   const [recentTickets, setRecentTickets] = useState([])
   const [ticketsLoading, setTicketsLoading] = useState(true)
+  const [ticketsError, setTicketsError] = useState(null)
 
   useEffect(() => {
     if (!isAuthenticated || !session?.userId) return
-    gatewayClient
-      .getWallet(session.userId, '?size=3&sort=purchaseDate,desc')
-      .then((data) => {
+
+    let active = true
+    const loadRecentTickets = async () => {
+      setTicketsLoading(true)
+      setTicketsError(null)
+      try {
+        const data = await gatewayClient.getWallet(session.userId, '?size=3&sort=purchaseDate,desc')
+        if (!active) return
         const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : []
         setRecentTickets(list)
-      })
-      .catch(() => {})
-      .finally(() => setTicketsLoading(false))
-  }, [isAuthenticated, session?.userId])
+      } catch (err) {
+        if (active) {
+          setRecentTickets([])
+          setTicketsError(err.message || t('tickets_load_failed'))
+        }
+      } finally {
+        if (active) setTicketsLoading(false)
+      }
+    }
+
+    loadRecentTickets()
+
+    return () => {
+      active = false
+    }
+  }, [isAuthenticated, session?.userId, t])
 
   if (!isAuthenticated) return <Navigate to="/auth" replace />
 
@@ -376,6 +394,8 @@ export function ProfilePage() {
 
         {ticketsLoading ? (
           <p className="mt-3 text-sm text-muted">{t('loading')}</p>
+        ) : ticketsError ? (
+          <ErrorAlert error={ticketsError} onDismiss={() => setTicketsError(null)} />
         ) : recentTickets.length === 0 ? (
           <p className="mt-3 text-sm text-muted">
             {t('no_tickets')}{' '}

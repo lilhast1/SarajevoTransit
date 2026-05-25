@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { LineBadge } from '../components/common/LineBadge'
+import { ErrorAlert } from '../components/common/Alerts'
 import { PanelCard } from '../components/common/PanelCard'
 import { TransitMap } from '../components/map/TransitMap'
 import { useAppContext } from '../context/AppContext'
@@ -17,6 +18,7 @@ export function StopDetailPage() {
 
   const [stop, setStop] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [departuresLimit, setDeparturesLimit] = useState(5)
   const [loadingMore, setLoadingMore] = useState(false)
 
@@ -64,14 +66,23 @@ export function StopDetailPage() {
   useEffect(() => {
     let active = true
     setLoading(true)
-    transitApi
-      .getStopById(stopId)
-      .then((response) => {
+    setError(null)
+
+    const loadStop = async () => {
+      try {
+        const response = await transitApi.getStopById(stopId)
         if (active) setStop(response)
-      })
-      .finally(() => {
+      } catch (err) {
+        if (active) {
+          setStop(null)
+          setError(err.message || 'Failed to load stop details')
+        }
+      } finally {
         if (active) setLoading(false)
-      })
+      }
+    }
+
+    loadStop()
 
     return () => {
       active = false
@@ -90,8 +101,9 @@ export function StopDetailPage() {
 
   if (!stop) {
     return (
-      <PanelCard>
-        <p className="text-sm text-muted">{t('stop_not_found')}</p>
+      <PanelCard className="space-y-3">
+        {error ? <ErrorAlert error={error} /> : null}
+        <p className="text-sm text-muted">{error ? error : t('stop_not_found')}</p>
         <Link to="/stops" className="mt-3 inline-block text-sm font-medium text-accent">
           {t('back')}
         </Link>

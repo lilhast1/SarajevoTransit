@@ -19,5 +19,6 @@
   "status_updated": "Ažurirano pre {{seconds}}s",
   "status_retrying": "Ponovni pokušaj",
   "planning": "Planiranje...",
-  "find_route": "Pronađi rutu"
+  "find_route": "Pronađi rutu",
+  "load_failed": "Nije moguce ucitati planer ruta. Pokusajte ponovo."
 }

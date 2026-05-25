@@ -5,6 +5,7 @@ import { gatewayClient } from '../services/gatewayClient'
 import { useAppContext } from '../context/AppContext'
 import { SearchableSelect } from '../components/common/SearchableSelect'
 import { PhotoUpload } from '../components/common/PhotoUpload'
+import { ErrorAlert } from '../components/common/Alerts'
 import { VEHICLE_TYPE_META_BY_ID } from '../constants/vehicleColors'
 
 const VEHICLE_TYPES = Object.values(VEHICLE_TYPE_META_BY_ID)
@@ -37,16 +38,41 @@ export function ReportProblemPage() {
   const [photos, setPhotos] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [linesLoading, setLinesLoading] = useState(false)
+  const [linesError, setLinesError] = useState(null)
+  const [stationsError, setStationsError] = useState(null)
 
   useEffect(() => {
+    let active = true
     const q = vehicleTypeId
       ? `?vehicleTypeId=${vehicleTypeId}&activeOnly=true`
       : '?activeOnly=true'
     setSelectedLine(null)
     setLineStations([])
     setSelectedStation(null)
-    gatewayClient.getLines(q).then(setLines).catch(() => {})
-  }, [vehicleTypeId])
+    setLinesLoading(true)
+    setLinesError(null)
+
+    const loadLines = async () => {
+      try {
+        const response = await gatewayClient.getLines(q)
+        if (active) setLines(response)
+      } catch (err) {
+        if (active) {
+          setLines([])
+          setLinesError(err.message || t('lines_load_failed'))
+        }
+      } finally {
+        if (active) setLinesLoading(false)
+      }
+    }
+
+    loadLines()
+
+    return () => {
+      active = false
+    }
+  }, [vehicleTypeId, t])
 
   // When a line is selected, load its stations from all directions
   useEffect(() => {
@@ -55,10 +81,14 @@ export function ReportProblemPage() {
       setSelectedStation(null)
       return
     }
-    gatewayClient.getDirections(`?lineId=${selectedLine.id}&activeOnly=true`)
-      .then(async (directions) => {
+    let active = true
+    setStationsError(null)
+
+    const loadStationsForLine = async () => {
+      try {
+        const directions = await gatewayClient.getDirections(`?lineId=${selectedLine.id}&activeOnly=true`)
         const all = await Promise.all(
-          directions.map((d) => gatewayClient.getDirectionStations(d.id).catch(() => []))
+          directions.map((d) => gatewayClient.getDirectionStations(d.id).catch(() => [])),
         )
         const seen = new Set()
         const unique = []
@@ -68,18 +98,33 @@ export function ReportProblemPage() {
             unique.push({ id: s.stationId, name: s.stationName })
           }
         })
-        setLineStations(unique)
-        setSelectedStation(null)
-      })
-      .catch(() => setLineStations([]))
-  }, [selectedLine])
+        if (active) {
+          setLineStations(unique)
+          setSelectedStation(null)
+        }
+      } catch (err) {
+        if (active) {
+          setLineStations([])
+          setSelectedStation(null)
+          setStationsError(err.message || t('stations_load_failed'))
+        }
+      }
+    }
+
+    loadStationsForLine()
+
+    return () => {
+      active = false
+    }
+  }, [selectedLine, t])
 
   async function loadStations(query) {
     if (!query || query.length < 2) return []
     try {
       const params = new URLSearchParams({ name: query, activeOnly: true })
       return await gatewayClient.getStations(`?${params}`)
-    } catch {
+    } catch (err) {
+      setStationsError(err.message || t('stations_search_failed'))
       return []
     }
   }
@@ -184,7 +229,7 @@ export function ReportProblemPage() {
                 options={lines}
                 getLabel={(l) => `${l.code} – ${l.name}`}
                 getValue={(l) => l.id}
-                placeholder={t('select_line')}
+                placeholder={linesLoading ? t('loading_lines') : t('select_line')}
               />
             </div>
           </div>
@@ -234,7 +279,9 @@ export function ReportProblemPage() {
           </div>
         </div>
 
-        {error && <div className="rounded-panel border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{error}</div>}
+        {linesError && <ErrorAlert error={linesError} onDismiss={() => setLinesError(null)} />}
+        {stationsError && <ErrorAlert error={stationsError} onDismiss={() => setStationsError(null)} />}
+        {error && <ErrorAlert error={error} onDismiss={() => setError(null)} />}
 
         <div className="flex gap-2">
           <button
