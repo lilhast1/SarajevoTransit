@@ -188,6 +188,14 @@ export const gatewayClient = {
       body: JSON.stringify(payload),
       token: getAccessToken(),
     }),
+  /** GET /api/v1/reports?reporterUserId={userId}&page=X&size=X — scoped to own reports for non-admins */
+  getMyReports: (userId, page = 0, size = 10) =>
+    request(`/api/v1/reports?reporterUserId=${userId}&page=${page}&size=${size}&sort=createdAt,desc`, {
+      token: getAccessToken(),
+    }),
+  /** GET /api/v1/reports/{id} */
+  getMyReportById: (id) =>
+    request(`/api/v1/reports/${id}`, { token: getAccessToken() }),
   /** POST /api/v1/auth/logout */
   logout: () => request('/api/v1/auth/logout', { method: 'POST' }),
 

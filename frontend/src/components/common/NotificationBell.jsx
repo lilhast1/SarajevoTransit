@@ -11,6 +11,7 @@ const TYPE_COLORS = {
   UPCOMING_DEPARTURE: 'bg-green-500',
   GENERAL: 'bg-blue-500',
   TIMETABLE_CHANGE: 'bg-purple-500',
+  REPORT_STATUS_CHANGE: 'bg-amber-500',
 }
 
 function timeAgo(dateStr, t) {

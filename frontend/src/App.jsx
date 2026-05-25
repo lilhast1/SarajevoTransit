@@ -18,6 +18,8 @@ import { VehicleDetailPage } from './pages/VehicleDetailPage.jsx'
 import { DriverPage } from './pages/DriverPage.jsx'
 import { TicketsPage } from './pages/TicketsPage.jsx'
 
+import { MyReportsPage } from './pages/MyReportsPage.jsx'
+import { MyReportDetailPage } from './pages/MyReportDetailPage.jsx'
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.jsx'
 import { AdminReportsPage } from './pages/admin/AdminReportsPage.jsx'
 import { AdminReportDetailPage } from './pages/admin/AdminReportDetailPage.jsx'
@@ -70,6 +72,24 @@ function App() {
           element={
             <ProtectedRoute>
               <ReportProblemPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/my-reports"
+          element={
+            <ProtectedRoute>
+              <MyReportsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/my-reports/:id"
+          element={
+            <ProtectedRoute>
+              <MyReportDetailPage />
             </ProtectedRoute>
           }
         />

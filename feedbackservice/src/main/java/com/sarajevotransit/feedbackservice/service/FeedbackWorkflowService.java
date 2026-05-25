@@ -68,6 +68,7 @@ public class FeedbackWorkflowService {
                 report.getId(),
                 lineId,
                 report.getReporterUserId(),
+                report.getCategory() != null ? report.getCategory().name() : null,
                 targetReportStatus.name()));
 
         reviews.stream()

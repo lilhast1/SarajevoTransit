@@ -126,8 +126,15 @@ export function AppProvider({ children }) {
         const count = typeof countResult === 'object' ? (countResult.count ?? 0) : Number(countResult) || 0
 
         setUnreadCount((prev) => {
-          if (count > prev && prev > 0) {
-            window.dispatchEvent(new CustomEvent('new-notification'))
+          if (count > prev) {
+            transitApi.getUnreadNotifications(session.userId)
+              .then((items) => {
+                const latest = items?.[0]
+                window.dispatchEvent(new CustomEvent('new-notification', {
+                  detail: { title: latest?.title ?? null },
+                }))
+              })
+              .catch(() => window.dispatchEvent(new CustomEvent('new-notification', { detail: { title: null } })))
           }
           return count
         })
@@ -143,10 +150,10 @@ export function AppProvider({ children }) {
 
   // Show browser notification when new-notification event fires
   useEffect(() => {
-    function handleNewNotification() {
+    function handleNewNotification(e) {
       if (Notification.permission === 'granted') {
         new Notification('SarajevoTransit', {
-          body: 'You have a new notification.',
+          body: e.detail?.title ?? 'You have a new notification.',
           icon: '/favicon.ico',
         })
       }

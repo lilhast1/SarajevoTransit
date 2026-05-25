@@ -6,5 +6,6 @@ public enum NotificationType {
     DISRUPTION,
     UPCOMING_DEPARTURE,
     GENERAL,
-    TIMETABLE_CHANGE
+    TIMETABLE_CHANGE,
+    REPORT_STATUS_CHANGE
 }

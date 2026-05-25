@@ -62,12 +62,16 @@ public class ProblemReportController {
     }
 
     @GetMapping
-    @Operation(security = {})
     public Page<ProblemReportResponse> getReports(
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) Long reporterUserId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             jakarta.servlet.http.HttpServletRequest httpRequest) {
+        String role = httpRequest.getHeader("X-User-Role");
+        if (!"ADMIN".equals(role)) {
+            String userIdHeader = httpRequest.getHeader("X-User-Id");
+            reporterUserId = userIdHeader != null ? Long.parseLong(userIdHeader) : reporterUserId;
+        }
         return problemReportService.getReports(status, reporterUserId, pageable);
     }
 

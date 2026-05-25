@@ -104,7 +104,7 @@ export function ReportProblemPage() {
         description,
         photoUrls: photos,
       })
-      navigate('/profile')
+      navigate('/my-reports')
     } catch (err) {
       setError(err.message || String(err))
     } finally {

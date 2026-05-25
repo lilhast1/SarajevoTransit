@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import {
   Bell, BellDot, CheckCheck, ChevronLeft, ChevronRight,
-  Loader2, AlertCircle, RefreshCw, ArrowLeft,
+  Loader2, AlertCircle, RefreshCw, ArrowLeft, ExternalLink,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PanelCard } from '../components/common/PanelCard'
@@ -18,6 +18,7 @@ const TYPE_COLORS = {
   UPCOMING_DEPARTURE: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   GENERAL: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   TIMETABLE_CHANGE: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  REPORT_STATUS_CHANGE: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
 }
 
 function timeAgo(dateStr, t) {
@@ -71,6 +72,7 @@ export function NotificationsPage() {
   const TYPE_LABEL_KEYS = {
     DELAY: 'type_delay', ROUTE_CHANGE: 'type_route_change', DISRUPTION: 'type_disruption',
     UPCOMING_DEPARTURE: 'type_departure', GENERAL: 'type_general', TIMETABLE_CHANGE: 'type_timetable',
+    REPORT_STATUS_CHANGE: 'type_report_status',
   }
   const typeMeta = (type) => ({
     label: TYPE_LABEL_KEYS[type] ? t(TYPE_LABEL_KEYS[type]) : type,
@@ -146,7 +148,10 @@ export function NotificationsPage() {
               <button
                 key={n.id}
                 type="button"
-                onClick={() => { if (!n.isRead) markAsRead(n.id) }}
+                onClick={() => {
+                  if (!n.isRead) markAsRead(n.id)
+                  if (n.type === 'REPORT_STATUS_CHANGE') navigate('/my-reports')
+                }}
                 className={`flex w-full gap-4 px-4 py-4 text-left transition hover:bg-surface-soft ${
                   !n.isRead ? 'bg-surface-alt/50' : ''
                 }`}
@@ -177,6 +182,13 @@ export function NotificationsPage() {
 
                   {n.content && (
                     <p className="mt-1 line-clamp-3 text-sm text-muted">{n.content}</p>
+                  )}
+
+                  {n.type === 'REPORT_STATUS_CHANGE' && (
+                    <span className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-accent">
+                      {t('view_my_reports')}
+                      <ExternalLink size={11} aria-hidden="true" />
+                    </span>
                   )}
                 </div>
               </button>

@@ -25,5 +25,7 @@
   "just_now": "just now",
   "minutes_ago": "{{count}}m ago",
   "hours_ago": "{{count}}h ago",
-  "days_ago": "{{count}}d ago"
+  "days_ago": "{{count}}d ago",
+  "type_report_status": "Report Status",
+  "view_my_reports": "View my reports"
 }

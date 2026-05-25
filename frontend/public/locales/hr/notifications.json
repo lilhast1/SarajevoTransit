@@ -25,5 +25,7 @@
   "just_now": "upravo sada",
   "minutes_ago": "prije {{count}} min",
   "hours_ago": "prije {{count}} h",
-  "days_ago": "prije {{count}} dana"
+  "days_ago": "prije {{count}} dana",
+  "type_report_status": "Status prijave",
+  "view_my_reports": "Pogledaj moje prijave"
 }
