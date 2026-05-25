@@ -24,6 +24,10 @@ export function AuthPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const normalizedEmail = form.email.trim()
+  const emailValid = validateEmail(normalizedEmail)
+  const showInlineEmailError = normalizedEmail.length > 0 && !emailValid
+
   if (isAuthenticated) return <Navigate to="/profile" replace />
 
   const onChange = (event) => {
@@ -37,16 +41,16 @@ export function AuthPage() {
     setLoading(true)
 
     try {
-      if (!validateEmail(form.email)) {
+      if (!emailValid) {
         setError(t('invalid_email'))
         return
       }
       const payload =
         mode === 'login'
-          ? await transitApi.login({ email: form.email, password: form.password })
+          ? await transitApi.login({ email: normalizedEmail, password: form.password })
           : await transitApi.register({
               fullName: form.fullName,
-              email: form.email,
+              email: normalizedEmail,
               password: form.password,
             })
       login(payload)
@@ -113,9 +117,16 @@ export function AuthPage() {
               value={form.email}
               onChange={onChange}
               placeholder={t('email_placeholder')}
+              aria-invalid={showInlineEmailError}
+              aria-describedby={showInlineEmailError ? 'auth-email-error' : undefined}
               className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
               required
             />
+            {showInlineEmailError ? (
+              <p id="auth-email-error" className="mt-1 text-xs text-accent">
+                {t('invalid_email')}
+              </p>
+            ) : null}
           </div>
 
           <div>
@@ -138,7 +149,7 @@ export function AuthPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !emailValid}
             className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition disabled:opacity-70"
           >
             {loading ? t('please_wait') : mode === 'login' ? t('login_button') : t('register_button')}
