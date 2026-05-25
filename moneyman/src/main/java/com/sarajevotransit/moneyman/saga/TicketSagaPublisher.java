@@ -23,4 +23,8 @@ public class TicketSagaPublisher {
     public void publishPurchaseCancelled(TicketPurchaseCancelledEvent event) {
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.ROUTING_PURCHASE_CANCELLED, event);
     }
+
+    public void publishRideValidated(TicketRideValidatedEvent event) {
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.ROUTING_RIDE_VALIDATED, event);
+    }
 }

@@ -17,6 +17,7 @@ public class RabbitMQConfig {
     public static final String ROUTING_USER_FAILED        = "ticket.user.failed";
     public static final String ROUTING_PURCHASE_COMPLETED = "ticket.purchase.completed";
     public static final String ROUTING_PURCHASE_CANCELLED = "ticket.purchase.cancelled";
+    public static final String ROUTING_RIDE_VALIDATED     = "ticket.ride.validated";
 
     public static final String QUEUE_MONEYMAN_USER_UPDATED = "ticket-moneyman-user-updated-queue";
     public static final String QUEUE_MONEYMAN_USER_FAILED  = "ticket-moneyman-user-failed-queue";

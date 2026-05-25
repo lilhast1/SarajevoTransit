@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
   CalendarDays,
+  Coins,
   History,
   Languages,
   Loader2,
@@ -36,6 +37,10 @@ const DEFAULT_PREFERENCE_FORM = {
   highContrastEnabled: false,
   largeTextEnabled: false,
   screenReaderEnabled: false,
+}
+const DEFAULT_LOYALTY_FORM = {
+  points: '',
+  rewardType: 'discount',
 }
 
 const TICKET_STATUS_STYLES = {
@@ -164,10 +169,13 @@ export function ProfilePage() {
   const [travelHistory, setTravelHistory] = useState([])
   const [suggestions, setSuggestions] = useState([])
   const [availableLines, setAvailableLines] = useState([])
+  const [loyaltyBalance, setLoyaltyBalance] = useState(0)
+  const [loyaltyTransactions, setLoyaltyTransactions] = useState([])
 
   const [profileForm, setProfileForm] = useState(DEFAULT_PROFILE_FORM)
   const [passwordForm, setPasswordForm] = useState(DEFAULT_PASSWORD_FORM)
   const [preferenceForm, setPreferenceForm] = useState(DEFAULT_PREFERENCE_FORM)
+  const [loyaltyForm, setLoyaltyForm] = useState(DEFAULT_LOYALTY_FORM)
 
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
@@ -216,6 +224,22 @@ export function ProfilePage() {
     [t],
   )
 
+  const loyaltyRewardOptions = useMemo(
+    () => [
+      {
+        value: 'discount',
+        label: 'Discount on next ticket',
+        description: 'Use points to reduce the price of your next ride.',
+      },
+      {
+        value: 'free_ticket',
+        label: 'Free ticket',
+        description: 'Redeem a larger points balance for a free ticket.',
+      },
+    ],
+    [],
+  )
+
   const suggestionLineMap = useMemo(() => {
     const map = new Map()
     availableLines.forEach((line) => {
@@ -246,6 +270,8 @@ export function ProfilePage() {
       setTravelHistory(Array.isArray(summaryResult?.travelHistory) ? summaryResult.travelHistory : [])
       setTickets(Array.isArray(summaryResult?.ticketPurchases) ? summaryResult.ticketPurchases : [])
       setSuggestions(Array.isArray(summaryResult?.personalizedLineSuggestions) ? summaryResult.personalizedLineSuggestions : [])
+      setLoyaltyBalance(Number(summaryResult?.profile?.loyaltyPointsBalance || 0))
+      setLoyaltyTransactions(Array.isArray(summaryResult?.loyaltyTransactions) ? summaryResult.loyaltyTransactions : [])
       setSubscriptions(Array.isArray(subscriptionsResult) ? subscriptionsResult : [])
       setAvailableLines(Array.isArray(linesResult) ? linesResult : [])
 
@@ -322,6 +348,36 @@ export function ProfilePage() {
       setMsg({ type: 'error', text: saveError.message || t('password_update_failed') })
     } finally {
       setSavingPassword(false)
+    }
+  }
+
+  async function handleLoyaltyRedeem(event) {
+    event.preventDefault()
+
+    const points = Number.parseInt(loyaltyForm.points, 10)
+    if (!Number.isFinite(points) || points <= 0) {
+      setMsg({ type: 'error', text: 'Enter a valid number of points to redeem.' })
+      return
+    }
+    if (points > loyaltyBalance) {
+      setMsg({ type: 'error', text: 'You do not have enough points for that redemption.' })
+      return
+    }
+
+    setMsg(null)
+
+    try {
+      const selectedReward = loyaltyRewardOptions.find((option) => option.value === loyaltyForm.rewardType) || loyaltyRewardOptions[0]
+      await transitApi.redeemUserLoyaltyPoints(session.userId, {
+        points,
+        description: selectedReward?.label || 'Redeemed loyalty points',
+        referenceType: selectedReward?.value === 'free_ticket' ? 'FREE_TICKET_REDEMPTION' : 'DISCOUNT_REDEMPTION',
+      })
+      setLoyaltyForm(DEFAULT_LOYALTY_FORM)
+      setRefreshKey((current) => current + 1)
+      setMsg({ type: 'success', text: 'Your points were redeemed successfully.' })
+    } catch (redeemError) {
+      setMsg({ type: 'error', text: redeemError.message || 'Redemption failed.' })
     }
   }
 
@@ -664,6 +720,99 @@ export function ProfilePage() {
                           </div>
                           {review.reviewText ? <p className="mt-1 text-sm text-muted">{review.reviewText}</p> : null}
                           <p className="mt-1 text-xs text-muted">{formatDateTime(review.createdAt)} · {review.moderationStatus}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </PanelCard>
+
+          <PanelCard tone="default">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Coins size={18} className="text-amber-500" aria-hidden="true" />
+                <div>
+                  <h3 className="text-base font-semibold text-ink">Loyalty programme</h3>
+                  <p className="text-sm text-muted">Points are earned from ticket purchases and validated rides, then redeemed for discounts or free tickets.</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-surface-soft px-4 py-3 text-right">
+                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Current balance</p>
+                <p className="text-2xl font-semibold text-ink">{loyaltyBalance}</p>
+                <p className="text-xs text-muted">{loyaltyTransactions.length} total transactions</p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <div className="rounded-lg border border-border bg-surface-soft p-4">
+                <h4 className="text-sm font-semibold text-ink">Redeem points</h4>
+                <form className="mt-3 space-y-3" onSubmit={handleLoyaltyRedeem}>
+                  <label className="block">
+                    <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Points to redeem</span>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={loyaltyForm.points}
+                      onChange={(event) => setLoyaltyForm((current) => ({ ...current, points: event.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Reward type</span>
+                    <select
+                      value={loyaltyForm.rewardType}
+                      onChange={(event) => setLoyaltyForm((current) => ({ ...current, rewardType: event.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
+                    >
+                      {loyaltyRewardOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">
+                    {loyaltyRewardOptions.find((option) => option.value === loyaltyForm.rewardType)?.description}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={!loyaltyForm.points || Number(loyaltyForm.points) > loyaltyBalance}
+                    className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition disabled:opacity-70"
+                  >
+                    Redeem loyalty points
+                  </button>
+                </form>
+              </div>
+
+              <div className="rounded-lg border border-border bg-surface-soft p-4">
+                <h4 className="text-sm font-semibold text-ink">Point history</h4>
+                {loyaltyTransactions.length === 0 ? (
+                  <p className="mt-3 text-sm text-muted">No loyalty activity yet.</p>
+                ) : (
+                  <div className="mt-3 max-h-96 space-y-2 overflow-y-auto pr-1">
+                    {loyaltyTransactions.map((transaction) => {
+                      const movement = transaction.transactionType === 'REDEEM'
+                        ? -1 * (transaction.pointsSpent || transaction.points || 0)
+                        : transaction.pointsEarned || transaction.points || 0
+
+                      return (
+                        <div key={transaction.id} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-medium text-ink">{transaction.description}</p>
+                              <p className="text-xs text-muted">
+                                {transaction.referenceType} · {formatDateTime(transaction.createdAt)}
+                              </p>
+                            </div>
+                            <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${movement >= 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                              {movement >= 0 ? '+' : ''}{movement}
+                            </span>
+                          </div>
+                          {transaction.expiryDate ? <p className="mt-1 text-xs text-muted">Expires {formatDate(transaction.expiryDate)}</p> : null}
                         </div>
                       )
                     })}

@@ -126,10 +126,22 @@ public class MoneymanService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
 
+        TicketStatus previousStatus = ticket.getStatus();
+
         JsonNode ticketNode = objectMapper.valueToTree(ticket);
         JsonNode patchedNode = patch.apply(ticketNode);
         Ticket patchedTicket = objectMapper.treeToValue(patchedNode, Ticket.class);
 
-        return ticketRepository.save(patchedTicket);
+        Ticket savedTicket = ticketRepository.save(patchedTicket);
+        if (previousStatus != TicketStatus.USED && savedTicket.getStatus() == TicketStatus.USED) {
+            sagaPublisher.publishRideValidated(new com.sarajevotransit.moneyman.saga.event.TicketRideValidatedEvent(
+                    savedTicket.getUserId(),
+                    savedTicket.getId(),
+                    savedTicket.getType() != null ? savedTicket.getType().name() : "UNKNOWN",
+                    1
+            ));
+        }
+
+        return savedTicket;
     }
 }

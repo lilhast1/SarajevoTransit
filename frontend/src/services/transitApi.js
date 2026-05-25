@@ -339,15 +339,16 @@ export const transitApi = {
 
     try {
       const linesResponse = await gatewayClient.getStopLines(stopId)
-      if (linesResponse && linesResponse.lines) { 
+      if (linesResponse && linesResponse.lines) {
         lines = linesResponse.lines.map((l, idx) => {
           return {
-          id: l.shortName || idx,
-          gtfsId: Number(l.gtfsId.split('-')[1]) || idx,
-          code: l.shortName || '?',
-          name: l.longName || l.shortName || 'Unknown',
-          vehicleTypeName: l.mode ? l.mode.toLowerCase() : 'bus',
-      }})
+            id: l.shortName || idx,
+            gtfsId: Number(l.gtfsId.split('-')[1]) || idx,
+            code: l.shortName || '?',
+            name: l.longName || l.shortName || 'Unknown',
+            vehicleTypeName: l.mode ? l.mode.toLowerCase() : 'bus',
+          }
+        })
       }
     } catch (e) {
       console.warn('Failed to fetch stop lines from GraphQL proxy:', e)
@@ -570,6 +571,18 @@ export const transitApi = {
 
   async getUserSummary(userId) {
     return gatewayClient.getUserSummary(userId)
+  },
+
+  async getUserLoyaltyBalance(userId) {
+    return gatewayClient.getUserLoyaltyBalance(userId)
+  },
+
+  async getUserLoyaltyTransactions(userId, query = '') {
+    return gatewayClient.getUserLoyaltyTransactions(userId, query)
+  },
+
+  async redeemUserLoyaltyPoints(userId, data) {
+    return gatewayClient.redeemUserLoyaltyPoints(userId, data)
   },
 
   // ── Reviews ───────────────────────────────────────────────────────────────

@@ -131,6 +131,18 @@ export const gatewayClient = {
     request(`/api/v1/users/${id}/travel-history${query}`, { token: getAccessToken() }),
   /** GET /api/v1/users/{id}/summary */
   getUserSummary: (id) => request(`/api/v1/users/${id}/summary`, { token: getAccessToken() }),
+  /** GET /api/v1/users/{id}/loyalty/balance */
+  getUserLoyaltyBalance: (id) => request(`/api/v1/users/${id}/loyalty/balance`, { token: getAccessToken() }),
+  /** GET /api/v1/users/{id}/loyalty/transactions */
+  getUserLoyaltyTransactions: (id, query = '') =>
+    request(`/api/v1/users/${id}/loyalty/transactions${query}`, { token: getAccessToken() }),
+  /** POST /api/v1/users/{id}/loyalty/redeem */
+  redeemUserLoyaltyPoints: (id, payload) =>
+    request(`/api/v1/users/${id}/loyalty/redeem`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
 
   // ── Vehicles ──────────────────────────────────────────────────────────
   /** GET /api/vehicles?size=200 */
