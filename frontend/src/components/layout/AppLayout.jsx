@@ -5,7 +5,6 @@ import {
   CircleUserRound,
   ClipboardList,
   X,
-  LogIn,
   LayoutDashboard,
   MapPinned,
   Menu,
@@ -71,7 +70,6 @@ export function AppLayout() {
       { to: '/report', label: t('report'), icon: Bus },
       ...(session?.role && session.role !== 'ADMIN' ? [{ to: '/my-reports', label: t('my_reports'), icon: ClipboardList }] : []),
       { to: '/tickets', label: t('tickets'), icon: Ticket },
-      { to: '/auth', label: t('auth'), icon: LogIn },
       { to: '/profile', label: t('profile'), icon: UserRound },
     ]
     if (session?.role === 'DRIVER') items.push({ to: '/driver', label: t('driver_portal'), icon: Car })
