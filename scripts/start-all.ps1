@@ -94,6 +94,66 @@ function Wait-ForHttpOk {
   throw "Timed out waiting for $Url"
 }
 
+function Wait-ForPostgresReady {
+  param(
+    [int]$TimeoutSeconds = 90,
+    [int]$PollIntervalSeconds = 2
+  )
+
+  Write-Host "[INFO] Waiting for PostgreSQL container readiness..."
+  $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  while ((Get-Date) -lt $deadline) {
+    try {
+      docker exec sarajevo-transit-postgres pg_isready -U postgres *> $null
+      if ($LASTEXITCODE -eq 0) {
+        Write-Host "[OK] PostgreSQL is ready"
+        return
+      }
+    } catch {
+      # Keep waiting until PostgreSQL is ready.
+    }
+
+    Start-Sleep -Seconds $PollIntervalSeconds
+  }
+
+  throw "Timed out waiting for PostgreSQL readiness"
+}
+
+function Ensure-PostgresDatabases {
+  $requiredDatabases = @(
+    "userdb",
+    "feedbackdb",
+    "sarajevo_transit_routing",
+    "sarajevo_transit_vehicle",
+    "sarajevo_transit_payment"
+  )
+
+  Write-Host "[INFO] Ensuring PostgreSQL databases exist..."
+  foreach ($db in $requiredDatabases) {
+    $exists = ""
+    try {
+      $exists = docker exec sarajevo-transit-postgres psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$db'"
+    } catch {
+      throw "Failed to verify PostgreSQL database '$db': $($_.Exception.Message)"
+    }
+
+    if (($exists | Out-String).Trim() -eq "1") {
+      Write-Host "[OK] Database already exists: $db"
+      continue
+    }
+
+    try {
+      docker exec sarajevo-transit-postgres psql -U postgres -c "CREATE DATABASE \"$db\";" *> $null
+      if ($LASTEXITCODE -ne 0) {
+        throw "psql create command returned exit code $LASTEXITCODE"
+      }
+      Write-Host "[OK] Created database: $db"
+    } catch {
+      throw "Failed to create PostgreSQL database '$db': $($_.Exception.Message)"
+    }
+  }
+}
+
 function Get-RandomFreePort {
   param([System.Collections.Generic.HashSet[int]]$Reserved)
 
@@ -150,6 +210,8 @@ if (-not $env:DB_PASSWORD) {
 
 Write-Host "[INFO] Starting databases with Docker Compose..."
 docker compose up -d
+Wait-ForPostgresReady
+Ensure-PostgresDatabases
 
 if ($IncludeOtp) {
   Write-Host "[INFO] Starting OTP container..."

@@ -101,6 +101,36 @@ export const gatewayClient = {
 
   /** GET /api/v1/users/me */
   getCurrentUser: () => request('/api/v1/users/me'),
+  /** GET /api/v1/users/{id} */
+  getUserById: (id) => request(`/api/v1/users/${id}`, { token: getAccessToken() }),
+  /** PUT /api/v1/users/{id} */
+  updateUserProfile: (id, payload) =>
+    request(`/api/v1/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/v1/users/{id}/preferences */
+  getUserPreferences: (id) => request(`/api/v1/users/${id}/preferences`, { token: getAccessToken() }),
+  /** PUT /api/v1/users/{id}/preferences */
+  updateUserPreferences: (id, payload) =>
+    request(`/api/v1/users/${id}/preferences`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** PUT /api/v1/users/{id}/password */
+  updateUserPassword: (id, payload) =>
+    request(`/api/v1/users/${id}/password`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/v1/users/{id}/travel-history */
+  getUserTravelHistory: (id, query = '') =>
+    request(`/api/v1/users/${id}/travel-history${query}`, { token: getAccessToken() }),
+  /** GET /api/v1/users/{id}/summary */
+  getUserSummary: (id) => request(`/api/v1/users/${id}/summary`, { token: getAccessToken() }),
 
   // ── Vehicles ──────────────────────────────────────────────────────────
   /** GET /api/vehicles?size=200 */
@@ -279,7 +309,6 @@ export const gatewayClient = {
 
   // ── Admin: Users ──────────────────────────────────────────────────────────
   getAllUsers: (query = '') => request(`/api/v1/users${query}`, { token: getAccessToken() }),
-  getUserById: (id) => request(`/api/v1/users/${id}`, { token: getAccessToken() }),
   deleteUser: (id) =>
     request(`/api/v1/users/${id}`, { method: 'DELETE', token: getAccessToken() }),
 

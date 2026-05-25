@@ -543,6 +543,35 @@ export const transitApi = {
     return gatewayClient.getAllUserSubscriptions(userId)
   },
 
+  // ── User Profile ─────────────────────────────────────────────────────────
+  async getUserProfile(userId) {
+    return gatewayClient.getUserById(userId)
+  },
+
+  async updateUserProfile(userId, data) {
+    return gatewayClient.updateUserProfile(userId, data)
+  },
+
+  async getUserPreferences(userId) {
+    return gatewayClient.getUserPreferences(userId)
+  },
+
+  async updateUserPreferences(userId, data) {
+    return gatewayClient.updateUserPreferences(userId, data)
+  },
+
+  async updateUserPassword(userId, data) {
+    return gatewayClient.updateUserPassword(userId, data)
+  },
+
+  async getUserTravelHistory(userId, query = '') {
+    return gatewayClient.getUserTravelHistory(userId, query)
+  },
+
+  async getUserSummary(userId) {
+    return gatewayClient.getUserSummary(userId)
+  },
+
   // ── Reviews ───────────────────────────────────────────────────────────────
   async createReview(payload) {
     return gatewayClient.createReview(payload)
