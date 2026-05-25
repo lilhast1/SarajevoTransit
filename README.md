@@ -2,134 +2,165 @@
 
 Microservice-based public transit management system for Sarajevo.
 
-## Prerequisites
+---
 
-- Java 21
-- Maven
-- Docker
+## Running with Docker (recommended)
 
-## Running the Project
+This is the easiest way to run the full stack on any operating system. All you need is **Docker Desktop** (or Docker Engine + Compose on Linux).
 
-### 1. Configure Passwords
-
-Copy the example environment file and set your passwords:
+### Step 1 — Configure environment
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and change the values if needed:
+Open `.env` and set your values:
 
 ```
-DB_PASSWORD=mysecretpassword   # PostgreSQL password (used by all services)
-NOTIF_DB_PASSWORD=notif_pass   # MySQL password (notification service only)
-OTP_HOST_PORT=18080            # Host port mapped to OTP container port 8080
-OTP_BASE_URL=http://localhost:18080  # URL used by otp-proxy to call OTP
+DB_PASSWORD=mysecretpassword       # PostgreSQL password
+NOTIF_DB_PASSWORD=notif_pass       # MySQL password (notification service)
+JP_API_TOKEN=                      # Bearer token for live vehicle positions (javniprevozks.ba)
+OTP_HOST_PORT=18080                # Host port for OTP (only needed if using route planner)
 ```
 
-All services read `DB_PASSWORD` from the <environment. If you change it in `.env`, also export it in each terminal before running services:
-
-```bash
-export DB_PASSWORD=yourpassword
-export NOTIF_DB_PASSWORD=yourpassword
-```
-
-> `.env` is gitignored and never committed. `.env.example` is the template that is committed.
+> `.env` is gitignored and never committed.
 
 ---
 
-### 2. Generate RSA Keys (first time only)
+### Step 2 — Generate RSA keys (first time only)
 
-JWT tokens are signed with an RSA key pair. The private key lives only in the User Service; the API Gateway uses the public key to verify tokens.
-
-Run this once from the project root:
+JWT tokens are signed with an RSA key pair. Run these commands once from the project root:
 
 ```bash
 mkdir -p userservice/src/main/resources/keys apigateway/src/main/resources/keys
-
+```
+```bash
 openssl genrsa -out tmp-rsa.pem 2048
+```
+```bash
 openssl pkcs8 -topk8 -inform PEM -in tmp-rsa.pem -out userservice/src/main/resources/keys/rsa-private-key.pem -nocrypt
+```
+```bash
 openssl rsa -in tmp-rsa.pem -pubout -out userservice/src/main/resources/keys/rsa-public-key.pem
+```
+```bash
 cp userservice/src/main/resources/keys/rsa-public-key.pem apigateway/src/main/resources/keys/rsa-public-key.pem
+```
+```bash
 rm tmp-rsa.pem
 ```
 
-> The private key is gitignored and never committed. You must regenerate it after a fresh clone.
+> The private key is gitignored. You must regenerate after every fresh clone.
 
 ---
 
-### 3. Start Databases
+### Step 3 — Build and start
 
-From the project root:
+The first build downloads all dependencies and compiles all services — this takes several minutes. Subsequent starts are instant.
+
+```bash
+docker compose -f docker-compose.full.yml up --build -d
+```
+
+---
+
+### Step 4 — Import routing data (first time only)
+
+Transit lines, stations and timetables must be imported once into the database:
+
+```bash
+docker compose -f docker-compose.full.yml stop routingservice
+```
+```bash
+docker compose -f docker-compose.full.yml run --rm -e ROUTING_IMPORT_ENABLED=true routingservice
+```
+```bash
+docker compose -f docker-compose.full.yml up -d routingservice
+```
+
+> Run this only once. The data persists in the PostgreSQL volume.
+
+---
+
+### Step 5 — Verify
+
+| URL | What to check |
+|-----|---------------|
+| http://localhost:3000 | Frontend |
+| http://localhost:8761 | Eureka — all services should show UP |
+| http://localhost:8080/swagger-ui/index.html | Swagger UI |
+| http://localhost:8080/actuator/health | Gateway health |
+| http://localhost:15672 | RabbitMQ UI (guest / guest) |
+
+---
+
+### Daily usage
+
+```bash
+# Start everything (no rebuild, no downloads)
+docker compose -f docker-compose.full.yml up -d
+
+# Stop everything (data preserved)
+docker compose -f docker-compose.full.yml down
+
+# Wipe all database data and start fresh
+docker compose -f docker-compose.full.yml down -v
+```
+
+---
+
+## Route Planner / OTP (optional)
+
+The route planner (best route between two points) requires OpenTripPlanner. This is optional — all other features work without it.
+
+### Step 1 — Download a Sarajevo OSM map file (one time only)
+
+```bash
+mkdir -p otp-data
+wget -O otp-data/sarajevo.osm.pbf https://download.geofabrik.de/europe/bosnia-herzegovina-latest.osm.pbf
+```
+
+### Step 2 — Build the OTP graph (one time only, ~5 min)
+
+The full stack must be running and routing data must be imported (Step 4 above) before running this.
+
+```bash
+export ROUTING_GTFS_ADMIN_TOKEN=change-me
+export ROUTING_BASE_URL=http://localhost:9999
+bash scripts/rebuild-otp.sh
+```
+
+> After this completes, `otp-data/graph.obj` is saved on your machine and never needs to be rebuilt unless transit data changes.
+
+### Step 3 — Start with OTP
+
+```bash
+docker compose -f docker-compose.full.yml --profile otp up -d
+```
+
+OTP will be available at http://localhost:18080
+
+---
+
+## Alternative: Manual startup (for development)
+
+Use this if you want to run services outside Docker for faster development iteration.
+
+### Prerequisites
+
+- Java 21
+- Maven
+- Docker (for databases)
+
+### 1. Start databases only
 
 ```bash
 docker compose up -d
 ```
 
-This starts one PostgreSQL container (port 5432) with all 5 databases and one MySQL container (port 3312) for the notification service.
+### 2. Start services in order
 
-To stop:
-```bash
-docker compose down
-```
-
-To stop and wipe all data:
-```bash
-docker compose down -v
-```
-
----
-
-### 4. Start Services
-
-#### Option A (recommended): one command
-
-**Linux / macOS:**
-
-```bash
-bash scripts/start-all.sh
-```
-
-**Windows (PowerShell):**
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
-```
-
-This starts:
-- PostgreSQL + MySQL via Docker Compose
-- Config Server, Eureka, all microservices, and API Gateway in separate terminal windows
-
-If a service has no `mvnw` / `mvnw.cmd`, the script falls back to `mvn` only when Maven is installed globally. Otherwise it stops early with a clear pre-check error.
-Ports are locked for Config Server (`8888`), Eureka (`8761`), and API Gateway (`8080`). For other services, the script tries the default port first and automatically picks a free random port when that port is already in use.
-
-Optional flags:
-
-```bash
-# Linux / macOS
-bash scripts/start-all.sh --include-otp
-```
-
-```powershell
-# Windows
-powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1 -IncludeOtp
-```
-
-To stop everything:
-
-```bash
-# Linux / macOS
-bash scripts/stop-all.sh
-```
-
-```powershell
-# Windows
-powershell -ExecutionPolicy Bypass -File .\scripts\stop-all.ps1
-```
-
-#### Option B: manual startup
-
-Open a separate terminal for each service and run them **in this order**. Each service must be started from its own directory.
+Open a separate terminal for each and run from its directory:
 
 | # | Service | Directory | Port |
 |---|---------|-----------|------|
@@ -146,54 +177,30 @@ Open a separate terminal for each service and run them **in this order**. Each s
 ```bash
 cd configserver && mvn spring-boot:run
 ```
-```bash
-cd eurekaserver && mvn spring-boot:run
-```
-```bash
-cd userservice && mvn spring-boot:run
-```
-```bash
-cd feedbackservice && mvn spring-boot:run
-```
-```bash
-cd notificationservice && mvn spring-boot:run
-```
-```bash
-cd vehicleservice && mvn spring-boot:run
-```
-```bash
-cd routingservice && mvn spring-boot:run
-```
-```bash
-cd moneyman && mvn spring-boot:run
-```
-```bash
-cd apigateway && mvn spring-boot:run
-```
 
-> Start the API Gateway last, after all other services are registered in Eureka.
-
----
-
-### 5. Verify
-
-- **Eureka dashboard** — http://localhost:8761 — all 7 services should show as UP
-- **Swagger UI** — http://localhost:8080/swagger-ui/index.html — browse and test all APIs
-- **Gateway health** — http://localhost:8080/actuator/health
-
----
-
-### Seed Routing Data (first run only)
-
-The routing service seeds vehicle types (bus, tram, trolleybus, minibus) automatically on every startup.
-
-To load the full transit data (lines, stations, timetables) run once:
+Or use the convenience script:
 
 ```bash
-cd routingservice && mvn spring-boot:run -Dspring-boot.run.arguments="--routing.import.enabled=true"
+# Linux / macOS
+bash scripts/start-all.sh
+
+# Windows
+powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
 ```
 
-> Run this only once. After the import completes, start the routing service normally on subsequent runs.
+To stop:
+
+```bash
+bash scripts/stop-all.sh
+```
+
+### 3. Start frontend (dev mode)
+
+```bash
+cd frontend && npm install && npm run dev
+```
+
+Frontend runs at http://localhost:5173 and proxies all API calls to the gateway at `localhost:8080`.
 
 ---
 
