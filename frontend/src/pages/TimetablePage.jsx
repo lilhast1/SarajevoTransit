@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { LoadingSpinner } from '../components/common/LoadingStates'
 import { PanelCard } from '../components/common/PanelCard'
 import { transitApi } from '../services/transitApi'
 
@@ -16,25 +17,59 @@ export function TimetablePage() {
   const [directionId, setDirectionId] = useState('')
   const [dayType, setDayType] = useState('weekday')
   const [rows, setRows] = useState([])
+  const [linesLoading, setLinesLoading] = useState(true)
+  const [directionsLoading, setDirectionsLoading] = useState(false)
+  const [timetableLoading, setTimetableLoading] = useState(false)
 
   useEffect(() => {
-    transitApi.getLines({ activeOnly: true }).then((response) => {
-      setLines(response)
-      if (response[0]) setLineId(String(response[0].id))
-    })
+    let active = true
+    setLinesLoading(true)
+
+    transitApi.getLines({ activeOnly: true })
+      .then((response) => {
+        if (!active) return
+        setLines(response)
+        if (response[0]) setLineId(String(response[0].id))
+      })
+      .finally(() => {
+        if (active) setLinesLoading(false)
+      })
+
+    return () => { active = false }
   }, [])
 
   useEffect(() => {
     if (!lineId) return
-    transitApi.getDirectionsByLine(lineId).then((response) => {
-      setDirections(response)
-      if (response[0]) setDirectionId(String(response[0].id))
-    })
+    let active = true
+    setDirectionsLoading(true)
+
+    transitApi.getDirectionsByLine(lineId)
+      .then((response) => {
+        if (!active) return
+        setDirections(response)
+        if (response[0]) setDirectionId(String(response[0].id))
+      })
+      .finally(() => {
+        if (active) setDirectionsLoading(false)
+      })
+
+    return () => { active = false }
   }, [lineId])
 
   useEffect(() => {
     if (!lineId || !directionId) return
-    transitApi.getTimetable({ lineId, directionId, dayType }).then(setRows)
+    let active = true
+    setTimetableLoading(true)
+
+    transitApi.getTimetable({ lineId, directionId, dayType })
+      .then((response) => {
+        if (active) setRows(response)
+      })
+      .finally(() => {
+        if (active) setTimetableLoading(false)
+      })
+
+    return () => { active = false }
   }, [dayType, directionId, lineId])
 
   const groupedByHour = useMemo(() => {
@@ -61,6 +96,7 @@ export function TimetablePage() {
             id="timetable-line"
             value={lineId}
             onChange={(event) => setLineId(event.target.value)}
+            disabled={linesLoading}
             className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
           >
             {lines.map((line) => (
@@ -77,6 +113,7 @@ export function TimetablePage() {
             id="timetable-direction"
             value={directionId}
             onChange={(event) => setDirectionId(event.target.value)}
+            disabled={directionsLoading || linesLoading}
             className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
           >
             {directions.map((direction) => (
@@ -93,6 +130,7 @@ export function TimetablePage() {
             id="timetable-daytype"
             value={dayType}
             onChange={(event) => setDayType(event.target.value)}
+            disabled={timetableLoading}
             className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
           >
             {dayTypes.map((item) => (
@@ -102,12 +140,24 @@ export function TimetablePage() {
             ))}
           </select>
         </div>
+
+        {(linesLoading || directionsLoading) ? (
+          <LoadingSpinner
+            label={
+              linesLoading
+                ? 'Loading lines...'
+                : 'Loading directions...'
+            }
+          />
+        ) : null}
       </PanelCard>
 
       <PanelCard>
         <h3 className="text-base font-semibold text-ink">{t('departure_grid')}</h3>
 
-        {groupedByHour.length === 0 ? (
+        {timetableLoading ? (
+          <LoadingSpinner label="Loading timetable..." />
+        ) : groupedByHour.length === 0 ? (
           <p className="mt-3 text-sm text-muted">{t('no_departures')}</p>
         ) : (
           <div className="mt-3 grid gap-2">

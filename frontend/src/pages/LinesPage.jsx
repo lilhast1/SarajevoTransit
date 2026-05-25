@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { LineBadge } from '../components/common/LineBadge'
 import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
-import { EmptyState } from '../components/common/LoadingStates'
+import { EmptyState, LoadingSkeletons } from '../components/common/LoadingStates'
 import { PanelCard } from '../components/common/PanelCard'
 import { LineDetailLayout } from '../components/lines/LineDetailLayout'
 import { SubscriptionModal } from '../components/common/SubscriptionModal'
@@ -279,7 +279,7 @@ export function LinesPage() {
         <div className="flex flex-col gap-4 sm:flex-row">
           <PanelCard className="min-h-[520px] sm:w-1/3 sm:shrink-0">
             <h3 className="mb-3 text-base font-semibold text-ink">{t('matching_lines')}</h3>
-            {loading ? <p className="text-sm text-muted">{t('loading')}</p> : null}
+            {loading ? <LoadingSkeletons count={5} /> : null}
             {!loading && error ? (
               <EmptyState
                 icon={AlertCircle}
