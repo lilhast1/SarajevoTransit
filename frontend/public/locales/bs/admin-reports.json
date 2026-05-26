@@ -27,5 +27,5 @@
   "full_size": "Puna veličina",
   "user_prefix": "Korisnik #{{id}}",
   "delete_confirm": "Obrisati ovu prijavu?",
-  "col_description": "Opis"
+  "reporter_load_failed": "Nije moguce ucitati podatke o podnosiocu."
 }

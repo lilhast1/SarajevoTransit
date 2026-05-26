@@ -20,5 +20,6 @@
   "subscribers": "Pretplatnici",
   "subscribers_title": "Pretplatnici — {{code}} {{name}}",
   "loading": "Učitavanje…",
-  "no_subscribers": "Nema pretplatnika za ovu liniju."
+  "no_subscribers": "Nema pretplatnika za ovu liniju.",
+  "subscribers_load_failed": "Nije moguce ucitati pretplatnike za ovu liniju."
 }

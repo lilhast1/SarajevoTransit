@@ -31,6 +31,7 @@ export function AdminReportDetailPage() {
   const [error, setError] = useState(null)
   const [lightboxSrc, setLightboxSrc] = useState(null)
   const [statusSaving, setStatusSaving] = useState(false)
+  const [reporterError, setReporterError] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -39,10 +40,11 @@ export function AdminReportDetailPage() {
       try {
         const r = await gatewayClient.getReportById(id)
         setReport(r)
+        setReporterError(null)
         if (r.reporterUserId) {
           gatewayClient.getUserById(r.reporterUserId)
             .then((u) => setReporterName(u.fullName ?? null))
-            .catch(() => {})
+            .catch((err) => setReporterError(err.message || t('reporter_load_failed')))
         }
       } catch (err) {
         setError(err.message)
@@ -84,6 +86,7 @@ export function AdminReportDetailPage() {
       </div>
 
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
+      <ErrorAlert error={reporterError} onDismiss={() => setReporterError(null)} />
 
       {report && (
         <>

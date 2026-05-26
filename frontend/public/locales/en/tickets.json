@@ -17,6 +17,8 @@
   "ticket_code": "Ticket Code",
   "pay_with": "Pay with",
   "loading_payment": "Loading payment methods…",
+  "payment_methods_load_failed": "Unable to load payment methods. Please try again.",
+  "remove_card_failed": "Unable to remove this card right now. Please try again.",
   "close": "Close",
   "add_card_link": "+ Add another card",
   "last_4": "Last 4 digits",

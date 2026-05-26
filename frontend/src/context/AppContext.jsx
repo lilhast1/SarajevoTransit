@@ -144,7 +144,7 @@ export function AppProvider({ children }) {
     }
 
     poll()
-    const id = setInterval(poll, 30000)
+    const id = setInterval(poll, 10000)
     return () => { active = false; clearInterval(id) }
   }, [session?.userId])
 

@@ -205,6 +205,7 @@ export function TicketsPage() {
 
   const [methods, setMethods] = useState([])
   const [methodsLoading, setMethodsLoading] = useState(true)
+  const [methodsError, setMethodsError] = useState(null)
   const [removingId, setRemovingId] = useState(null)
   const [userCoupons, setUserCoupons] = useState([])
 
@@ -231,6 +232,7 @@ export function TicketsPage() {
 
   async function loadMethods() {
     setMethodsLoading(true)
+    setMethodsError(null)
     try {
       const data = await gatewayClient.getPaymentMethods(session.userId)
       const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : []
@@ -240,8 +242,10 @@ export function TicketsPage() {
         setSelectedMethodId(def.id)
       }
       if (list.length === 0) setShowAddCard(true)
-    } catch {
-      // silent — user will see empty list
+    } catch (err) {
+      setMethods([])
+      setSelectedMethodId(null)
+      setMethodsError(err.message || t('payment_methods_load_failed'))
     } finally {
       setMethodsLoading(false)
     }
@@ -288,6 +292,7 @@ export function TicketsPage() {
 
   async function handleRemoveMethod(methodId) {
     setRemovingId(methodId)
+    setMethodsError(null)
     try {
       await gatewayClient.removePaymentMethod(methodId)
       setMethods((prev) => prev.filter((m) => m.id !== methodId))
@@ -295,8 +300,8 @@ export function TicketsPage() {
         const remaining = methods.filter((m) => m.id !== methodId)
         setSelectedMethodId(remaining.length > 0 ? remaining[0].id : null)
       }
-    } catch {
-      // silent
+    } catch (err) {
+      setMethodsError(err.message || t('remove_card_failed'))
     } finally {
       setRemovingId(null)
     }
@@ -358,6 +363,8 @@ export function TicketsPage() {
               <p className="text-sm text-muted">{t('loading_payment')}</p>
             ) : (
               <>
+                {methodsError && <ErrorAlert error={methodsError} onDismiss={() => setMethodsError(null)} />}
+
                 {methods.map((m) => (
                   <PaymentMethodCard
                     key={m.id}
@@ -465,6 +472,8 @@ export function TicketsPage() {
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-ink">{t('payment_methods')}</h3>
         </div>
+
+        {methodsError && <ErrorAlert error={methodsError} onDismiss={() => setMethodsError(null)} />}
 
         {!methodsLoading && methods.length === 0 && !showAddCard && (
           <p className="text-sm text-muted">{t('no_payment_methods')}</p>

@@ -36,9 +36,21 @@ export function LineDetailPage() {
   const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0)
 
   useEffect(() => {
-    transitApi.getReviewSummary(lineId)
-      .then(setReviewSummary)
-      .catch(() => {})
+    let active = true
+    const loadSummary = async () => {
+      try {
+        const summary = await transitApi.getReviewSummary(lineId)
+        if (active) setReviewSummary(summary)
+      } catch {
+        if (active) setReviewSummary(null)
+      }
+    }
+
+    loadSummary()
+
+    return () => {
+      active = false
+    }
   }, [lineId, reviewsRefreshKey])
   const [subscriptionMsg, setSubscriptionMsg] = useState(null)
 
@@ -93,6 +105,7 @@ export function LineDetailPage() {
   useEffect(() => {
     if (!selectedDirectionId) return
     let active = true
+    setError(null)
 
     const loadDirectionData = async () => {
       try {
@@ -105,7 +118,11 @@ export function LineDetailPage() {
           setPolyline(directionPolyline)
         }
       } catch (err) {
-        console.error('Failed to load direction data:', err)
+        if (active) {
+          setStops([])
+          setPolyline([])
+          setError(err.message || t('failed'))
+        }
       }
     }
 
@@ -114,7 +131,7 @@ export function LineDetailPage() {
     return () => {
       active = false
     }
-  }, [selectedDirectionId])
+  }, [selectedDirectionId, t])
 
   const subscribed = useMemo(() => isLineSubscribed(lineId), [isLineSubscribed, lineId])
 

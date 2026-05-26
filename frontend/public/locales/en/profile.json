@@ -24,6 +24,7 @@
   "loading": "Loading…",
   "no_tickets": "No tickets yet.",
   "buy_first_ticket": "Buy your first ticket",
+  "tickets_load_failed": "Unable to load recent tickets. Please try again.",
   "valid_until": "valid until {{date}}",
   "retry": "Retry",
   "sub_updated_ok": "Subscription updated successfully.",

@@ -49,32 +49,88 @@ export function AdminTimetablePage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [formDirections, setFormDirections] = useState([])
   const [saving, setSaving] = useState(false)
+  const [lineFilterError, setLineFilterError] = useState(null)
+  const [directionFilterError, setDirectionFilterError] = useState(null)
+  const [formDirectionError, setFormDirectionError] = useState(null)
 
   useEffect(() => {
+    let active = true
     const q = vehicleTypeId ? `?vehicleTypeId=${vehicleTypeId}` : ''
     setLineId('')
     setDirectionId('')
     setDirections([])
-    gatewayClient.getLines(q).then(setLines).catch(() => {})
-  }, [vehicleTypeId])
+
+    const loadLines = async () => {
+      try {
+        setLineFilterError(null)
+        const response = await gatewayClient.getLines(q)
+        if (active) setLines(response)
+      } catch (err) {
+        if (active) {
+          setLines([])
+          setLineFilterError(err.message || t('lines_load_failed'))
+        }
+      }
+    }
+
+    loadLines()
+
+    return () => {
+      active = false
+    }
+  }, [vehicleTypeId, t])
 
   // load directions for the table filter
   useEffect(() => {
     if (!lineId) { setDirections([]); setDirectionId(''); return }
-    gatewayClient.getDirections(`?lineId=${lineId}&activeOnly=true`)
-      .then(setDirections)
-      .catch(() => setDirections([]))
+
+    let active = true
+    const loadDirections = async () => {
+      try {
+        setDirectionFilterError(null)
+        const response = await gatewayClient.getDirections(`?lineId=${lineId}&activeOnly=true`)
+        if (active) setDirections(response)
+      } catch (err) {
+        if (active) {
+          setDirections([])
+          setDirectionFilterError(err.message || t('directions_load_failed'))
+        }
+      }
+    }
+
+    loadDirections()
     setDirectionId('')
-  }, [lineId])
+
+    return () => {
+      active = false
+    }
+  }, [lineId, t])
 
   // load directions for the form's line selector
   useEffect(() => {
     if (!form.formLineId) { setFormDirections([]); setForm((f) => ({ ...f, formDirectionId: '' })); return }
-    gatewayClient.getDirections(`?lineId=${form.formLineId}&activeOnly=true`)
-      .then(setFormDirections)
-      .catch(() => setFormDirections([]))
+
+    let active = true
+    const loadFormDirections = async () => {
+      try {
+        setFormDirectionError(null)
+        const response = await gatewayClient.getDirections(`?lineId=${form.formLineId}&activeOnly=true`)
+        if (active) setFormDirections(response)
+      } catch (err) {
+        if (active) {
+          setFormDirections([])
+          setFormDirectionError(err.message || t('directions_load_failed'))
+        }
+      }
+    }
+
+    loadFormDirections()
     setForm((f) => ({ ...f, formDirectionId: '' }))
-  }, [form.formLineId])
+
+    return () => {
+      active = false
+    }
+  }, [form.formLineId, t])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -100,8 +156,14 @@ export function AdminTimetablePage() {
     setForm({ ...EMPTY_FORM, formLineId: lineId, formDirectionId: directionId })
     if (lineId) {
       gatewayClient.getDirections(`?lineId=${lineId}&activeOnly=true`)
-        .then(setFormDirections)
-        .catch(() => setFormDirections([]))
+        .then((response) => {
+          setFormDirections(response)
+          setFormDirectionError(null)
+        })
+        .catch((err) => {
+          setFormDirections([])
+          setFormDirectionError(err.message || t('directions_load_failed'))
+        })
     }
     setFormOpen(true)
   }
@@ -264,6 +326,7 @@ export function AdminTimetablePage() {
             <button type="button" onClick={() => setFormOpen(false)} className="text-muted hover:text-ink"><X size={16} /></button>
           </div>
           <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2">
+            {formDirectionError && <ErrorAlert error={formDirectionError} onDismiss={() => setFormDirectionError(null)} />}
 
             {/* line + direction */}
             <label className="block">
@@ -378,6 +441,8 @@ export function AdminTimetablePage() {
       )}
 
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
+      <ErrorAlert error={lineFilterError} onDismiss={() => setLineFilterError(null)} />
+      <ErrorAlert error={directionFilterError} onDismiss={() => setDirectionFilterError(null)} />
 
       <DataTable
         columns={columns}

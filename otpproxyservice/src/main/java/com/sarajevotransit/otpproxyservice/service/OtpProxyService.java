@@ -201,6 +201,17 @@ public class OtpProxyService {
                         mappedLeg.setEndTime(toEpochMillis(leg.getEnd() != null ? leg.getEnd().getScheduledTime() : null));
                         mappedLeg.setDistanceMeters(leg.getDistance());
                         mappedLeg.setPoints(leg.getLegGeometry() != null ? leg.getLegGeometry().getPoints() : null);
+                        if (leg.getStopCalls() != null) {
+                            mappedLeg.setVisitedStops(leg.getStopCalls().stream()
+                                    .filter(sc -> sc.getStopLocation() != null)
+                                    .map(sc -> {
+                                        var vs = new OptimalRouteResponse.VisitedStop();
+                                        vs.setGtfsId(sc.getStopLocation().getGtfsId());
+                                        vs.setName(sc.getStopLocation().getName());
+                                        return vs;
+                                    })
+                                    .collect(Collectors.toList()));
+                        }
                         legs.add(mappedLeg);
                     }
                 }
@@ -245,7 +256,7 @@ public class OtpProxyService {
                 + ") {"
                 + " itineraries {"
                 + " duration walkDistance numberOfTransfers"
-                + " legs { mode route { shortName longName type } from { name } to { name } start { scheduledTime } end { scheduledTime } distance legGeometry { points } }"
+                + " legs { mode route { shortName longName type } from { name } to { name } start { scheduledTime } end { scheduledTime } distance legGeometry { points } stopCalls { stopLocation { ... on Stop { gtfsId name } } } }"
                 + " }"
                 + " }"
                 + "}";

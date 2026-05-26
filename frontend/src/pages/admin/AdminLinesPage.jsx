@@ -16,14 +16,17 @@ function SubscribersPanel({ line }) {
   const [page, setPage] = useState(0)
   const [data, setData] = useState({ content: [], totalPages: 0 })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const res = await gatewayClient.getSubscriptionsByLine(line.id, page)
       setData(res)
-    } catch {
-      // silently ignore
+    } catch (err) {
+      setData({ content: [], totalPages: 0 })
+      setError(err.message || t('subscribers_load_failed'))
     } finally {
       setLoading(false)
     }
@@ -53,6 +56,7 @@ function SubscribersPanel({ line }) {
       <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">
         {t('subscribers_title', { code: line.code, name: line.name })}
       </p>
+      <ErrorAlert error={error} onDismiss={() => setError(null)} />
       {loading && <p className="text-sm text-muted">{t('loading')}</p>}
       {!loading && (data.content ?? []).length === 0 && (
         <p className="text-sm text-muted">{t('no_subscribers')}</p>

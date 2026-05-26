@@ -22,5 +22,6 @@
   "hide": "Sakrij",
   "show": "Prikaži",
   "delete": "Obriši",
-  "delete_confirm": "Obrisati ovu recenziju?"
+  "delete_confirm": "Obrisati ovu recenziju?",
+  "lines_load_failed": "Nije moguce ucitati linije. Pokusajte ponovo."
 }

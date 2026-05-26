@@ -20,5 +20,6 @@
   "subscribers": "Subscribers",
   "subscribers_title": "Subscribers — {{code}} {{name}}",
   "loading": "Loading…",
-  "no_subscribers": "No subscribers for this line."
+  "no_subscribers": "No subscribers for this line.",
+  "subscribers_load_failed": "Unable to load subscribers for this line."
 }

@@ -318,6 +318,43 @@ export function ProfilePage() {
   useEffect(() => {
     loadProfileBundle()
   }, [loadProfileBundle, refreshKey])
+  }, [session?.userId])
+
+  useEffect(() => {
+    fetchSubscriptions()
+  }, [fetchSubscriptions])
+  const [recentTickets, setRecentTickets] = useState([])
+  const [ticketsLoading, setTicketsLoading] = useState(true)
+  const [ticketsError, setTicketsError] = useState(null)
+
+  useEffect(() => {
+    if (!isAuthenticated || !session?.userId) return
+
+    let active = true
+    const loadRecentTickets = async () => {
+      setTicketsLoading(true)
+      setTicketsError(null)
+      try {
+        const data = await gatewayClient.getWallet(session.userId, '?size=3&sort=purchaseDate,desc')
+        if (!active) return
+        const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : []
+        setRecentTickets(list)
+      } catch (err) {
+        if (active) {
+          setRecentTickets([])
+          setTicketsError(err.message || t('tickets_load_failed'))
+        }
+      } finally {
+        if (active) setTicketsLoading(false)
+      }
+    }
+
+    loadRecentTickets()
+
+    return () => {
+      active = false
+    }
+  }, [isAuthenticated, session?.userId, t])
 
   if (!isAuthenticated) return <Navigate to="/auth" replace />
 
@@ -859,6 +896,53 @@ export function ProfilePage() {
         <div className="flex items-center gap-2">
           <Star size={16} className="text-amber-400" fill="currentColor" aria-hidden="true" />
           <h3 className="text-base font-semibold text-ink">{t('rate_title')}</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-ink">{t('wallet')}</h3>
+          <Link to="/tickets" className="text-xs text-accent underline-offset-2 hover:underline">
+            {t('view_all_tickets')}
+          </Link>
+        </div>
+
+        {ticketsLoading ? (
+          <p className="mt-3 text-sm text-muted">{t('loading')}</p>
+        ) : ticketsError ? (
+          <ErrorAlert error={ticketsError} onDismiss={() => setTicketsError(null)} />
+        ) : recentTickets.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">
+            {t('no_tickets')}{' '}
+            <Link to="/tickets" className="text-accent underline-offset-2 hover:underline">
+              {t('buy_first_ticket')}
+            </Link>
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {recentTickets.map((ticket) => (
+              <div key={ticket.id} className="flex items-center justify-between rounded-lg border border-border bg-surface-soft px-3 py-2 text-sm">
+                <div>
+                  <span className="font-medium text-ink capitalize">{ticket.type?.toLowerCase()}</span>
+                  {ticket.validUntil && (
+                    <span className="ml-2 text-xs text-muted">{t('valid_until', { date: formatDate(ticket.validUntil) })}</span>
+                  )}
+                </div>
+                <span className={`rounded px-2 py-0.5 text-xs font-semibold ${TICKET_STATUS_STYLES[ticket.status] || ''}`}>
+                  {ticket.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </PanelCard>
+
+      {/* ── Rate a line ─────────────────────────────────────────────────── */}
+      <PanelCard tone="default">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Star size={16} className="text-amber-400" fill="currentColor" aria-hidden="true" />
+            <h3 className="text-base font-semibold text-ink">{t('rate_title')}</h3>
+          </div>
+          <Link to="/lines" className="text-xs text-accent underline-offset-2 hover:underline">
+            {t('rate_browse_lines')}
+          </Link>
         </div>
         <p className="mt-1 text-sm text-muted">{t('rate_subtitle')}</p>
 

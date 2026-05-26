@@ -8,5 +8,6 @@
   "saturday": "Subota",
   "sunday": "Nedjelja",
   "departure_grid": "Pregled polazaka",
-  "no_departures": "Nema polazaka za odabrani kriterij."
+  "no_departures": "Nema polazaka za odabrani kriterij.",
+  "load_failed": "Nije moguce ucitati podatke voznog reda. Pokusajte ponovo."
 }

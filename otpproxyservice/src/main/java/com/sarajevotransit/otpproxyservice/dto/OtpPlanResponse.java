@@ -77,6 +77,7 @@ public class OtpPlanResponse {
         private LegTime end;
         private Double distance;
         private LegGeometry legGeometry;
+        private List<StopCall> stopCalls;
 
         public String getMode() {
             return mode;
@@ -140,6 +141,47 @@ public class OtpPlanResponse {
 
         public void setLegGeometry(LegGeometry legGeometry) {
             this.legGeometry = legGeometry;
+        }
+
+        public List<StopCall> getStopCalls() {
+            return stopCalls;
+        }
+
+        public void setStopCalls(List<StopCall> stopCalls) {
+            this.stopCalls = stopCalls;
+        }
+    }
+
+    public static class StopCall {
+        private StopLocation stopLocation;
+
+        public StopLocation getStopLocation() {
+            return stopLocation;
+        }
+
+        public void setStopLocation(StopLocation stopLocation) {
+            this.stopLocation = stopLocation;
+        }
+    }
+
+    public static class StopLocation {
+        private String gtfsId;
+        private String name;
+
+        public String getGtfsId() {
+            return gtfsId;
+        }
+
+        public void setGtfsId(String gtfsId) {
+            this.gtfsId = gtfsId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
         }
     }
 

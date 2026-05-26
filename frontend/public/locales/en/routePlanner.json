@@ -19,5 +19,6 @@
   "status_updated": "Updated {{seconds}}s",
   "status_retrying": "Retrying",
   "planning": "Planning...",
-  "find_route": "Find route"
+  "find_route": "Find route",
+  "load_failed": "Unable to load route planner data. Please try again."
 }

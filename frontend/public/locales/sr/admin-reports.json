@@ -26,5 +26,6 @@
   "close_image": "Zatvori sliku",
   "full_size": "Puna veličina",
   "user_prefix": "Korisnik #{{id}}",
-  "delete_confirm": "Obrisati ovu prijavu?"
+  "delete_confirm": "Obrisati ovu prijavu?",
+  "reporter_load_failed": "Nije moguce ucitati podatke o podnosiocu."
 }

@@ -29,5 +29,8 @@
   "field_address": "Address",
   "field_lat": "Latitude",
   "field_lng": "Longitude",
-  "field_active": "Active"
+  "field_active": "Active",
+  "lines_load_failed": "Unable to load lines. Please try again.",
+  "directions_load_failed": "Unable to load directions. Please try again.",
+  "stations_filter_failed": "Unable to load stations for this direction."
 }
