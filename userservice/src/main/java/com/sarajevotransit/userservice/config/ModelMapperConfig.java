@@ -77,8 +77,6 @@ public class ModelMapperConfig {
                             source.getDurationMinutes());
                 });
 
-
-
         modelMapper.createTypeMap(LoyaltyTransaction.class, LoyaltyTransactionResponse.class)
                 .setConverter(context -> {
                     LoyaltyTransaction source = context.getSource();

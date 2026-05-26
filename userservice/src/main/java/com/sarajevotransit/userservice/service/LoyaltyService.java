@@ -137,7 +137,8 @@ public class LoyaltyService {
         }
 
         if (coupon.getCouponType() == LoyaltyCouponType.FREE_RIDE) {
-            String rideCode = request == null || request.rideCode() == null ? null : request.rideCode().trim().toUpperCase();
+            String rideCode = request == null || request.rideCode() == null ? null
+                    : request.rideCode().trim().toUpperCase();
             if (rideCode == null || !rideCode.equalsIgnoreCase(coupon.getCouponRideCode())) {
                 throw new IllegalArgumentException("This free ride coupon is only valid for the selected ride.");
             }
@@ -153,8 +154,7 @@ public class LoyaltyService {
                 coupon.getCouponTier(),
                 coupon.getCouponDiscountPercent() == null ? 0 : coupon.getCouponDiscountPercent(),
                 coupon.getCouponRideCode(),
-                coupon.getCouponType() == LoyaltyCouponType.FREE_RIDE
-        );
+                coupon.getCouponType() == LoyaltyCouponType.FREE_RIDE);
     }
 
     @Transactional(readOnly = true)
@@ -228,7 +228,8 @@ public class LoyaltyService {
     }
 
     private String generateCouponCode(Long userId, LoyaltyCouponType type, LoyaltyTier tier) {
-        return "CP-" + tier.name().substring(0, 3) + "-" + type.name().substring(0, 3) + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return "CP-" + tier.name().substring(0, 3) + "-" + type.name().substring(0, 3) + "-"
+                + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
     private String buildCouponDescription(LoyaltyCouponType type, LoyaltyTier tier, String rideCode) {

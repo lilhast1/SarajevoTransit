@@ -45,7 +45,8 @@ public class FinanceController {
     public ResponseEntity<TicketResponseDTO> purchase(
             @Valid @RequestBody TicketPurchaseRequest request,
             HttpServletRequest httpRequest) {
-        // Override userId from gateway-injected header — never trust request body for identity
+        // Override userId from gateway-injected header — never trust request body for
+        // identity
         Long requestingUserId = extractUserId(httpRequest);
         request.setUserId(requestingUserId);
         try {
@@ -86,7 +87,8 @@ public class FinanceController {
 
     private void requireOwnerOrAdmin(HttpServletRequest request, Long resourceUserId) {
         String role = request.getHeader("X-User-Role");
-        if ("ADMIN".equals(role)) return;
+        if ("ADMIN".equals(role))
+            return;
         String requestingUserId = request.getHeader("X-User-Id");
         if (requestingUserId == null || !requestingUserId.equals(String.valueOf(resourceUserId))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");

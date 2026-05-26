@@ -80,8 +80,6 @@ public class UserProfile {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TravelHistoryEntry> travelHistoryEntries = new ArrayList<>();
 
-
-
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LoyaltyTransaction> loyaltyTransactions = new ArrayList<>();
 
@@ -121,8 +119,6 @@ public class UserProfile {
         travelHistoryEntries.add(entry);
         entry.setUser(this);
     }
-
-
 
     public void addLoyaltyTransaction(LoyaltyTransaction transaction) {
         loyaltyTransactions.add(transaction);

@@ -29,9 +29,12 @@ public enum LoyaltyTier {
     }
 
     public static LoyaltyTier fromLifetimePoints(int lifetimePoints) {
-        if (lifetimePoints >= PLATINUM.minimumLifetimePoints) return PLATINUM;
-        if (lifetimePoints >= GOLD.minimumLifetimePoints) return GOLD;
-        if (lifetimePoints >= SILVER.minimumLifetimePoints) return SILVER;
+        if (lifetimePoints >= PLATINUM.minimumLifetimePoints)
+            return PLATINUM;
+        if (lifetimePoints >= GOLD.minimumLifetimePoints)
+            return GOLD;
+        if (lifetimePoints >= SILVER.minimumLifetimePoints)
+            return SILVER;
         return BRONZE;
     }
 }

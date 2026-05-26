@@ -28,7 +28,8 @@ public class LoyaltyCouponClient {
             throw new IllegalStateException("User service is unavailable");
         }
 
-        String url = instance.getUri().toString() + "/api/v1/users/" + userId + "/loyalty/coupons/" + couponCode + "/apply";
+        String url = instance.getUri().toString() + "/api/v1/users/" + userId + "/loyalty/coupons/" + couponCode
+                + "/apply";
 
         try {
             return restClientBuilder.build()
