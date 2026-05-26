@@ -1,6 +1,7 @@
 package com.sarajevotransit.userservice.model;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -8,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Min;
@@ -51,6 +53,29 @@ public class LoyaltyTransaction {
 
     @Column(name = "expiry_date")
     private LocalDate expiryDate;
+
+    @Column(name = "coupon_code", unique = true)
+    private String couponCode;
+
+    @Column(name = "coupon_type")
+    @Enumerated(EnumType.STRING)
+    private LoyaltyCouponType couponType;
+
+    @Column(name = "coupon_tier")
+    @Enumerated(EnumType.STRING)
+    private LoyaltyTier couponTier;
+
+    @Column(name = "coupon_discount_percent")
+    private Integer couponDiscountPercent;
+
+    @Column(name = "coupon_ride_code")
+    private String couponRideCode;
+
+    @Column(name = "coupon_redeemed_at")
+    private LocalDateTime couponRedeemedAt;
+
+    @Column(name = "coupon_active")
+    private Boolean couponActive;
 
     @Column(nullable = false)
     @NotBlank

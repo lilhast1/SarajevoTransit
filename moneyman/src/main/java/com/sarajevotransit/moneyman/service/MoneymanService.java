@@ -9,6 +9,8 @@ import com.sarajevotransit.moneyman.dto.TicketPurchaseRequest;
 import com.sarajevotransit.moneyman.dto.TicketResponseDTO;
 import com.sarajevotransit.moneyman.mapper.MoneymanMapper;
 import com.sarajevotransit.moneyman.exception.ResourceNotFoundException;
+import com.sarajevotransit.moneyman.client.LoyaltyCouponClient;
+import com.sarajevotransit.moneyman.dto.CouponApplicationResponse;
 import com.sarajevotransit.moneyman.model.*;
 import com.sarajevotransit.moneyman.model.enums.*;
 import com.sarajevotransit.moneyman.repository.*;
@@ -34,16 +36,18 @@ public class MoneymanService {
     private final MoneymanMapper mapper;
     private final ObjectMapper objectMapper;
     private final TicketSagaPublisher sagaPublisher;
+    private final LoyaltyCouponClient loyaltyCouponClient;
 
     public MoneymanService(TicketRepository ticketRepository, TransactionRepository transactionRepository,
             PaymentMethodRepository paymentMethodRepository, MoneymanMapper mapper, ObjectMapper objectMapper,
-            TicketSagaPublisher sagaPublisher) {
+            TicketSagaPublisher sagaPublisher, LoyaltyCouponClient loyaltyCouponClient) {
         this.ticketRepository = ticketRepository;
         this.transactionRepository = transactionRepository;
         this.paymentMethodRepository = paymentMethodRepository;
         this.mapper = mapper;
         this.objectMapper = objectMapper;
         this.sagaPublisher = sagaPublisher;
+        this.loyaltyCouponClient = loyaltyCouponClient;
     }
 
     @Transactional
@@ -54,6 +58,20 @@ public class MoneymanService {
 
         BigDecimal price = calculatePrice(request.getTicketType());
         LocalDateTime expiry = calculateExpiry(request.getTicketType());
+
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            CouponApplicationResponse coupon = loyaltyCouponClient.applyCoupon(
+                    request.getUserId(),
+                    request.getCouponCode().trim(),
+                    request.getRideCode());
+
+            if (coupon.freeRide()) {
+                price = BigDecimal.ZERO;
+            } else if (coupon.discountPercent() > 0) {
+                price = price.multiply(BigDecimal.valueOf(100 - coupon.discountPercent()))
+                        .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            }
+        }
 
         log.info("Charging card ending in {} via {} token: {}", pm.getLastFour(), pm.getProvider(),
                 pm.getGatewayToken());
@@ -82,7 +100,8 @@ public class MoneymanService {
         ticket.setTransaction(tx);
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        // Publish event — UserService will record purchase history + earn loyalty points
+        // Publish event — UserService will record purchase history + earn loyalty
+        // points
         sagaPublisher.publishPurchaseInitiated(new TicketPurchaseInitiatedEvent(
                 sagaId,
                 request.getUserId(),
@@ -90,8 +109,7 @@ public class MoneymanService {
                 tx.getId(),
                 request.getTicketType().name(),
                 price,
-                externalId
-        ));
+                externalId));
 
         log.info("Saga [{}]: TicketPurchaseInitiated published for user {}", sagaId, request.getUserId());
         return savedTicket;
@@ -122,14 +140,26 @@ public class MoneymanService {
     }
 
     @Transactional
-    public Ticket updateTicket(UUID ticketId, JsonPatch patch) throws JsonPatchException, IllegalArgumentException, JsonProcessingException {
+    public Ticket updateTicket(UUID ticketId, JsonPatch patch)
+            throws JsonPatchException, IllegalArgumentException, JsonProcessingException {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+
+        TicketStatus previousStatus = ticket.getStatus();
 
         JsonNode ticketNode = objectMapper.valueToTree(ticket);
         JsonNode patchedNode = patch.apply(ticketNode);
         Ticket patchedTicket = objectMapper.treeToValue(patchedNode, Ticket.class);
 
-        return ticketRepository.save(patchedTicket);
+        Ticket savedTicket = ticketRepository.save(patchedTicket);
+        if (previousStatus != TicketStatus.USED && savedTicket.getStatus() == TicketStatus.USED) {
+            sagaPublisher.publishRideValidated(new com.sarajevotransit.moneyman.saga.event.TicketRideValidatedEvent(
+                    savedTicket.getUserId(),
+                    savedTicket.getId(),
+                    savedTicket.getType() != null ? savedTicket.getType().name() : "UNKNOWN",
+                    1));
+        }
+
+        return savedTicket;
     }
 }

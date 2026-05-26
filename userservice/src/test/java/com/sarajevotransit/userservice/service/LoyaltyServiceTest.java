@@ -145,8 +145,14 @@ class LoyaltyServiceTest {
                 0,
                 "Bonus",
                 "ticket_purchase",
-                null,
-                null,
+                null, // transactionId
+                null, // expiryDate
+                null, // couponCode
+                null, // couponType
+                null, // couponTier
+                null, // couponDiscountPercent
+                null, // couponRideCode
+                null, // couponRedeemedAt
                 LocalDateTime.now());
 
         when(userService.findUserById(5L)).thenReturn(user);
