@@ -46,6 +46,11 @@ public class DigitalWallet {
     @Min(0)
     private Integer loyaltyPointsTotal = 0;
 
+    @Column(name = "loyalty_points_lifetime", nullable = false)
+    @NotNull
+    @Min(0)
+    private Integer loyaltyPointsLifetime = 0;
+
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
@@ -56,6 +61,9 @@ public class DigitalWallet {
         }
         if (this.loyaltyPointsTotal == null) {
             this.loyaltyPointsTotal = 0;
+        }
+        if (this.loyaltyPointsLifetime == null) {
+            this.loyaltyPointsLifetime = 0;
         }
         this.updatedAt = LocalDateTime.now();
     }

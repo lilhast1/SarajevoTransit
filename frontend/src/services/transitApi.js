@@ -573,6 +573,10 @@ export const transitApi = {
     return gatewayClient.getUserSummary(userId)
   },
 
+  async generateUserLoyaltyCoupon(userId, data) {
+    return gatewayClient.generateUserLoyaltyCoupon(userId, data)
+  },
+
   async getUserLoyaltyBalance(userId) {
     return gatewayClient.getUserLoyaltyBalance(userId)
   },

@@ -201,10 +201,12 @@ export function TicketsPage() {
   const [purchasing, setPurchasing] = useState(false)
   const [purchaseError, setPurchaseError] = useState(null)
   const [purchaseSuccess, setPurchaseSuccess] = useState(null)
+  const [couponCode, setCouponCode] = useState('')
 
   const [methods, setMethods] = useState([])
   const [methodsLoading, setMethodsLoading] = useState(true)
   const [removingId, setRemovingId] = useState(null)
+  const [userCoupons, setUserCoupons] = useState([])
 
   const [tickets, setTickets] = useState([])
   const [ticketsLoading, setTicketsLoading] = useState(true)
@@ -214,7 +216,18 @@ export function TicketsPage() {
     if (!isAuthenticated || !session?.userId) return
     loadMethods()
     loadTickets()
+    loadCoupons()
   }, [isAuthenticated, session?.userId])
+
+  async function loadCoupons() {
+    try {
+      const data = await gatewayClient.getUserLoyaltyCoupons(session.userId)
+      const list = Array.isArray(data) ? data : []
+      setUserCoupons(list)
+    } catch {
+      setUserCoupons([])
+    }
+  }
 
   async function loadMethods() {
     setMethodsLoading(true)
@@ -254,13 +267,17 @@ export function TicketsPage() {
     setPurchaseError(null)
     setPurchaseSuccess(null)
     try {
-      await gatewayClient.purchaseTicket({
+      const payload = {
         userId: session.userId,
         ticketType: selectedType,
         paymentMethodId: selectedMethodId,
-      })
+      }
+      if (couponCode && couponCode.trim().length > 0) payload.couponCode = couponCode.trim()
+
+      await gatewayClient.purchaseTicket(payload)
       setPurchaseSuccess(t('ticket_purchased'))
       setSelectedType(null)
+      setCouponCode('')
       await loadTickets()
     } catch (err) {
       setPurchaseError(err.message || 'Purchase failed')
@@ -370,6 +387,32 @@ export function TicketsPage() {
 
             {purchaseError && <ErrorAlert error={purchaseError} onDismiss={() => setPurchaseError(null)} />}
             {purchaseSuccess && <SuccessAlert message={purchaseSuccess} onDismiss={() => setPurchaseSuccess(null)} />}
+
+            <div className="flex flex-col gap-2">
+              <label className="text-xs text-muted">Have a coupon? (optional)</label>
+              {userCoupons.length === 0 ? (
+                <input
+                  type="text"
+                  placeholder="Paste a coupon code (optional)"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  className="w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+                />
+              ) : (
+                <select
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  className="w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent"
+                >
+                  <option value="">No coupon</option>
+                  {userCoupons.map((c) => (
+                    <option key={c.couponCode} value={c.couponCode}>
+                      {c.couponCode} {c.couponType === 'DISCOUNT' && c.couponDiscountPercent ? `— ${c.couponDiscountPercent}%` : c.couponType === 'FREE_RIDE' ? '— Free ride' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
 
             <div className="flex items-center justify-between pt-1">
               <button

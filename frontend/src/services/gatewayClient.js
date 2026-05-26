@@ -131,6 +131,16 @@ export const gatewayClient = {
     request(`/api/v1/users/${id}/travel-history${query}`, { token: getAccessToken() }),
   /** GET /api/v1/users/{id}/summary */
   getUserSummary: (id) => request(`/api/v1/users/${id}/summary`, { token: getAccessToken() }),
+  /** POST /api/v1/users/{id}/loyalty/coupons */
+  generateUserLoyaltyCoupon: (id, payload) =>
+    request(`/api/v1/users/${id}/loyalty/coupons`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/v1/users/{id}/loyalty/coupons */
+  getUserLoyaltyCoupons: (id) =>
+    request(`/api/v1/users/${id}/loyalty/coupons`, { token: getAccessToken() }),
   /** GET /api/v1/users/{id}/loyalty/balance */
   getUserLoyaltyBalance: (id) => request(`/api/v1/users/${id}/loyalty/balance`, { token: getAccessToken() }),
   /** GET /api/v1/users/{id}/loyalty/transactions */

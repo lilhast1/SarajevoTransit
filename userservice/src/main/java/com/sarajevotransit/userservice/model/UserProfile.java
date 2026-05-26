@@ -187,10 +187,36 @@ public class UserProfile {
         return wallet.getLoyaltyPointsTotal();
     }
 
+    public Integer getLoyaltyPointsLifetime() {
+        if (wallet == null || wallet.getLoyaltyPointsLifetime() == null) {
+            return 0;
+        }
+        return wallet.getLoyaltyPointsLifetime();
+    }
+
+    public String getLoyaltyTier() {
+        return LoyaltyTier.fromLifetimePoints(getLoyaltyPointsLifetime()).name();
+    }
+
+    public Integer getLoyaltyDiscountPercent() {
+        return LoyaltyTier.fromLifetimePoints(getLoyaltyPointsLifetime()).getDiscountPercent();
+    }
+
+    public boolean isLoyaltyFreeRideEligible() {
+        return LoyaltyTier.fromLifetimePoints(getLoyaltyPointsLifetime()).isFreeRideEligible();
+    }
+
     public void setLoyaltyPointsBalance(Integer loyaltyPointsBalance) {
         if (this.wallet == null) {
             setWallet(new DigitalWallet());
         }
         this.wallet.setLoyaltyPointsTotal(loyaltyPointsBalance == null ? 0 : loyaltyPointsBalance);
+    }
+
+    public void setLoyaltyPointsLifetime(Integer loyaltyPointsLifetime) {
+        if (this.wallet == null) {
+            setWallet(new DigitalWallet());
+        }
+        this.wallet.setLoyaltyPointsLifetime(loyaltyPointsLifetime == null ? 0 : loyaltyPointsLifetime);
     }
 }

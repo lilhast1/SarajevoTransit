@@ -7,6 +7,10 @@ public record UserProfileResponse(
         String fullName,
         String email,
         int loyaltyPointsBalance,
+        int loyaltyPointsLifetime,
+        String loyaltyTier,
+        int loyaltyDiscountPercent,
+        boolean loyaltyFreeRideEligible,
         UserPreferenceResponse preference,
         LocalDateTime createdAt,
         LocalDateTime updatedAt) {

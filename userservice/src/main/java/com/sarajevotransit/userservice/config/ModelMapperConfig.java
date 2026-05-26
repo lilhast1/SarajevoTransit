@@ -53,6 +53,10 @@ public class ModelMapperConfig {
                             source.getFullName(),
                             source.getEmail(),
                             source.getLoyaltyPointsBalance(),
+                            source.getLoyaltyPointsLifetime(),
+                            source.getLoyaltyTier(),
+                            source.getLoyaltyDiscountPercent(),
+                            source.isLoyaltyFreeRideEligible(),
                             modelMapper.map(source.getPreference(), UserPreferenceResponse.class),
                             source.getCreatedAt(),
                             source.getUpdatedAt());
@@ -91,6 +95,12 @@ public class ModelMapperConfig {
                             source.getReferenceType(),
                             source.getTransactionId(),
                             source.getExpiryDate(),
+                            source.getCouponCode(),
+                            source.getCouponType(),
+                            source.getCouponTier(),
+                            source.getCouponDiscountPercent(),
+                            source.getCouponRideCode(),
+                            source.getCouponRedeemedAt(),
                             source.getCreatedAt());
                 });
 

@@ -48,8 +48,12 @@ public class FinanceController {
         // Override userId from gateway-injected header — never trust request body for identity
         Long requestingUserId = extractUserId(httpRequest);
         request.setUserId(requestingUserId);
-        Ticket ticket = moneymanService.purchaseTicket(request);
-        return ResponseEntity.accepted().body(moneymanMapper.toResponseDTO(ticket));
+        try {
+            Ticket ticket = moneymanService.purchaseTicket(request);
+            return ResponseEntity.accepted().body(moneymanMapper.toResponseDTO(ticket));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     @GetMapping("/health")

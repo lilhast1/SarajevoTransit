@@ -13,7 +13,7 @@ public class RabbitMQConfig {
     public static final String EXCHANGE = "ticket.saga.exchange";
 
     public static final String ROUTING_USER_UPDATED = "ticket.user.updated";
-    public static final String ROUTING_USER_FAILED  = "ticket.user.failed";
+    public static final String ROUTING_USER_FAILED = "ticket.user.failed";
     public static final String ROUTING_RIDE_VALIDATED = "ticket.ride.validated";
 
     public static final String QUEUE_USER_PURCHASE_INITIATED = "ticket-user-update-queue";

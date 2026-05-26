@@ -39,8 +39,11 @@ const DEFAULT_PREFERENCE_FORM = {
   screenReaderEnabled: false,
 }
 const DEFAULT_LOYALTY_FORM = {
+  couponType: 'DISCOUNT',
+  rideCode: '',
+  // redeem form fields
   points: '',
-  rewardType: 'discount',
+  rewardType: 'DISCOUNT',
 }
 
 const TICKET_STATUS_STYLES = {
@@ -171,6 +174,8 @@ export function ProfilePage() {
   const [availableLines, setAvailableLines] = useState([])
   const [loyaltyBalance, setLoyaltyBalance] = useState(0)
   const [loyaltyTransactions, setLoyaltyTransactions] = useState([])
+  const [loyaltyCoupons, setLoyaltyCoupons] = useState([])
+  const [generatedCoupon, setGeneratedCoupon] = useState(null)
 
   const [profileForm, setProfileForm] = useState(DEFAULT_PROFILE_FORM)
   const [passwordForm, setPasswordForm] = useState(DEFAULT_PASSWORD_FORM)
@@ -227,18 +232,29 @@ export function ProfilePage() {
   const loyaltyRewardOptions = useMemo(
     () => [
       {
-        value: 'discount',
-        label: 'Discount on next ticket',
-        description: 'Use points to reduce the price of your next ride.',
+        value: 'DISCOUNT',
+        label: 'Discount coupon',
+        description: 'Turns your points into a discount coupon for the next ticket.',
       },
       {
-        value: 'free_ticket',
-        label: 'Free ticket',
-        description: 'Redeem a larger points balance for a free ticket.',
+        value: 'FREE_RIDE',
+        label: 'Free ride coupon',
+        description: 'Available only at the highest tier and tied to a specific ride.',
       },
     ],
     [],
   )
+
+  const loyaltyTierLabel = useMemo(() => {
+    const tier = String(profileData?.loyaltyTier || 'BRONZE').toUpperCase()
+    return tier.charAt(0) + tier.slice(1).toLowerCase()
+  }, [profileData?.loyaltyTier])
+
+  const loyaltyCouponSelection = useMemo(() => {
+    const tier = String(profileData?.loyaltyTier || 'BRONZE').toUpperCase()
+    const freeRideEligible = Boolean(profileData?.loyaltyFreeRideEligible)
+    return loyaltyRewardOptions.filter((option) => option.value === 'DISCOUNT' || (option.value === 'FREE_RIDE' && freeRideEligible))
+  }, [profileData?.loyaltyFreeRideEligible, profileData?.loyaltyTier, loyaltyRewardOptions])
 
   const suggestionLineMap = useMemo(() => {
     const map = new Map()
@@ -272,6 +288,7 @@ export function ProfilePage() {
       setSuggestions(Array.isArray(summaryResult?.personalizedLineSuggestions) ? summaryResult.personalizedLineSuggestions : [])
       setLoyaltyBalance(Number(summaryResult?.profile?.loyaltyPointsBalance || 0))
       setLoyaltyTransactions(Array.isArray(summaryResult?.loyaltyTransactions) ? summaryResult.loyaltyTransactions : [])
+      setLoyaltyCoupons(Array.isArray(summaryResult?.loyaltyCoupons) ? summaryResult.loyaltyCoupons : [])
       setSubscriptions(Array.isArray(subscriptionsResult) ? subscriptionsResult : [])
       setAvailableLines(Array.isArray(linesResult) ? linesResult : [])
 
@@ -351,33 +368,60 @@ export function ProfilePage() {
     }
   }
 
-  async function handleLoyaltyRedeem(event) {
+  async function handleLoyaltyCouponGenerate(event) {
     event.preventDefault()
 
-    const points = Number.parseInt(loyaltyForm.points, 10)
-    if (!Number.isFinite(points) || points <= 0) {
-      setMsg({ type: 'error', text: 'Enter a valid number of points to redeem.' })
+    if (loyaltyForm.couponType === 'FREE_RIDE' && !loyaltyForm.rideCode) {
+      setMsg({ type: 'error', text: 'Choose a ride for the free ride coupon.' })
       return
     }
-    if (points > loyaltyBalance) {
-      setMsg({ type: 'error', text: 'You do not have enough points for that redemption.' })
+
+    if (loyaltyForm.couponType === 'FREE_RIDE' && !profileData?.loyaltyFreeRideEligible) {
+      setMsg({ type: 'error', text: 'Free ride coupons are only available at the highest tier.' })
+      return
+    }
+
+    if (loyaltyBalance <= 0) {
+      setMsg({ type: 'error', text: 'You do not have enough points to generate a coupon.' })
       return
     }
 
     setMsg(null)
 
     try {
-      const selectedReward = loyaltyRewardOptions.find((option) => option.value === loyaltyForm.rewardType) || loyaltyRewardOptions[0]
-      await transitApi.redeemUserLoyaltyPoints(session.userId, {
-        points,
-        description: selectedReward?.label || 'Redeemed loyalty points',
-        referenceType: selectedReward?.value === 'free_ticket' ? 'FREE_TICKET_REDEMPTION' : 'DISCOUNT_REDEMPTION',
+      const generated = await transitApi.generateUserLoyaltyCoupon(session.userId, {
+        couponType: loyaltyForm.couponType,
+        rideCode: loyaltyForm.couponType === 'FREE_RIDE' ? loyaltyForm.rideCode : null,
       })
       setLoyaltyForm(DEFAULT_LOYALTY_FORM)
+      setGeneratedCoupon(generated)
       setRefreshKey((current) => current + 1)
-      setMsg({ type: 'success', text: 'Your points were redeemed successfully.' })
-    } catch (redeemError) {
-      setMsg({ type: 'error', text: redeemError.message || 'Redemption failed.' })
+      setMsg({ type: 'success', text: 'Your coupon was generated successfully.' })
+    } catch (couponError) {
+      setMsg({ type: 'error', text: couponError.message || 'Coupon generation failed.' })
+    }
+  }
+
+  async function handleLoyaltyRedeem(event) {
+    event.preventDefault()
+    const points = Number(loyaltyForm.points || 0)
+    if (!points || points <= 0) {
+      setMsg({ type: 'error', text: 'Enter a positive number of points to redeem.' })
+      return
+    }
+    if (points > loyaltyBalance) {
+      setMsg({ type: 'error', text: 'You do not have enough points.' })
+      return
+    }
+
+    setMsg(null)
+    try {
+      await transitApi.redeemUserLoyaltyPoints(session.userId, { points, rewardType: loyaltyForm.rewardType })
+      setLoyaltyForm((current) => ({ ...current, points: '', rewardType: 'DISCOUNT' }))
+      setRefreshKey((k) => k + 1)
+      setMsg({ type: 'success', text: 'Points redeemed successfully.' })
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message || 'Failed to redeem points.' })
     }
   }
 
@@ -538,102 +582,8 @@ export function ProfilePage() {
               </form>
             </PanelCard>
           </div>
-
-          <PanelCard tone="default">
-            <div className="flex items-center gap-2">
-              <Settings2 size={18} className="text-accent" aria-hidden="true" />
-              <h3 className="text-base font-semibold text-ink">{t('preferences')}</h3>
-            </div>
-            <form className="mt-4 grid gap-4 lg:grid-cols-2" onSubmit={handlePreferencesSave}>
-              <div className="space-y-3">
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">{t('language')}</span>
-                  <select
-                    value={preferenceForm.languageCode}
-                    onChange={(event) => setPreferenceForm((current) => ({ ...current, languageCode: event.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
-                  >
-                    {languageOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">{t('theme')}</span>
-                  <select
-                    value={preferenceForm.themeMode}
-                    onChange={(event) => setPreferenceForm((current) => ({ ...current, themeMode: event.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
-                  >
-                    {themeOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">{t('notification_channel')}</span>
-                  <select
-                    value={preferenceForm.notificationChannel}
-                    onChange={(event) => setPreferenceForm((current) => ({ ...current, notificationChannel: event.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
-                  >
-                    {notificationOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="space-y-3 rounded-lg border border-border bg-surface-soft p-4">
-                <p className="text-sm font-semibold text-ink">{t('accessibility')}</p>
-                <label className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2">
-                  <span className="text-sm text-ink">{t('high_contrast')}</span>
-                  <input
-                    type="checkbox"
-                    checked={preferenceForm.highContrastEnabled}
-                    onChange={(event) => setPreferenceForm((current) => ({ ...current, highContrastEnabled: event.target.checked }))}
-                  />
-                </label>
-                <label className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2">
-                  <span className="text-sm text-ink">{t('large_text')}</span>
-                  <input
-                    type="checkbox"
-                    checked={preferenceForm.largeTextEnabled}
-                    onChange={(event) => setPreferenceForm((current) => ({ ...current, largeTextEnabled: event.target.checked }))}
-                  />
-                </label>
-                <label className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2">
-                  <span className="text-sm text-ink">{t('screen_reader')}</span>
-                  <input
-                    type="checkbox"
-                    checked={preferenceForm.screenReaderEnabled}
-                    onChange={(event) => setPreferenceForm((current) => ({ ...current, screenReaderEnabled: event.target.checked }))}
-                  />
-                </label>
-
-                <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">
-                  <div className="flex items-center gap-2 text-ink">
-                    {preferenceThemePreview === 'dark' ? <Moon size={14} aria-hidden="true" /> : <SunMedium size={14} aria-hidden="true" />}
-                    <span>{t('preview_label')}</span>
-                  </div>
-                  <p className="mt-1">{t('preview_text', { theme: preferenceThemePreview, language: mapLanguageCode(preferenceForm.languageCode) })}</p>
-                </div>
-              </div>
-
-              <div className="lg:col-span-2">
-                <button
-                  type="submit"
-                  disabled={savingPreferences}
-                  className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition disabled:opacity-70"
-                >
-                  {savingPreferences ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <Languages size={14} aria-hidden="true" />}
-                  {t('save_preferences')}
-                </button>
-              </div>
-            </form>
-          </PanelCard>
+                          <h4 className="text-sm font-semibold text-ink">Generate coupon</h4>
+                          <p className="mt-1 text-xs text-muted">Manage coupons from the Loyalty section below.</p>
 
           <PanelCard tone="default">
             <div className="flex items-center justify-between gap-3">

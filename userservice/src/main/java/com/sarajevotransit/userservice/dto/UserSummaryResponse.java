@@ -7,5 +7,6 @@ public record UserSummaryResponse(
                 List<TravelHistoryResponse> travelHistory,
                 List<TicketPurchaseResponse> ticketPurchases,
                 List<LoyaltyTransactionResponse> loyaltyTransactions,
+                List<LoyaltyTransactionResponse> loyaltyCoupons,
                 List<String> personalizedLineSuggestions) {
 }

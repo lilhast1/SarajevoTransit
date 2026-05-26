@@ -309,6 +309,12 @@ public class UserService {
                 .map(loyaltyTransactionMapper::toResponse)
                 .toList();
 
+        List<LoyaltyTransactionResponse> coupons = loyaltyTransactionRepository
+            .findByUserIdAndCouponCodeIsNotNullOrderByCreatedAtDesc(userId)
+            .stream()
+            .map(loyaltyTransactionMapper::toResponse)
+            .toList();
+
         List<String> suggestions = getPersonalizedLineSuggestions(userId, 3);
 
         return new UserSummaryResponse(
@@ -316,6 +322,7 @@ public class UserService {
                 travelHistory,
                 purchases,
                 transactions,
+            coupons,
                 suggestions);
     }
 

@@ -138,16 +138,22 @@ class LoyaltyServiceTest {
         transaction.setReferenceType("ticket_purchase");
 
         LoyaltyTransactionResponse response = new LoyaltyTransactionResponse(
-                77L,
-                LoyaltyTransactionType.EARN,
-                10,
-                10,
-                0,
-                "Bonus",
-                "ticket_purchase",
-                null,
-                null,
-                LocalDateTime.now());
+            77L,
+            LoyaltyTransactionType.EARN,
+            10,
+            10,
+            0,
+            "Bonus",
+            "ticket_purchase",
+            null, // transactionId
+            null, // expiryDate
+            null, // couponCode
+            null, // couponType
+            null, // couponTier
+            null, // couponDiscountPercent
+            null, // couponRideCode
+            null, // couponRedeemedAt
+            LocalDateTime.now());
 
         when(userService.findUserById(5L)).thenReturn(user);
         when(loyaltyTransactionRepository.findByUserIdOrderByCreatedAtDesc(5L)).thenReturn(List.of(transaction));
