@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
   CalendarDays,
+  Clock,
   Coins,
   History,
   Languages,
@@ -16,6 +17,7 @@ import {
   Star,
   SunMedium,
   Ticket,
+  Trash2,
   User,
   X,
 } from 'lucide-react'
@@ -25,7 +27,9 @@ import { LoadingSpinner } from '../components/common/LoadingStates'
 import { LineBadge } from '../components/common/LineBadge'
 import { PanelCard } from '../components/common/PanelCard'
 import { ReviewForm } from '../components/reviews/ReviewForm'
+import { SubscriptionModal } from '../components/common/SubscriptionModal'
 import { useAppContext } from '../context/AppContext'
+import { gatewayClient } from '../services/gatewayClient'
 import { transitApi } from '../services/transitApi'
 
 const DEFAULT_PROFILE_FORM = { fullName: '', email: '' }
@@ -158,6 +162,7 @@ export function ProfilePage() {
     highContrast,
     toggleHighContrast,
     tripHistory,
+    refreshSubscriptions,
   } = useAppContext()
   const { t } = useTranslation('profile')
 
@@ -187,6 +192,9 @@ export function ProfilePage() {
   const [savingPreferences, setSavingPreferences] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [reviewTarget, setReviewTarget] = useState(null)
+  const [editTarget, setEditTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [processing, setProcessing] = useState(false)
 
   const dayLabels = useMemo(
     () => ({
@@ -317,12 +325,10 @@ export function ProfilePage() {
 
   useEffect(() => {
     loadProfileBundle()
-  }, [loadProfileBundle, refreshKey])
-  }, [session?.userId])
+  }, [loadProfileBundle, refreshKey, session?.userId])
 
-  useEffect(() => {
-    fetchSubscriptions()
-  }, [fetchSubscriptions])
+
+
   const [recentTickets, setRecentTickets] = useState([])
   const [ticketsLoading, setTicketsLoading] = useState(true)
   const [ticketsError, setTicketsError] = useState(null)
@@ -497,6 +503,71 @@ export function ProfilePage() {
     }
   }
 
+  async function handleEditSave(data) {
+    if (!editTarget) return
+
+    const normalizeTime = (timeStr) => {
+      if (!timeStr) return null
+      const parts = timeStr.split(':')
+      const hh = parts[0].padStart(2, '0')
+      const mm = (parts[1] || '00').padStart(2, '0')
+      return `${hh}:${mm}:00`
+    }
+
+    try {
+      setProcessing(true)
+      await transitApi.updateSubscription(editTarget.id, {
+        startInterval: normalizeTime(data.startInterval),
+        endInterval: normalizeTime(data.endInterval),
+        daysOfWeek: data.daysOfWeek,
+      })
+      setEditTarget(null)
+      setRefreshKey((k) => k + 1)
+      refreshSubscriptions()
+      setMsg({ type: 'success', text: t('sub_updated_ok') })
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message || t('sub_update_failed') })
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  async function handleToggleActive(sub) {
+    setProcessing(true)
+    setMsg(null)
+    try {
+      if (sub.isActive) {
+        await transitApi.unsubscribeFromLine(sub.id)
+      } else {
+        await transitApi.reactivateSubscription(sub.id)
+      }
+      setRefreshKey((k) => k + 1)
+      refreshSubscriptions()
+      setMsg({ type: 'success', text: sub.isActive ? t('sub_deactivated') : t('sub_reactivated') })
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message || t('op_failed') })
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setProcessing(true)
+    setMsg(null)
+    try {
+      await transitApi.deleteSubscription(deleteTarget.id)
+      setDeleteTarget(null)
+      setRefreshKey((k) => k + 1)
+      refreshSubscriptions()
+      setMsg({ type: 'success', text: t('sub_deleted') })
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message || t('sub_delete_failed') })
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {msg?.type === 'success' && <SuccessAlert message={msg.text} onDismiss={() => setMsg(null)} />}
@@ -619,8 +690,6 @@ export function ProfilePage() {
               </form>
             </PanelCard>
           </div>
-                          <h4 className="text-sm font-semibold text-ink">Generate coupon</h4>
-                          <p className="mt-1 text-xs text-muted">Manage coupons from the Loyalty section below.</p>
 
           <PanelCard tone="default">
             <div className="flex items-center justify-between gap-3">
@@ -865,37 +934,148 @@ export function ProfilePage() {
           </div>
 
           <PanelCard tone="default">
-            <div className="flex items-center gap-2">
-              <CalendarDays size={18} className="text-accent" aria-hidden="true" />
-              <h3 className="text-base font-semibold text-ink">{t('subscriptions')}</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarDays size={18} className="text-accent" aria-hidden="true" />
+                <h3 className="text-base font-semibold text-ink">{t('subscriptions')}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRefreshKey((k) => k + 1)}
+                disabled={loading}
+                className="rounded-lg border border-border p-1.5 text-muted transition hover:bg-surface-alt hover:text-ink disabled:opacity-50"
+                aria-label={t('refresh_subs')}
+              >
+                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              </button>
             </div>
             <div className="mt-4 space-y-2 text-sm">
               {subscriptions.length === 0 ? (
                 <p className="text-muted">{t('no_subs')}</p>
               ) : (
                 subscriptions.map((sub) => (
-                  <div key={sub.id} className="rounded-lg border border-border bg-surface-soft px-3 py-2">
-                    <div className="flex items-center justify-between gap-2">
+                  <div key={sub.id} className={`rounded-lg border px-3 py-3 transition ${sub.isActive ? 'border-border bg-surface-soft' : 'border-border/50 bg-surface-soft/60'}`}>
+                    <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-ink">{sub.lineName || `Line ${sub.lineId}`}</p>
-                        <p className="text-xs text-muted">{sub.lineCode || `#${sub.lineId}`}</p>
+                        <div className="flex items-center gap-2">
+                          <LineBadge line={{ code: sub.lineCode || String(sub.lineId), vehicleTypeName: 'bus', name: sub.lineName || `Line ${sub.lineId}` }} />
+                          {sub.isActive ? (
+                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400">{t('active')}</span>
+                          ) : (
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-400">{t('inactive')}</span>
+                          )}
+                        </div>
+                        <p className="mt-1.5 font-semibold text-ink">{sub.lineName || `Line ${sub.lineId}`}</p>
+
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+                          <span className="inline-flex items-center gap-1">
+                            <Clock size={12} />
+                            {formatTime(sub.startInterval)} – {formatTime(sub.endInterval)}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <CalendarDays size={12} />
+                            {formatDays(sub.daysOfWeek, dayLabels)}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 text-[11px] text-muted">{t('created', { date: formatDate(sub.createdAt) })}</p>
                       </div>
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${sub.isActive ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
-                        {sub.isActive ? t('active') : t('inactive')}
-                      </span>
+
+                      <div className="flex flex-col gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditTarget(sub)}
+                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-ink transition hover:bg-surface-alt"
+                          aria-label={t('edit_sub')}
+                        >
+                          <Pencil size={12} aria-hidden="true" />
+                          <span className="text-ink">{t('edit')}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(sub)}
+                          disabled={processing}
+                          className="rounded-md border border-border px-2 py-1 text-xs font-medium text-ink transition hover:bg-surface-alt disabled:opacity-50"
+                          aria-label={sub.isActive ? t('deactivate') : t('activate')}
+                        >
+                          {sub.isActive ? (
+                            <span className="text-gray-500">{t('deactivate')}</span>
+                          ) : (
+                            <span className="text-green-600">{t('activate')}</span>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(sub)}
+                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-red-600 transition hover:bg-surface-alt"
+                          aria-label={t('delete_sub')}
+                        >
+                          <Trash2 size={12} aria-hidden="true" />
+                          <span className="text-red-600">{t('delete')}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
               )}
             </div>
           </PanelCard>
+
+          <SubscriptionModal
+            isOpen={editTarget !== null}
+            onClose={() => setEditTarget(null)}
+            onSubmit={handleEditSave}
+            lineName={editTarget?.lineName}
+            mode="edit"
+            initialValues={editTarget ? { startInterval: editTarget.startInterval, endInterval: editTarget.endInterval, daysOfWeek: editTarget.daysOfWeek } : null}
+          />
+
+          {deleteTarget !== null && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+              onClick={() => !processing && setDeleteTarget(null)}
+            >
+              <div
+                className="w-full max-w-sm rounded-panel border border-border bg-surface p-6 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-2">
+                  <Trash2 size={18} className="text-red-500" aria-hidden="true" />
+                  <h2 className="text-base font-semibold text-ink">{t('delete_sub')}</h2>
+                </div>
+                <p className="mb-5 mt-2 text-sm text-muted">
+                  {t('delete_confirm', { line: deleteTarget.lineName || `Line ${deleteTarget.lineId}` })}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={processing}
+                    className="flex-1 rounded-panel border border-red-500 bg-red-500 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  >
+                    {processing ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                        {t('deleting')}
+                      </span>
+                    ) : t('delete')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(null)}
+                    disabled={processing}
+                    className="flex-1 rounded-panel border border-border py-2 text-sm font-medium text-ink hover:bg-surface-alt disabled:opacity-50"
+                  >
+                    {t('cancel')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
 
       <PanelCard tone="default">
-        <div className="flex items-center gap-2">
-          <Star size={16} className="text-amber-400" fill="currentColor" aria-hidden="true" />
-          <h3 className="text-base font-semibold text-ink">{t('rate_title')}</h3>
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-ink">{t('wallet')}</h3>
           <Link to="/tickets" className="text-xs text-accent underline-offset-2 hover:underline">
