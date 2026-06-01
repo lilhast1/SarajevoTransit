@@ -94,5 +94,10 @@
   "password_update_failed": "Promjena lozinke nije uspjela.",
   "preferences_updated": "Postavke su uspješno ažurirane.",
   "preferences_update_failed": "Ažuriranje postavki nije uspjelo.",
-  "load_failed": "Učitavanje podataka profila nije uspjelo."
+  "load_failed": "Učitavanje podataka profila nije uspjelo.",
+  "tab_account": "Račun",
+  "tab_subscriptions": "Pretplate",
+  "tab_activity": "Aktivnost",
+  "tab_wallet": "Novčanik",
+  "tab_label": "Sekcije profila"
 }

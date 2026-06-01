@@ -94,5 +94,10 @@
   "password_update_failed": "Failed to update password.",
   "preferences_updated": "Preferences updated successfully.",
   "preferences_update_failed": "Failed to update preferences.",
-  "load_failed": "Failed to load profile data."
+  "load_failed": "Failed to load profile data.",
+  "tab_account": "Account",
+  "tab_subscriptions": "Subscriptions",
+  "tab_activity": "Activity",
+  "tab_wallet": "Wallet",
+  "tab_label": "Profile sections"
 }

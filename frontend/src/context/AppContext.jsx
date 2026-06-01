@@ -2,6 +2,13 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback } 
 import { saveAuthSession, getAuthSession, clearAuthSession, enrichSessionWithMetadata, secondsUntilExpiry } from '../utils/authStorage'
 import { gatewayClient } from '../services/gatewayClient'
 import { transitApi } from '../services/transitApi'
+import {
+  arePreferencesEqual,
+  mapLanguageCode,
+  resolveCurrentTheme,
+  toApiLanguageCode,
+  toApiThemeMode,
+} from '../utils/preferenceMappers'
 import i18n from '../i18n'
 
 const STORAGE_KEYS = {
@@ -52,6 +59,7 @@ export function AppProvider({ children }) {
   const [subscriptionsRefreshKey, setSubscriptionsRefreshKey] = useState(0)
   const [unreadCount, setUnreadCount] = useState(0)
   const [recentNotifications, setRecentNotifications] = useState([])
+  const [preference, setPreference] = useState(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -109,6 +117,44 @@ export function AppProvider({ children }) {
     })
     return () => { active = false }
   }, [session?.userId, subscriptionsRefreshKey])
+
+  useEffect(() => {
+    if (!session?.userId) {
+      setPreference(null)
+      return
+    }
+    let active = true
+    transitApi.getUserSummary(session.userId).then((summary) => {
+      if (!active) return
+      const pref = summary?.profile?.preference
+      if (!pref) return
+      setPreference(pref)
+      setLanguageState(mapLanguageCode(pref.languageCode))
+      setTheme(resolveCurrentTheme(pref.themeMode, null))
+      setTextSize(pref.largeTextEnabled ? 'large' : 'normal')
+      setHighContrast(Boolean(pref.highContrastEnabled))
+    }).catch(() => {
+    })
+    return () => { active = false }
+  }, [session?.userId])
+
+  useEffect(() => {
+    if (!session?.userId || !preference) return
+    const apiFromState = {
+      languageCode: toApiLanguageCode(language),
+      themeMode: toApiThemeMode(theme),
+      notificationChannel: preference.notificationChannel,
+      highContrastEnabled: highContrast,
+      largeTextEnabled: textSize === 'large',
+      screenReaderEnabled: preference.screenReaderEnabled,
+    }
+    if (arePreferencesEqual(apiFromState, preference)) return
+    let active = true
+    transitApi.updateUserPreferences(session.userId, apiFromState)
+      .then((updated) => { if (active) setPreference(updated) })
+      .catch(() => { if (active) {} })
+    return () => { active = false }
+  }, [session?.userId, preference, language, theme, textSize, highContrast])
 
   // Poll unread notifications count every 30s when logged in
   useEffect(() => {
@@ -193,6 +239,17 @@ export function AppProvider({ children }) {
     }
   }, [session])
 
+  const savePreferences = useCallback(async (apiPayload) => {
+    if (!session?.userId) throw new Error('Not authenticated')
+    const updated = await transitApi.updateUserPreferences(session.userId, apiPayload)
+    setPreference(updated)
+    setLanguageState(mapLanguageCode(updated.languageCode))
+    setTheme(resolveCurrentTheme(updated.themeMode, null))
+    setTextSize(updated.largeTextEnabled ? 'large' : 'normal')
+    setHighContrast(Boolean(updated.highContrastEnabled))
+    return updated
+  }, [session?.userId])
+
   const value = useMemo(
     () => ({
       theme,
@@ -258,6 +315,8 @@ export function AppProvider({ children }) {
       updateLineSubscription: async (subscriptionId, data) => {
         return transitApi.updateSubscription(subscriptionId, data)
       },
+      preference,
+      savePreferences,
       unreadCount,
       recentNotifications,
       fetchRecentNotifications: async () => {
@@ -290,7 +349,7 @@ export function AppProvider({ children }) {
       tripHistory,
       addTripHistoryItem: (item) => setTripHistory((current) => [item, ...current].slice(0, 30)),
     }),
-    [favorites, session, sessionModal, refreshSession, theme, language, textSize, highContrast, tripHistory, subscribedLines, subscriptionsRefreshKey, unreadCount, recentNotifications],
+    [favorites, session, sessionModal, refreshSession, theme, language, textSize, highContrast, tripHistory, subscribedLines, subscriptionsRefreshKey, unreadCount, recentNotifications, preference, savePreferences],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
