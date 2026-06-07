@@ -130,7 +130,6 @@ services:
       SPRING_DATA_REDIS_PORT: "6379"
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: "5672"
-      SPRING_MAIN_LAZY_INITIALIZATION: "true"
     depends_on:
       eurekaserver:
         condition: service_healthy
@@ -194,7 +193,6 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: guest
       RABBITMQ_PASS: guest
-      SPRING_MAIN_LAZY_INITIALIZATION: "true"
     depends_on:
       eurekaserver:
         condition: service_healthy
@@ -255,7 +253,6 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: guest
       RABBITMQ_PASSWORD: guest
-      SPRING_MAIN_LAZY_INITIALIZATION: "true"
     depends_on:
       eurekaserver:
         condition: service_healthy
@@ -286,7 +283,6 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
-      SPRING_MAIN_LAZY_INITIALIZATION: "true"
     depends_on:
       eurekaserver:
         condition: service_healthy

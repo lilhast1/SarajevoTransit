@@ -127,12 +127,14 @@ export function AdminLinesPage() {
 
   async function handleSave(e) {
     e.preventDefault()
-    const duplicate = lines.find(
-      (l) => l.code.trim().toLowerCase() === form.code.trim().toLowerCase() && l.id !== editingLine?.id
-    )
-    if (duplicate) {
-      setError(`A line with code "${form.code.trim()}" already exists.`)
-      return
+    if (!editingLine) {
+      const duplicate = lines.find(
+        (l) => l.code.trim().toLowerCase() === form.code.trim().toLowerCase()
+      )
+      if (duplicate) {
+        setError(`A line with code "${form.code.trim()}" already exists.`)
+        return
+      }
     }
     setSaving(true)
     setError(null)
