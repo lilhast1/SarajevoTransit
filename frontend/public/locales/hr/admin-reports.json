@@ -28,4 +28,6 @@
   "user_prefix": "Korisnik #{{id}}",
   "delete_confirm": "Obrisati ovu prijavu?",
   "reporter_load_failed": "Nije moguce ucitati podatke o podnositelju."
+,
+  "delete_review_confirm": "Obrisati ovu recenziju?"
 }

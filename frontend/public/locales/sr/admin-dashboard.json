@@ -1,5 +1,68 @@
 {
   "title": "Admin panel",
+  "subtitle": "Pregled stanja sistema i brzi pristup sekcijama upravljanja.",
+
+  "tab_dashboard": "Kontrolna tabla",
+  "tab_reports": "Prijave",
+  "tab_reviews": "Recenzije",
+  "tab_lines": "Linije",
+  "tab_stations": "Stanice",
+  "tab_timetables": "Red vožnje",
+  "tab_users": "Korisnici",
+  "tab_notifications": "Obaveštenja",
+  "tab_delays": "Kašnjenja",
+
+  "period_today": "Danas",
+  "period_week": "Poslednjih 7 dana",
+  "period_month": "Poslednjih 30 dana",
+
+  "btn_pdf": "PDF",
+  "btn_excel": "Excel",
+
+  "kpi_revenue": "Ukupni prihod",
+  "kpi_tickets_sold": "Prodane karte",
+  "kpi_active_tickets": "Aktivne karte",
+  "kpi_open_reports": "Otvorene prijave",
+  "kpi_avg_rating": "Prosj. ocena",
+  "kpi_total_reviews": "Ukupno recenzija",
+
+  "chart_revenue": "Prihod kroz vreme (BAM)",
+  "chart_ticket_types": "Vrste karata",
+  "chart_busiest_hours": "Najprometnije sati (kupovina karata)",
+  "chart_rating_trend": "Trend ocena (poslednjih 6 mes.)",
+  "chart_reports_category": "Prijave po kategoriji",
+  "chart_avg_delay_label": "Prosj. kašnjenje (min)",
+
+  "tooltip_revenue": "Prihod",
+  "tooltip_avg_rating": "Prosj. ocena",
+  "tooltip_avg_delay": "Prosj. kašnjenje",
+
+  "section_delays": "Aktivna kašnjenja po liniji",
+  "section_busiest_lines": "Najprometnija linije (po pretplatama)",
+  "section_reported_lines": "Najčešće prijavljene linije",
+  "section_top_buyers": "Najaktivniji kupci",
+
+  "col_line": "Linija",
+  "col_name": "Naziv",
+  "col_avg_delay": "Prosj. kašnjenje",
+  "col_active": "Aktivno",
+  "col_subscribers": "Pretplatnici",
+  "col_reports": "Prijave",
+  "col_passenger": "Putnik",
+  "col_tickets": "Karte",
+  "col_revenue": "Prihod",
+
+  "export_title": "SarajevoTransit — Admin statistike",
+  "export_period": "Period",
+  "export_generated": "Generisano",
+  "export_metric": "Metrika",
+  "export_value": "Vrednost",
+  "export_sheet_summary": "Pregled",
+  "export_sheet_revenue": "Prihod",
+  "export_sheet_top_buyers": "Najaktivniji kupci",
+  "export_sheet_delays": "Kašnjenja",
+  "export_col_active_delays": "# Aktivnih kašnjenja",
+
   "open_reports": "Otvorene prijave",
   "in_progress": "U toku",
   "total_users": "Ukupno korisnika",
@@ -10,6 +73,5 @@
   "stations": "Stanice",
   "timetables": "Red vožnje",
   "users": "Korisnici",
-  "notifications": "Obaveštenja",
-  "subtitle": "Pregled stanja sistema i brzi pristup sekcijama upravljanja."
+  "notifications": "Obaveštenja"
 }

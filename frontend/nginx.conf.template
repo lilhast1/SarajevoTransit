@@ -34,6 +34,14 @@ server {
         proxy_ssl_server_name on;
     }
 
+    # Locale files must never be cached so language changes take effect immediately
+    location /locales/ {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        expires 0;
+        try_files $uri =404;
+    }
+
     # React Router fallback — all unmatched paths serve index.html
     location / {
         try_files $uri $uri/ /index.html;

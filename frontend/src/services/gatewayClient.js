@@ -404,4 +404,25 @@ export const gatewayClient = {
     request(`/subscriptions/user/${userId}`, { token: getAccessToken() }),
   getSubscriptionById: (id) =>
     request(`/subscriptions/${id}`, { token: getAccessToken() }),
+
+  // Admin dashboard stats
+  getAdminStats: (period = 'MONTH') =>
+    request(`/api/finance/admin/stats?period=${period}`, { token: getAccessToken() }),
+  getAdminFeedbackStats: () =>
+    request('/api/v1/reports/admin/stats', { token: getAccessToken() }),
+  getLineSubscriptionStats: () =>
+    request('/subscriptions/admin/line-stats', { token: getAccessToken() }),
+  getTripDelays: () =>
+    request('/api/v1/admin/realtime/trip-delays', { token: getAccessToken() }),
+  setTripDelay: (payload) =>
+    request('/api/v1/admin/realtime/trip-delays', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  clearTripDelay: (timetableId, serviceDate) =>
+    request(`/api/v1/admin/realtime/trip-delays/${timetableId}?serviceDate=${serviceDate}`, {
+      method: 'DELETE',
+      token: getAccessToken(),
+    }),
 }

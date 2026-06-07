@@ -20,6 +20,7 @@ import { TicketsPage } from './pages/TicketsPage.jsx'
 
 import { MyReportsPage } from './pages/MyReportsPage.jsx'
 import { MyReportDetailPage } from './pages/MyReportDetailPage.jsx'
+import { AdminLayout } from './components/layout/AdminLayout.jsx'
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.jsx'
 import { AdminReportsPage } from './pages/admin/AdminReportsPage.jsx'
 import { AdminReportDetailPage } from './pages/admin/AdminReportDetailPage.jsx'
@@ -29,6 +30,7 @@ import { AdminStationsPage } from './pages/admin/AdminStationsPage.jsx'
 import { AdminTimetablePage } from './pages/admin/AdminTimetablePage.jsx'
 import { AdminUsersPage } from './pages/admin/AdminUsersPage.jsx'
 import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage.jsx'
+import { AdminDelaysPage } from './pages/admin/AdminDelaysPage.jsx'
 
 
 function App() {
@@ -104,15 +106,18 @@ function App() {
         />
 
         {/* Admin routes - require ADMIN role */}
-        <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-        <Route path="/admin/reports" element={<AdminRoute><AdminReportsPage /></AdminRoute>} />
-        <Route path="/admin/reports/:id" element={<AdminRoute><AdminReportDetailPage /></AdminRoute>} />
-        <Route path="/admin/reviews" element={<AdminRoute><AdminReviewsPage /></AdminRoute>} />
-        <Route path="/admin/lines" element={<AdminRoute><AdminLinesPage /></AdminRoute>} />
-        <Route path="/admin/stations" element={<AdminRoute><AdminStationsPage /></AdminRoute>} />
-        <Route path="/admin/timetables" element={<AdminRoute><AdminTimetablePage /></AdminRoute>} />
-        <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
-        <Route path="/admin/notifications" element={<AdminRoute><AdminNotificationsPage /></AdminRoute>} />
+        <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+          <Route path="reports/:id" element={<AdminReportDetailPage />} />
+          <Route path="reviews" element={<AdminReviewsPage />} />
+          <Route path="lines" element={<AdminLinesPage />} />
+          <Route path="stations" element={<AdminStationsPage />} />
+          <Route path="timetables" element={<AdminTimetablePage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="notifications" element={<AdminNotificationsPage />} />
+          <Route path="delays" element={<AdminDelaysPage />} />
+        </Route>
 
         {/* 404 fallback */}
         <Route path="*" element={<NotFoundPage />} />
