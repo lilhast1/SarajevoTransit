@@ -278,9 +278,12 @@ export function TicketsPage() {
         paymentMethodId: selectedMethodId,
       }
       if (couponCode && couponCode.trim().length > 0) {
-        payload.couponCode = couponCode.trim()
-        // For FREE_RIDE coupons the backend validates rideCode — look it up and inject it
-        const selectedCoupon = userCoupons.find((c) => c.couponCode === couponCode.trim())
+        const code = couponCode.trim()
+        const selectedCoupon = userCoupons.find((c) => c.couponCode === code)
+        if (selectedCoupon?.couponType === 'FREE_RIDE' && selectedType !== 'SINGLE') {
+          throw new Error('Free ride coupons can only be used with single ride tickets')
+        }
+        payload.couponCode = code
         if (selectedCoupon?.couponType === 'FREE_RIDE' && selectedCoupon?.rideCode) {
           payload.rideCode = selectedCoupon.rideCode
         }
@@ -421,7 +424,9 @@ export function TicketsPage() {
                   className="w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent"
                 >
                   <option value="">No coupon</option>
-                  {userCoupons.map((c) => (
+                  {userCoupons
+                    .filter((c) => c.couponType !== 'FREE_RIDE' || selectedType === 'SINGLE')
+                    .map((c) => (
                     <option key={c.couponCode} value={c.couponCode}>
                       {c.couponCode}{c.couponType === 'DISCOUNT' && c.discountPercent ? ` — ${c.discountPercent}% off` : c.couponType === 'FREE_RIDE' ? ` — Free ride (${c.rideCode})` : ''}
                     </option>
