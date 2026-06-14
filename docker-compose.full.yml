@@ -223,10 +223,16 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sarajevo_transit_vehicle
       DB_PASSWORD: ${DB_PASSWORD}
       SPRING_MAIN_LAZY_INITIALIZATION: "true"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
     depends_on:
       eurekaserver:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]

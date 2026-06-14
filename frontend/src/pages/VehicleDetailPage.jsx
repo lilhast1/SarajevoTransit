@@ -234,9 +234,17 @@ function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setSaving(true)
     setFormError(null)
     setFormSuccess(null)
+    if (new Date(form.serviceStart) < new Date()) {
+      setFormError(t('error_past_start'))
+      return
+    }
+    if (form.serviceEnd && new Date(form.serviceEnd) <= new Date(form.serviceStart)) {
+      setFormError(t('error_end_before_start'))
+      return
+    }
+    setSaving(true)
     try {
       const payload = {
         serviceStart: toIso(form.serviceStart),
@@ -288,6 +296,7 @@ function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
                 required
                 type="datetime-local"
                 value={form.serviceStart}
+                min={new Date().toISOString().slice(0, 16)}
                 onChange={(e) => setField('serviceStart', e.target.value)}
                 className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
               />
@@ -297,6 +306,7 @@ function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
               <input
                 type="datetime-local"
                 value={form.serviceEnd}
+                min={form.serviceStart || new Date().toISOString().slice(0, 16)}
                 onChange={(e) => setField('serviceEnd', e.target.value)}
                 className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
               />
@@ -525,7 +535,7 @@ export function VehicleDetailPage() {
   const { t } = useTranslation('vehicles')
   const { id } = useParams()
   const navigate = useNavigate()
-  const { isAuthenticated, session } = useAppContext()
+  const { isAuthenticated, isAdmin, session } = useAppContext()
 
   const [vehicle, setVehicle] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -655,7 +665,7 @@ export function VehicleDetailPage() {
       <GpsHistorySection vehicleId={vehicle.id} />
 
       {/* Service Records */}
-      <ServiceRecordsSection vehicleId={vehicle.id} isAuthenticated={isAuthenticated} />
+      <ServiceRecordsSection vehicleId={vehicle.id} isAuthenticated={isAdmin} />
 
       {/* Pending Status Requests — admin only */}
       {isAuthenticated && session?.role === 'ADMIN' && (

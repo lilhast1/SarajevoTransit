@@ -66,5 +66,7 @@
   "status_updating": "Ažuriranje",
   "status_updated": "Ažurirano prije {{seconds}}s",
   "status_retrying": "Ponovni pokušaj",
-  "status_updated_to": "Status ažuriran na {{status}}"
+  "status_updated_to": "Status ažuriran na {{status}}",
+  "error_past_start": "Datum početka servisa ne može biti u prošlosti",
+  "error_end_before_start": "Kraj servisa mora biti nakon početka"
 }

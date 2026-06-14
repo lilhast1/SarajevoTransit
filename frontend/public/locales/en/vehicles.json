@@ -66,5 +66,7 @@
   "status_updating": "Updating",
   "status_updated": "Updated {{seconds}}s ago",
   "status_retrying": "Retrying",
-  "status_updated_to": "Status updated to {{status}}"
+  "status_updated_to": "Status updated to {{status}}",
+  "error_past_start": "Service start date cannot be in the past",
+  "error_end_before_start": "Service end must be after start"
 }

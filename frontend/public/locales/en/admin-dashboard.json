@@ -11,6 +11,8 @@
   "tab_users": "Users",
   "tab_notifications": "Notifications",
   "tab_delays": "Delays",
+  "tab_fleet": "Fleet",
+  "tab_drivers": "Drivers",
 
   "period_today": "Today",
   "period_week": "Last 7 days",

@@ -1,10 +1,10 @@
-import { AlertCircle, Plus, RefreshCw, Truck, X } from 'lucide-react'
+import { AlertCircle, RefreshCw, Truck } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 import { TransitMap } from '../components/map/TransitMap'
 import { useAppContext } from '../context/AppContext'
 import { gatewayClient } from '../services/gatewayClient'
+import { transitApi } from '../services/transitApi'
 
 const POLL_INTERVAL_MS = 5000
 
@@ -31,31 +31,44 @@ export const STATUS_LABELS = {
 
 const TYPE_FILTERS = ['all', 'bus', 'tram', 'trolleybus', 'minibus']
 
-const VEHICLE_TYPES = ['BUS', 'TRAM', 'TROLLEY', 'MINIBUS']
-const VEHICLE_STATUSES = ['OPERATIONAL', 'IN_MAINTENANCE', 'OUT_OF_SERVICE', 'RETIRED']
-
-const EMPTY_ADD_FORM = {
-  registrationNumber: '',
-  internalId: '',
-  type: 'BUS',
-  capacity: '',
-  status: 'OPERATIONAL',
-  manufactureDate: '',
-}
-
-export function normalizeFleetVehicle(v) {
-  if (v.lastLat == null || v.lastLon == null) return null
+export function normalizeFleetVehicle(v, jpPositions = []) {
   const t = VS_TYPE_MAP[v.type] || VS_TYPE_MAP.BUS
+
+  let lat = v.lastLat
+  let lon = v.lastLon
+  let isMapped = false
+
+  if (jpPositions.length > 0) {
+    // 1. Exact 1:1 match by internalId → jp.id (GRAS fleet number)
+    let jpMatch = v.internalId
+      ? jpPositions.find((p) => String(p.id).trim() === String(v.internalId).trim())
+      : null
+    // 2. Fallback: first vehicle on same line
+    if (!jpMatch && v.assignedLineCode) {
+      jpMatch = jpPositions.find(
+        (p) => String(p.lineCode).trim() === String(v.assignedLineCode).trim()
+      )
+    }
+    if (jpMatch) {
+      lat = jpMatch.latitude
+      lon = jpMatch.longitude
+      isMapped = true
+    }
+  }
+
+  if (lat == null || lon == null) return null
+
   return {
     id: v.id,
-    lineCode: v.internalId || `#${v.id}`,
+    lineCode: v.assignedLineCode || v.internalId || `#${v.id}`,
     name: `${t.label} ${v.registrationNumber}`,
-    latitude: v.lastLat,
-    longitude: v.lastLon,
+    latitude: lat,
+    longitude: lon,
     typeId: t.typeId,
     type: t.key,
     typeLabel: t.label,
     color: t.color,
+    isMapped,
   }
 }
 
@@ -103,7 +116,7 @@ export const STATUS_I18N = {
   RETIRED: 'status_retired',
 }
 
-function VehicleRow({ vehicle, onClick }) {
+function VehicleRow({ vehicle, onClick, isSelected }) {
   const { t } = useTranslation('vehicles')
   const typeInfo = VS_TYPE_MAP[vehicle.type] || VS_TYPE_MAP.BUS
   const statusStyle = STATUS_STYLES[vehicle.status] || STATUS_STYLES.OPERATIONAL
@@ -114,7 +127,9 @@ function VehicleRow({ vehicle, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-panel border border-border px-3 py-2.5 text-left transition hover:bg-surface-alt hover:border-accent/50"
+      className={`w-full rounded-panel border px-3 py-2.5 text-left transition hover:bg-surface-alt hover:border-accent/50 ${
+        isSelected ? 'border-accent bg-accent/5' : 'border-border'
+      }`}
     >
       <div className="flex items-center gap-2">
         <span
@@ -126,7 +141,7 @@ function VehicleRow({ vehicle, onClick }) {
             {vehicle.registrationNumber}
           </span>
           <span className="block text-xs text-muted">
-            {typeInfo.label}{vehicle.internalId ? ` · #${vehicle.internalId}` : ''}{vehicle.capacity ? ` · ${vehicle.capacity} cap` : ''}
+            {typeInfo.label}{vehicle.internalId ? ` · #${vehicle.internalId}` : ''}{vehicle.capacity ? ` · ${vehicle.capacity} cap` : ''}{vehicle.assignedLineCode ? ` · Line ${vehicle.assignedLineCode}` : ''}
           </span>
         </span>
         <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${statusStyle}`}>
@@ -140,177 +155,17 @@ function VehicleRow({ vehicle, onClick }) {
   )
 }
 
-function AddVehicleModal({ onClose, onCreated }) {
-  const { t } = useTranslation('vehicles')
-  const [form, setForm] = useState(EMPTY_ADD_FORM)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
-
-  function setField(key, value) {
-    setForm((prev) => ({ ...prev, [key]: value }))
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setSaving(true)
-    setError(null)
-    try {
-      const payload = {
-        registrationNumber: form.registrationNumber.trim(),
-        internalId: form.internalId.trim() || undefined,
-        type: form.type,
-        capacity: parseInt(form.capacity, 10),
-        status: form.status,
-        manufactureDate: form.manufactureDate || undefined,
-      }
-      const vehicle = await gatewayClient.addVehicle(payload)
-      onCreated(vehicle)
-    } catch (err) {
-      setError(err.message || 'Failed to add vehicle')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        aria-label="Close"
-        className="fixed inset-0 z-[1100] bg-black/40"
-        onClick={onClose}
-      />
-      <div className="fixed left-1/2 top-1/2 z-[1200] w-[min(480px,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-panel border border-border bg-surface p-5 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-ink">{t('add_vehicle')}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-panel border border-border p-1.5 text-muted transition hover:bg-surface-alt hover:text-ink"
-            aria-label={t('close')}
-          >
-            <X size={15} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted">{t('reg_no')}</span>
-              <input
-                required
-                type="text"
-                value={form.registrationNumber}
-                onChange={(e) => setField('registrationNumber', e.target.value)}
-                placeholder={t('reg_placeholder')}
-                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted">{t('internal_id')}</span>
-              <input
-                type="text"
-                value={form.internalId}
-                onChange={(e) => setField('internalId', e.target.value)}
-                placeholder={t('internal_id_placeholder')}
-                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
-              />
-            </label>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted">{t('type_label')}</span>
-              <select
-                required
-                value={form.type}
-                onChange={(e) => setField('type', e.target.value)}
-                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
-              >
-                {VEHICLE_TYPES.map((vt) => (
-                  <option key={vt} value={vt}>{t(`type_${VS_TYPE_MAP[vt]?.key}`) || VS_TYPE_MAP[vt]?.label || vt}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted">{t('capacity')}</span>
-              <input
-                required
-                type="number"
-                min="1"
-                value={form.capacity}
-                onChange={(e) => setField('capacity', e.target.value)}
-                placeholder={t('capacity_placeholder')}
-                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
-              />
-            </label>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted">{t('status_label')}</span>
-              <select
-                required
-                value={form.status}
-                onChange={(e) => setField('status', e.target.value)}
-                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
-              >
-                {VEHICLE_STATUSES.map((s) => (
-                  <option key={s} value={s}>{t(STATUS_I18N[s] || 'status_operational')}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted">{t('manufacture_date')}</span>
-              <input
-                type="date"
-                value={form.manufactureDate}
-                onChange={(e) => setField('manufactureDate', e.target.value)}
-                className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
-              />
-            </label>
-          </div>
-
-          {error && (
-            <div className="flex items-center gap-2 rounded-panel border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
-              <AlertCircle size={13} className="shrink-0" />
-              {error}
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="rounded-panel border border-border px-4 py-1.5 text-sm text-muted transition hover:bg-surface-alt hover:text-ink disabled:opacity-50"
-            >
-              {t('cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-panel bg-accent px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
-            >
-              {saving ? t('adding') : t('add_vehicle')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </>
-  )
-}
-
 export function VehiclesPage() {
   const { t } = useTranslation('vehicles')
-  const { theme, isAuthenticated } = useAppContext()
-  const navigate = useNavigate()
+  const { theme } = useAppContext()
   const [vehicles, setVehicles] = useState([])
+  const [jpPositions, setJpPositions] = useState([])
   const [pollStatus, setPollStatus] = useState('idle')
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null)
   const [error, setError] = useState(null)
   const [typeFilter, setTypeFilter] = useState('all')
-  const [showAddModal, setShowAddModal] = useState(false)
+  const [selectedVehicleId, setSelectedVehicleId] = useState(null)
+  const [showUnmapped, setShowUnmapped] = useState(false)
   const pollRef = useRef(null)
   const retryCountRef = useRef(0)
 
@@ -318,9 +173,15 @@ export function VehiclesPage() {
     if (document.visibilityState === 'hidden') return
     setPollStatus('loading')
     try {
-      const response = await gatewayClient.getVehicles('?size=200&sort=id,asc')
-      const content = Array.isArray(response?.content) ? response.content : Array.isArray(response) ? response : []
+      const [response, livePositions] = await Promise.allSettled([
+        gatewayClient.getVehicles('?size=500&sort=id,asc'),
+        transitApi.getVehiclePositions([1, 2, 3, 4]),
+      ])
+      const content = response.status === 'fulfilled'
+        ? (Array.isArray(response.value?.content) ? response.value.content : Array.isArray(response.value) ? response.value : [])
+        : []
       setVehicles(content)
+      if (livePositions.status === 'fulfilled') setJpPositions(livePositions.value || [])
       setPollStatus('ok')
       setLastUpdatedAt(Date.now())
       setError(null)
@@ -345,17 +206,77 @@ export function VehiclesPage() {
     return vehicles.filter((v) => v.type === enumVal)
   }, [vehicles, typeFilter])
 
-  const mapVehicles = useMemo(
-    () => filteredVehicles.map(normalizeFleetVehicle).filter(Boolean),
-    [filteredVehicles],
+  const selectedVehicle = useMemo(
+    () => (selectedVehicleId ? vehicles.find((v) => v.id === selectedVehicleId) : null),
+    [vehicles, selectedVehicleId],
+  )
+
+  const mapVehicles = useMemo(() => {
+    if (selectedVehicle) {
+      const typeKey = VS_TYPE_MAP[selectedVehicle.type]?.key
+
+      // 1. Exact 1:1 match by internalId → jp.id (set via the Line modal picker)
+      if (selectedVehicle.internalId) {
+        const exact = jpPositions.find(
+          (p) => String(p.id).trim() === String(selectedVehicle.internalId).trim()
+        )
+        if (exact) return [exact]
+      }
+      // 2. Internal GPS position
+      if (selectedVehicle.lastLat != null && selectedVehicle.lastLon != null) {
+        return [{
+          id: selectedVehicle.id,
+          lineCode: selectedVehicle.assignedLineCode || `#${selectedVehicle.id}`,
+          name: `${VS_TYPE_MAP[selectedVehicle.type]?.label || ''} ${selectedVehicle.registrationNumber}`,
+          latitude: selectedVehicle.lastLat,
+          longitude: selectedVehicle.lastLon,
+          type: typeKey || 'bus',
+          typeLabel: VS_TYPE_MAP[selectedVehicle.type]?.label || '',
+          color: VS_TYPE_MAP[selectedVehicle.type]?.color || '#334155',
+        }]
+      }
+      // 3. Vehicle assigned to a line → show only JP vehicles on that line
+      if (selectedVehicle.assignedLineCode) {
+        const norm = (c) => String(c ?? '').trim().toLowerCase().replace(/^0+/, '')
+        return jpPositions.filter(
+          (p) => norm(p.lineCode) === norm(selectedVehicle.assignedLineCode)
+        )
+      }
+      // 4. Not assigned to any line → show all live vehicles of same type
+      if (typeKey) return jpPositions.filter((p) => p.type === typeKey)
+      return jpPositions
+    }
+
+    const base = typeFilter === 'all' ? jpPositions : jpPositions.filter((p) => p.type === typeFilter)
+
+    if (showUnmapped) {
+      const mappedJpIds = new Set(jpPositions.map((p) => String(p.id)))
+      const unmapped = vehicles.filter(
+        (v) => v.lastLat != null && (!v.internalId || !mappedJpIds.has(String(v.internalId)))
+      )
+      const unmappedPins = unmapped.map((v) => ({
+        id: `unmapped-${v.id}`,
+        lineCode: v.assignedLineCode || `#${v.id}`,
+        name: `${VS_TYPE_MAP[v.type]?.label || ''} ${v.registrationNumber}`,
+        latitude: v.lastLat,
+        longitude: v.lastLon,
+        type: VS_TYPE_MAP[v.type]?.key || 'bus',
+        typeLabel: VS_TYPE_MAP[v.type]?.label || '',
+        color: '#94a3b8',
+        isUnmapped: true,
+      }))
+      return [...base, ...unmappedPins]
+    }
+
+    return base
+  }, [selectedVehicle, jpPositions, typeFilter, showUnmapped, vehicles])
+
+  const focusPositions = useMemo(
+    () => mapVehicles.map((p) => [p.latitude, p.longitude]),
+    [mapVehicles],
   )
 
   const operationalCount = vehicles.filter((v) => v.status === 'OPERATIONAL').length
-
-  function handleVehicleCreated(vehicle) {
-    setShowAddModal(false)
-    navigate(`/vehicles/${vehicle.id}`)
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -370,16 +291,6 @@ export function VehiclesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {isAuthenticated && (
-            <button
-              type="button"
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1.5 rounded-panel border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
-            >
-              <Plus size={13} aria-hidden="true" />
-              {t('add_vehicle')}
-            </button>
-          )}
           <PollingStatusBadge status={pollStatus} lastUpdatedAt={lastUpdatedAt} theme={theme} />
           <button
             type="button"
@@ -416,6 +327,18 @@ export function VehiclesPage() {
             </button>
           )
         })}
+        <button
+          type="button"
+          onClick={() => setShowUnmapped((p) => !p)}
+          className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition ${
+            showUnmapped
+              ? 'border-slate-400 bg-slate-500 text-white'
+              : 'border-border text-muted hover:bg-surface-alt hover:text-ink'
+          }`}
+        >
+          <span className="inline-block h-2 w-2 rounded-full bg-slate-400" />
+          Unmapped fleet
+        </button>
       </div>
 
       {error && pollStatus !== 'ok' && (
@@ -436,23 +359,19 @@ export function VehiclesPage() {
             <VehicleRow
               key={v.id}
               vehicle={v}
-              onClick={() => navigate(`/vehicles/${v.id}`)}
+              isSelected={v.id === selectedVehicleId}
+              onClick={() => setSelectedVehicleId((prev) => prev === v.id ? null : v.id)}
             />
           ))}
         </div>
 
         <TransitMap
           vehicles={mapVehicles}
+          focusPositions={focusPositions}
+          focusKey={selectedVehicleId}
           className="h-[480px] rounded-panel lg:h-[calc(100vh-220px)]"
         />
       </div>
-
-      {showAddModal && (
-        <AddVehicleModal
-          onClose={() => setShowAddModal(false)}
-          onCreated={handleVehicleCreated}
-        />
-      )}
     </div>
   )
 }

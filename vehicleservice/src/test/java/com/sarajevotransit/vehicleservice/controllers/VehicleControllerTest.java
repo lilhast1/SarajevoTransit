@@ -109,7 +109,7 @@ class VehicleControllerTest {
                 43.8563, 18.4131, LocalDateTime.now());
 
         VehicleResponseDTO responseDto = new VehicleResponseDTO(
-                1L, "ABC-123", null, null, null, null, null, null, null, null, null);
+                1L, "ABC-123", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         when(vehicleMapper.toEntity(requestDto)).thenReturn(testVehicle);
         when(vehicleService.addVehicle(testVehicle)).thenReturn(1L);
@@ -134,7 +134,7 @@ class VehicleControllerTest {
         updatedVehicle.setStatus(VehicleStatus.OUT_OF_SERVICE);
         VehicleResponseDTO updatedResponse = new VehicleResponseDTO(1L, "ABC-123", "INT-1", VehicleType.BUS, 50,
                 LocalDate.of(2020, 1, 1), VehicleStatus.OUT_OF_SERVICE, 43.8563, 18.4131,
-                LocalDateTime.now(), 1L);
+                LocalDateTime.now(), 1L, null, null, null, null, null);
 
         when(vehicleService.setVehicleStatus(1L, VehicleStatus.OUT_OF_SERVICE)).thenReturn(updatedVehicle);
         when(vehicleMapper.toResponse(updatedVehicle)).thenReturn(updatedResponse);
@@ -168,6 +168,6 @@ class VehicleControllerTest {
     private VehicleResponseDTO createTestVehicleResponse(Long id, String registrationNumber, VehicleType type) {
         return new VehicleResponseDTO(id, registrationNumber, "INT-" + id, type, 50,
                 LocalDate.of(2020, 1, 1), VehicleStatus.OPERATIONAL, 43.8563, 18.4131,
-                LocalDateTime.now(), 1L);
+                LocalDateTime.now(), 1L, null, null, null, null, null);
     }
 }

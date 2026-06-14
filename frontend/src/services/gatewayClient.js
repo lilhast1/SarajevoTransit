@@ -212,6 +212,84 @@ export const gatewayClient = {
       body: JSON.stringify(payload),
       token: getAccessToken(),
     }),
+  /** PUT /api/vehicles/{id} */
+  updateVehicle: (vehicleId, payload) =>
+    request(`/api/vehicles/${vehicleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** PATCH /api/vehicles/{id}/assign-line */
+  assignVehicleToLine: (vehicleId, payload) =>
+    request(`/api/vehicles/${vehicleId}/assign-line`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** PATCH /api/vehicles/{id}/assign-driver */
+  assignVehicleToDriver: (vehicleId, driverId) =>
+    request(`/api/vehicles/${vehicleId}/assign-driver`, {
+      method: 'PATCH',
+      body: JSON.stringify({ driverId }),
+      token: getAccessToken(),
+    }),
+  /** GET /api/vehicles/maintenance-alerts */
+  getMaintenanceAlerts: () =>
+    request('/api/vehicles/maintenance-alerts', { token: getAccessToken() }),
+
+  // ── Drivers ────────────────────────────────────────────────────────────
+  getDriverProfiles: () => request('/api/vehicles/drivers', { token: getAccessToken() }),
+  getDriverProfile: (driverId) => request(`/api/vehicles/drivers/${driverId}`, { token: getAccessToken() }),
+  getDriverByUser: (userId) => request(`/api/vehicles/drivers/by-user/${userId}`, { token: getAccessToken() }),
+  createDriverProfile: (payload) =>
+    request('/api/vehicles/drivers', { method: 'POST', body: JSON.stringify(payload), token: getAccessToken() }),
+  updateDriverProfile: (driverId, payload) =>
+    request(`/api/vehicles/drivers/${driverId}`, { method: 'PUT', body: JSON.stringify(payload), token: getAccessToken() }),
+  getDriverAvailability: (driverId, from, to) => {
+    const params = new URLSearchParams()
+    if (from) params.set('from', from)
+    if (to) params.set('to', to)
+    return request(`/api/vehicles/drivers/${driverId}/availability?${params}`, { token: getAccessToken() })
+  },
+  setDriverAvailability: (driverId, payload) =>
+    request(`/api/vehicles/drivers/${driverId}/availability`, {
+      method: 'POST', body: JSON.stringify(payload), token: getAccessToken(),
+    }),
+  getDriverAssignments: (driverId) =>
+    request(`/api/vehicles/drivers/${driverId}/assignments`, { token: getAccessToken() }),
+  getDriverStatistics: (driverId) =>
+    request(`/api/vehicles/drivers/${driverId}/statistics`, { token: getAccessToken() }),
+  createDriverServiceRequest: (driverId, payload) =>
+    request(`/api/vehicles/drivers/${driverId}/service-requests`, {
+      method: 'POST', body: JSON.stringify(payload), token: getAccessToken(),
+    }),
+  getDriverServiceRequestsByDriver: (driverId) =>
+    request(`/api/vehicles/drivers/${driverId}/service-requests`, { token: getAccessToken() }),
+  getAvailableDrivers: (date, vehicleType) => {
+    const params = new URLSearchParams({ date })
+    if (vehicleType) params.set('vehicleType', vehicleType)
+    return request(`/api/vehicles/drivers/available?${params}`, { token: getAccessToken() })
+  },
+
+  // ── Driver assignments ────────────────────────────────────────────────
+  getAssignmentsByDate: (date) =>
+    request(`/api/vehicles/driver-assignments?date=${date}`, { token: getAccessToken() }),
+  createAssignment: (payload) =>
+    request('/api/vehicles/driver-assignments', {
+      method: 'POST', body: JSON.stringify(payload), token: getAccessToken(),
+    }),
+  cancelAssignment: (assignmentId) =>
+    request(`/api/vehicles/driver-assignments/${assignmentId}`, {
+      method: 'DELETE', token: getAccessToken(),
+    }),
+  getAllDriverServiceRequests: (status) => {
+    const params = status ? `?status=${status}` : ''
+    return request(`/api/vehicles/driver-assignments/service-requests${params}`, { token: getAccessToken() })
+  },
+  resolveDriverServiceRequest: (requestId, payload) =>
+    request(`/api/vehicles/driver-assignments/service-requests/${requestId}`, {
+      method: 'PATCH', body: JSON.stringify(payload), token: getAccessToken(),
+    }),
 
   // ── Finance / Tickets ──────────────────────────────────────────────────
   /** POST /api/finance/purchase */

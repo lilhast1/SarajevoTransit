@@ -1,4 +1,4 @@
-import { AlertCircle, Car, CheckCircle, Clock, RefreshCw, XCircle } from 'lucide-react'
+import { AlertCircle, BarChart2, Calendar, Car, CheckCircle, Clock, RefreshCw, Wrench, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
@@ -273,6 +273,238 @@ export function DriverPage() {
           <RequestRow key={req.id} req={req} vehicles={vehicles} />
         ))}
       </section>
+
+      <DriverAvailabilitySection session={session} />
+      <DriverStatisticsSection session={session} />
+      <DriverServiceRequestSection vehicles={vehicles} session={session} />
     </div>
+  )
+}
+
+// ── Driver availability calendar ───────────────────────────────────────────────
+
+function DriverAvailabilitySection({ session }) {
+  const [driverProfile, setDriverProfile] = useState(null)
+  const [availability, setAvailability] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(null)
+
+  const today = new Date()
+  const [viewYear, setViewYear] = useState(today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(today.getMonth())
+
+  useEffect(() => {
+    if (!session?.userId) return
+    gatewayClient.getDriverByUser(session.userId)
+      .then((profile) => {
+        setDriverProfile(profile)
+        return loadAvailability(profile.id)
+      })
+      .catch(() => setLoading(false))
+  }, [session?.userId])
+
+  async function loadAvailability(driverId) {
+    const from = new Date(viewYear, viewMonth, 1).toISOString().split('T')[0]
+    const to = new Date(viewYear, viewMonth + 2, 0).toISOString().split('T')[0]
+    try {
+      const data = await gatewayClient.getDriverAvailability(driverId, from, to)
+      setAvailability(data || [])
+    } catch {
+      setAvailability([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function toggleDay(dateStr) {
+    if (!driverProfile) return
+    const existing = availability.find((a) => a.availableDate === dateStr)
+    const newAvail = existing ? !existing.available : true
+    setSaving(dateStr)
+    try {
+      const updated = await gatewayClient.setDriverAvailability(driverProfile.id, { date: dateStr, available: newAvail })
+      setAvailability((prev) => {
+        const filtered = prev.filter((a) => a.availableDate !== dateStr)
+        return [...filtered, updated]
+      })
+    } catch (err) {
+      alert('Failed to update availability: ' + err.message)
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  if (!driverProfile && !loading) return null
+
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay()
+  const monthName = new Date(viewYear, viewMonth, 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+
+  function getAvailForDay(day) {
+    const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    return availability.find((a) => a.availableDate === dateStr)
+  }
+
+  return (
+    <section className="rounded-panel border border-border p-4 flex flex-col gap-3">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <Calendar size={15} />My Availability
+      </h3>
+      {loading ? <p className="text-xs text-muted">Loading…</p> : (
+        <>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => { const d = new Date(viewYear, viewMonth - 1, 1); setViewYear(d.getFullYear()); setViewMonth(d.getMonth()) }}
+              className="rounded-panel border border-border px-2 py-1 text-xs text-muted hover:bg-surface-alt">‹</button>
+            <span className="text-sm font-medium text-ink flex-1 text-center">{monthName}</span>
+            <button type="button" onClick={() => { const d = new Date(viewYear, viewMonth + 1, 1); setViewYear(d.getFullYear()); setViewMonth(d.getMonth()) }}
+              className="rounded-panel border border-border px-2 py-1 text-xs text-muted hover:bg-surface-alt">›</button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center">
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+              <div key={i} className="text-[10px] font-medium text-muted pb-1">{d}</div>
+            ))}
+            {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
+            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+              const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+              const avail = getAvailForDay(day)
+              const isAvailable = avail ? avail.available : false
+              const isPast = new Date(dateStr) < new Date(today.toISOString().split('T')[0])
+              return (
+                <button key={day} type="button" disabled={isPast || saving === dateStr}
+                  onClick={() => toggleDay(dateStr)}
+                  className={`rounded p-1.5 text-xs transition ${
+                    saving === dateStr ? 'opacity-50 cursor-wait' :
+                    isPast ? 'opacity-30 cursor-default' :
+                    isAvailable ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                    'bg-surface border border-border text-muted hover:bg-surface-alt'
+                  }`}>
+                  {day}
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-[10px] text-muted">Click a day to toggle availability. Green = available.</p>
+        </>
+      )}
+    </section>
+  )
+}
+
+// ── Driver statistics ───────────────────────────────────────────────────────────
+
+function DriverStatisticsSection({ session }) {
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!session?.userId) return
+    gatewayClient.getDriverByUser(session.userId)
+      .then((profile) => gatewayClient.getDriverStatistics(profile.id))
+      .then((data) => { setStats(data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [session?.userId])
+
+  if (!stats && !loading) return null
+
+  return (
+    <section className="rounded-panel border border-border p-4 flex flex-col gap-3">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <BarChart2 size={15} />My Statistics
+      </h3>
+      {loading ? <p className="text-xs text-muted">Loading…</p> : stats ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-panel border border-border p-3 text-center">
+            <p className="text-2xl font-bold text-ink">{stats.totalAssignments}</p>
+            <p className="text-xs text-muted mt-0.5">Total Assignments</p>
+          </div>
+          <div className="rounded-panel border border-border p-3 text-center">
+            <p className="text-2xl font-bold text-ink">{stats.totalDaysActive}</p>
+            <p className="text-xs text-muted mt-0.5">Active Days</p>
+          </div>
+          <div className="rounded-panel border border-border p-3 text-center">
+            <p className="text-2xl font-bold text-ink">{stats.lineCodesServed?.length || 0}</p>
+            <p className="text-xs text-muted mt-0.5">Lines Served</p>
+          </div>
+          <div className="rounded-panel border border-border p-3 text-center">
+            <p className="text-2xl font-bold text-ink">{stats.vehicleIdsUsed?.length || 0}</p>
+            <p className="text-xs text-muted mt-0.5">Vehicles Driven</p>
+          </div>
+        </div>
+      ) : <p className="text-xs text-muted">No statistics available.</p>}
+    </section>
+  )
+}
+
+// ── Driver service request (maintenance request for a vehicle) ─────────────────
+
+function DriverServiceRequestSection({ vehicles, session }) {
+  const [form, setForm] = useState({ vehicleId: '', description: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [success, setSuccess] = useState(null)
+  const [error, setError] = useState(null)
+  const [driverProfile, setDriverProfile] = useState(null)
+
+  useEffect(() => {
+    if (!session?.userId) return
+    gatewayClient.getDriverByUser(session.userId)
+      .then(setDriverProfile)
+      .catch(() => {})
+  }, [session?.userId])
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!driverProfile) return
+    setSubmitting(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      await gatewayClient.createDriverServiceRequest(driverProfile.id, {
+        vehicleId: parseInt(form.vehicleId, 10),
+        description: form.description.trim(),
+      })
+      setSuccess('Service request sent to admin.')
+      setForm({ vehicleId: '', description: '' })
+    } catch (err) {
+      setError(err.message || 'Failed to send request')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (!driverProfile) return null
+
+  return (
+    <section className="rounded-panel border border-border p-4 flex flex-col gap-3">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <Wrench size={15} />Request Vehicle Service
+      </h3>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted">Vehicle</span>
+          <select required value={form.vehicleId} onChange={(e) => setForm((p) => ({ ...p, vehicleId: e.target.value }))}
+            className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none">
+            <option value="">Select vehicle…</option>
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>{v.registrationNumber} ({VS_TYPE_MAP[v.type]?.label || v.type})</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted">Description of issue</span>
+          <textarea required rows={3} value={form.description}
+            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+            placeholder="Describe what needs servicing…"
+            className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none" />
+        </label>
+        {error && <div className="text-xs text-red-600">{error}</div>}
+        {success && <div className="text-xs text-emerald-600">{success}</div>}
+        <div className="flex justify-end">
+          <button type="submit" disabled={submitting}
+            className="rounded-panel bg-accent px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+            {submitting ? 'Sending…' : 'Send Request'}
+          </button>
+        </div>
+      </form>
+    </section>
   )
 }

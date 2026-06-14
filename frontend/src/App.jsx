@@ -31,6 +31,8 @@ import { AdminTimetablePage } from './pages/admin/AdminTimetablePage.jsx'
 import { AdminUsersPage } from './pages/admin/AdminUsersPage.jsx'
 import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage.jsx'
 import { AdminDelaysPage } from './pages/admin/AdminDelaysPage.jsx'
+import { AdminVehiclesPage } from './pages/admin/AdminVehiclesPage.jsx'
+import { AdminDriversPage } from './pages/admin/AdminDriversPage.jsx'
 
 
 function App() {
@@ -117,6 +119,8 @@ function App() {
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="notifications" element={<AdminNotificationsPage />} />
           <Route path="delays" element={<AdminDelaysPage />} />
+          <Route path="vehicles" element={<AdminVehiclesPage />} />
+          <Route path="drivers" element={<AdminDriversPage />} />
         </Route>
 
         {/* 404 fallback */}

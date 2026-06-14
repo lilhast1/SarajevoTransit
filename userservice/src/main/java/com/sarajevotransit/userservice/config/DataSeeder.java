@@ -99,6 +99,24 @@ public class DataSeeder {
                                         45,
                                         "Weekly ticket purchase",
                                         "ticket_purchase"));
+
+                        // Driver users (IDs 4–8)
+                        String[][] drivers = {
+                                {"Emir Hodzic",    "emir.hodzic@sarajevotransit.ba",    "DriverPass1!"},
+                                {"Selma Muric",    "selma.muric@sarajevotransit.ba",     "DriverPass2!"},
+                                {"Damir Begic",    "damir.begic@sarajevotransit.ba",     "DriverPass3!"},
+                                {"Lejla Avdic",    "lejla.avdic@sarajevotransit.ba",     "DriverPass4!"},
+                                {"Nedim Konjic",   "nedim.konjic@sarajevotransit.ba",    "DriverPass5!"},
+                        };
+                        for (String[] d : drivers) {
+                                var resp = userService.createUser(new CreateUserRequest(
+                                        d[0], d[1], d[2],
+                                        LanguageCode.BS, ThemeMode.LIGHT, NotificationChannel.PUSH));
+                                userProfileRepository.findById(resp.id()).ifPresent(u -> {
+                                        u.setRole(UserRole.DRIVER);
+                                        userProfileRepository.save(u);
+                                });
+                        }
                 };
         }
 }
