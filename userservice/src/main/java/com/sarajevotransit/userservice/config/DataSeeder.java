@@ -3,7 +3,8 @@ package com.sarajevotransit.userservice.config;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
-import com.sarajevotransit.userservice.dto.LoyaltyRedeemRequest;
+import com.sarajevotransit.userservice.dto.GenerateLoyaltyCouponRequest;
+import com.sarajevotransit.userservice.model.LoyaltyCouponType;
 import com.sarajevotransit.userservice.model.LanguageCode;
 import com.sarajevotransit.userservice.model.NotificationChannel;
 import com.sarajevotransit.userservice.model.ThemeMode;
@@ -66,17 +67,14 @@ public class DataSeeder {
                                         LocalDateTime.now().minusDays(1),
                                         22));
 
-
-
                         loyaltyService.earnPoints(amina.id(), new LoyaltyEarnRequest(
                                         120,
                                         "Monthly ticket purchase",
                                         "ticket_purchase"));
 
-                        loyaltyService.redeemPoints(amina.id(), new LoyaltyRedeemRequest(
-                                        30,
-                                        "Loyalty discount for next ride",
-                                        "discount"));
+                        loyaltyService.generateCoupon(amina.id(), new GenerateLoyaltyCouponRequest(
+                                        LoyaltyCouponType.DISCOUNT,
+                                        null));
 
                         var tar = userService.createUser(new CreateUserRequest(
                                         "Tarik Kovac",
@@ -93,8 +91,6 @@ public class DataSeeder {
                                         LocalDateTime.now().minusDays(2),
                                         27));
 
-
-
                         loyaltyService.earnPoints(tar.id(), new LoyaltyEarnRequest(
                                         45,
                                         "Weekly ticket purchase",
@@ -102,16 +98,16 @@ public class DataSeeder {
 
                         // Driver users (IDs 4–8)
                         String[][] drivers = {
-                                {"Emir Hodzic",    "emir.hodzic@sarajevotransit.ba",    "DriverPass1!"},
-                                {"Selma Muric",    "selma.muric@sarajevotransit.ba",     "DriverPass2!"},
-                                {"Damir Begic",    "damir.begic@sarajevotransit.ba",     "DriverPass3!"},
-                                {"Lejla Avdic",    "lejla.avdic@sarajevotransit.ba",     "DriverPass4!"},
-                                {"Nedim Konjic",   "nedim.konjic@sarajevotransit.ba",    "DriverPass5!"},
+                                        { "Emir Hodzic", "emir.hodzic@sarajevotransit.ba", "DriverPass1!" },
+                                        { "Selma Muric", "selma.muric@sarajevotransit.ba", "DriverPass2!" },
+                                        { "Damir Begic", "damir.begic@sarajevotransit.ba", "DriverPass3!" },
+                                        { "Lejla Avdic", "lejla.avdic@sarajevotransit.ba", "DriverPass4!" },
+                                        { "Nedim Konjic", "nedim.konjic@sarajevotransit.ba", "DriverPass5!" },
                         };
                         for (String[] d : drivers) {
                                 var resp = userService.createUser(new CreateUserRequest(
-                                        d[0], d[1], d[2],
-                                        LanguageCode.BS, ThemeMode.LIGHT, NotificationChannel.PUSH));
+                                                d[0], d[1], d[2],
+                                                LanguageCode.BS, ThemeMode.LIGHT, NotificationChannel.PUSH));
                                 userProfileRepository.findById(resp.id()).ifPresent(u -> {
                                         u.setRole(UserRole.DRIVER);
                                         userProfileRepository.save(u);

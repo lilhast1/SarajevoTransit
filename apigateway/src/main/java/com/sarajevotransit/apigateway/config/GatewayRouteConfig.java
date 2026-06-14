@@ -31,6 +31,15 @@ public class GatewayRouteConfig {
     }
 
     @Bean
+    public RouterFunction<ServerResponse> adminLoyaltyTierRoutes() {
+        return GatewayRouterFunctions.route()
+                .route(path("/api/v1/admin/loyalty/tiers/**").or(path("/api/admin/loyalty/tiers/**")),
+                        HandlerFunctions.http())
+                .filter(LoadBalancerFilterFunctions.lb("userservice"))
+                .build();
+    }
+
+    @Bean
     public RouterFunction<ServerResponse> feedbackServiceRoutes() {
         return GatewayRouterFunctions.route()
                 .route(path("/api/v1/workflows/**")

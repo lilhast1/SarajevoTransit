@@ -483,6 +483,16 @@ export const gatewayClient = {
   getSubscriptionById: (id) =>
     request(`/subscriptions/${id}`, { token: getAccessToken() }),
 
+  // ── Admin: Loyalty tier configs ────────────────────────────────────────────
+  getLoyaltyTierConfigs: () =>
+    request('/api/v1/admin/loyalty/tiers', { token: getAccessToken() }),
+  updateLoyaltyTierConfig: (id, payload) =>
+    request(`/api/v1/admin/loyalty/tiers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+
   // Admin dashboard stats
   getAdminStats: (period = 'MONTH') =>
     request(`/api/finance/admin/stats?period=${period}`, { token: getAccessToken() }),

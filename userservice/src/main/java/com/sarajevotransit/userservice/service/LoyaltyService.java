@@ -6,7 +6,6 @@ import com.sarajevotransit.userservice.dto.CouponApplicationResponse;
 import com.sarajevotransit.userservice.dto.GenerateLoyaltyCouponRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyCouponResponse;
-import com.sarajevotransit.userservice.dto.LoyaltyRedeemRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyTransactionResponse;
 import com.sarajevotransit.userservice.exception.InsufficientLoyaltyPointsException;
 import com.sarajevotransit.userservice.mapper.LoyaltyTransactionMapper;
@@ -15,6 +14,7 @@ import com.sarajevotransit.userservice.model.LoyaltyCouponType;
 import com.sarajevotransit.userservice.model.LoyaltyTransaction;
 import com.sarajevotransit.userservice.model.LoyaltyTransactionType;
 import com.sarajevotransit.userservice.model.LoyaltyTier;
+import com.sarajevotransit.userservice.model.LoyaltyTierConfig;
 import com.sarajevotransit.userservice.model.UserProfile;
 import com.sarajevotransit.userservice.repository.LoyaltyTransactionRepository;
 import com.sarajevotransit.userservice.repository.UserProfileRepository;
@@ -39,6 +39,7 @@ public class LoyaltyService {
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
     private final UserService userService;
     private final LoyaltyTransactionMapper loyaltyTransactionMapper;
+    private final LoyaltyTierConfigService tierConfigService;
 
     @Transactional
     public LoyaltyBalanceResponse earnPoints(Long userId, LoyaltyEarnRequest request) {
@@ -54,26 +55,10 @@ public class LoyaltyService {
     }
 
     @Transactional
-    public LoyaltyBalanceResponse redeemPoints(Long userId, LoyaltyRedeemRequest request) {
-        UserProfile user = userService.findUserById(userId);
-        DigitalWallet wallet = getOrCreateWallet(user);
-        if (wallet.getLoyaltyPointsTotal() < request.points()) {
-            throw new InsufficientLoyaltyPointsException("User does not have enough loyalty points for redemption.");
-        }
-
-        wallet.setLoyaltyPointsTotal(wallet.getLoyaltyPointsTotal() - request.points());
-        createTransaction(user, LoyaltyTransactionType.REDEEM, request.points(), request.description(),
-                request.referenceType());
-        userProfileRepository.save(user);
-
-        return new LoyaltyBalanceResponse(user.getId(), wallet.getLoyaltyPointsTotal());
-    }
-
-    @Transactional
     public LoyaltyCouponResponse generateCoupon(Long userId, GenerateLoyaltyCouponRequest request) {
         UserProfile user = userService.findUserById(userId);
         DigitalWallet wallet = getOrCreateWallet(user);
-        LoyaltyTier tier = LoyaltyTier.fromLifetimePoints(wallet.getLoyaltyPointsLifetime());
+        LoyaltyTierConfig tier = tierConfigService.getTierByLifetimePoints(wallet.getLoyaltyPointsLifetime());
 
         int pointsCost = resolveCouponCost(tier, request.couponType());
         if (wallet.getLoyaltyPointsTotal() < pointsCost) {
@@ -92,14 +77,16 @@ public class LoyaltyService {
 
         wallet.setLoyaltyPointsTotal(wallet.getLoyaltyPointsTotal() - pointsCost);
 
+        LoyaltyTier tierEnum = LoyaltyTier.valueOf(tier.getTierName());
+
         LoyaltyTransaction transaction = new LoyaltyTransaction();
         transaction.setPointsSpent(pointsCost);
         transaction.setPointsEarned(0);
-        transaction.setDescription(buildCouponDescription(request.couponType(), tier, rideCode));
+        transaction.setDescription(buildCouponDescription(request.couponType(), tierEnum, rideCode));
         transaction.setReferenceType("COUPON_GENERATED");
-        transaction.setCouponCode(generateCouponCode(userId, request.couponType(), tier));
+        transaction.setCouponCode(generateCouponCode(userId, request.couponType(), tierEnum));
         transaction.setCouponType(request.couponType());
-        transaction.setCouponTier(tier);
+        transaction.setCouponTier(tierEnum);
         transaction.setCouponDiscountPercent(resolveCouponDiscountPercent(tier, request.couponType()));
         transaction.setCouponRideCode(rideCode);
         transaction.setCouponActive(true);
@@ -203,24 +190,24 @@ public class LoyaltyService {
                 transaction.getCreatedAt());
     }
 
-    private int resolveCouponCost(LoyaltyTier tier, LoyaltyCouponType type) {
+    private int resolveCouponCost(LoyaltyTierConfig tier, LoyaltyCouponType type) {
         return switch (type) {
-            case DISCOUNT -> switch (tier) {
-                case SILVER -> 100;
-                case GOLD -> 200;
-                case PLATINUM -> 300;
-                default -> throw new IllegalArgumentException("Coupons are available from silver tier and above.");
-            };
-            case FREE_RIDE -> {
-                if (tier != LoyaltyTier.PLATINUM) {
-                    throw new IllegalArgumentException("Free ride coupons are only available at platinum tier.");
+            case DISCOUNT -> {
+                if (tier.getCouponCostDiscount() <= 0) {
+                    throw new IllegalArgumentException("Coupons are not available at this tier.");
                 }
-                yield 500;
+                yield tier.getCouponCostDiscount();
+            }
+            case FREE_RIDE -> {
+                if (tier.getCouponCostFreeRide() == null || tier.getCouponCostFreeRide() <= 0) {
+                    throw new IllegalArgumentException("Free ride coupons are not available at this tier.");
+                }
+                yield tier.getCouponCostFreeRide();
             }
         };
     }
 
-    private int resolveCouponDiscountPercent(LoyaltyTier tier, LoyaltyCouponType type) {
+    private int resolveCouponDiscountPercent(LoyaltyTierConfig tier, LoyaltyCouponType type) {
         if (type == LoyaltyCouponType.FREE_RIDE) {
             return 100;
         }

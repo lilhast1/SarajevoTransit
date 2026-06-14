@@ -3,7 +3,8 @@ package com.sarajevotransit.userservice.repository;
 import com.sarajevotransit.userservice.dto.AddTravelHistoryRequest;
 import com.sarajevotransit.userservice.dto.CreateUserRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
-import com.sarajevotransit.userservice.dto.LoyaltyRedeemRequest;
+import com.sarajevotransit.userservice.dto.GenerateLoyaltyCouponRequest;
+import com.sarajevotransit.userservice.model.LoyaltyCouponType;
 import com.sarajevotransit.userservice.model.LanguageCode;
 import com.sarajevotransit.userservice.model.NotificationChannel;
 import com.sarajevotransit.userservice.model.ThemeMode;
@@ -157,10 +158,9 @@ class RepositoryQueryPerformanceTests {
                 "Monthly ticket purchase",
                 "ticket_purchase"));
 
-        loyaltyService.redeemPoints(primaryUserId, new LoyaltyRedeemRequest(
-                30,
-                "Loyalty discount for next ride",
-                "discount"));
+        loyaltyService.generateCoupon(primaryUserId, new GenerateLoyaltyCouponRequest(
+                LoyaltyCouponType.DISCOUNT,
+                null));
 
         loyaltyService.earnPoints(tar.id(), new LoyaltyEarnRequest(
                 45,

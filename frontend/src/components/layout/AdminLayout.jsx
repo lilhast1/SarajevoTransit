@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, AlertCircle, Star, Bus, MapPinned,
-  Table2, Users, Bell, Clock, Truck, UserCog,
+  Table2, Users, Bell, Clock, Truck, UserCog, Award,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { gatewayClient } from '../../services/gatewayClient'
@@ -19,6 +19,7 @@ const TAB_DEFS = [
   { to: '/admin/delays',        key: 'tab_delays',        icon: Clock },
   { to: '/admin/vehicles',      key: 'tab_fleet',         icon: Truck, badge: 'maintenanceAlerts' },
   { to: '/admin/drivers',       key: 'tab_drivers',       icon: UserCog },
+  { to: '/admin/tiers',         key: 'tab_tiers',         icon: Award },
 ]
 
 export function AdminLayout() {

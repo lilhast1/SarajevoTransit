@@ -8,6 +8,11 @@ spring:
           predicates:
             - Path=/api/v1/users/**, /api/users/**
 
+        - id: userservice-admin-loyalty-tiers-route
+          uri: lb://userservice
+          predicates:
+            - Path=/api/v1/admin/loyalty/tiers/**, /api/admin/loyalty/tiers/**
+
         - id: feedbackservice-route
           uri: lb://feedbackservice
           predicates:
