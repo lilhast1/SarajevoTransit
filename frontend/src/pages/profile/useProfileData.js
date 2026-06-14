@@ -6,7 +6,6 @@ import {
   DEFAULT_PASSWORD_FORM,
   DEFAULT_PREFERENCE_FORM,
   DEFAULT_PROFILE_FORM,
-  DEFAULT_REDEEM_FORM,
   fromLanguagePreference,
   fromNotificationPreference,
   fromThemePreference,
@@ -38,7 +37,6 @@ export function useProfileData({ session, refreshSubscriptions, savePreferences,
   const [passwordForm, setPasswordForm] = useState(DEFAULT_PASSWORD_FORM)
   const [preferenceForm, setPreferenceForm] = useState(DEFAULT_PREFERENCE_FORM)
   const [couponForm, setCouponForm] = useState(DEFAULT_COUPON_FORM)
-  const [redeemForm, setRedeemForm] = useState(DEFAULT_REDEEM_FORM)
 
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
@@ -254,28 +252,6 @@ export function useProfileData({ session, refreshSubscriptions, savePreferences,
     }
   }
 
-  async function handleLoyaltyRedeem(event) {
-    event.preventDefault()
-    setMsg(null)
-    const points = Number(redeemForm.points || 0)
-    if (!points || points <= 0) {
-      setMsg({ type: 'error', text: 'Enter a positive number of points to redeem.' })
-      return
-    }
-    if (points > loyaltyBalance) {
-      setMsg({ type: 'error', text: 'You do not have enough points.' })
-      return
-    }
-    try {
-      await transitApi.redeemUserLoyaltyPoints(session.userId, { points, rewardType: redeemForm.rewardType })
-      setRedeemForm(DEFAULT_REDEEM_FORM)
-      setRefreshKey((current) => current + 1)
-      setMsg({ type: 'success', text: 'Points redeemed successfully.' })
-    } catch (err) {
-      setMsg({ type: 'error', text: err.message || 'Failed to redeem points.' })
-    }
-  }
-
   async function handleEditSubscription(subId, data) {
     setProcessing(true)
     setMsg(null)
@@ -362,8 +338,6 @@ export function useProfileData({ session, refreshSubscriptions, savePreferences,
     setPreferenceForm,
     couponForm,
     setCouponForm,
-    redeemForm,
-    setRedeemForm,
     savingProfile,
     savingPassword,
     savingPreferences,
@@ -374,7 +348,6 @@ export function useProfileData({ session, refreshSubscriptions, savePreferences,
     handlePasswordSave,
     handlePreferencesSave,
     handleLoyaltyCouponGenerate,
-    handleLoyaltyRedeem,
     handleEditSubscription,
     handleToggleSubscriptionActive,
     handleDeleteSubscription,

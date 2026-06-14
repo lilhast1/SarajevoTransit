@@ -6,7 +6,6 @@ import com.sarajevotransit.userservice.dto.CouponApplicationResponse;
 import com.sarajevotransit.userservice.dto.GenerateLoyaltyCouponRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyCouponResponse;
-import com.sarajevotransit.userservice.dto.LoyaltyRedeemRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyTransactionResponse;
 import com.sarajevotransit.userservice.dto.PaginationRequest;
 import com.sarajevotransit.userservice.service.LoyaltyService;
@@ -41,18 +40,6 @@ public class LoyaltyController {
             @PathVariable @Positive Long userId,
             @Valid @RequestBody LoyaltyEarnRequest request) {
         LoyaltyBalanceResponse created = loyaltyService.earnPoints(userId, request);
-        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/api/v1/users/{userId}/loyalty/balance")
-                .buildAndExpand(userId)
-                .toUri();
-        return ResponseEntity.created(location).body(created);
-    }
-
-    @PostMapping("/redeem")
-    public ResponseEntity<LoyaltyBalanceResponse> redeem(
-            @PathVariable @Positive Long userId,
-            @Valid @RequestBody LoyaltyRedeemRequest request) {
-        LoyaltyBalanceResponse created = loyaltyService.redeemPoints(userId, request);
         URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/api/v1/users/{userId}/loyalty/balance")
                 .buildAndExpand(userId)

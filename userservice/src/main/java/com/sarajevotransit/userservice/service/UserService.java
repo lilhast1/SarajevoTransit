@@ -427,6 +427,10 @@ public class UserService {
             wallet.setLoyaltyPointsTotal(0);
         }
         wallet.setLoyaltyPointsTotal(wallet.getLoyaltyPointsTotal() + loyaltyPoints);
+        if (wallet.getLoyaltyPointsLifetime() == null) {
+            wallet.setLoyaltyPointsLifetime(0);
+        }
+        wallet.setLoyaltyPointsLifetime(wallet.getLoyaltyPointsLifetime() + loyaltyPoints);
 
         com.sarajevotransit.userservice.model.LoyaltyTransaction lt = new com.sarajevotransit.userservice.model.LoyaltyTransaction();
         lt.setPointsEarned(loyaltyPoints);

@@ -23,7 +23,6 @@ export const DEFAULT_PREFERENCE_FORM = {
   screenReaderEnabled: false,
 }
 export const DEFAULT_COUPON_FORM = { couponType: 'DISCOUNT', rideCode: '' }
-export const DEFAULT_REDEEM_FORM = { points: '', rewardType: 'DISCOUNT' }
 
 export const TICKET_STATUS_STYLES = {
   ACTIVE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',

@@ -33,6 +33,7 @@ import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage.jsx
 import { AdminDelaysPage } from './pages/admin/AdminDelaysPage.jsx'
 import { AdminVehiclesPage } from './pages/admin/AdminVehiclesPage.jsx'
 import { AdminDriversPage } from './pages/admin/AdminDriversPage.jsx'
+import { AdminTiersPage } from './pages/admin/AdminTiersPage.jsx'
 
 
 function App() {
@@ -121,6 +122,7 @@ function App() {
           <Route path="delays" element={<AdminDelaysPage />} />
           <Route path="vehicles" element={<AdminVehiclesPage />} />
           <Route path="drivers" element={<AdminDriversPage />} />
+          <Route path="tiers" element={<AdminTiersPage />} />
         </Route>
 
         {/* 404 fallback */}

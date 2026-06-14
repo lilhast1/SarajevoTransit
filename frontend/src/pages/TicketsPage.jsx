@@ -224,7 +224,8 @@ export function TicketsPage() {
     try {
       const data = await gatewayClient.getUserLoyaltyCoupons(session.userId)
       const list = Array.isArray(data) ? data : []
-      setUserCoupons(list)
+      // Only show coupons that are still active (not used, not expired)
+      setUserCoupons(list.filter((c) => c.active === true))
     } catch {
       setUserCoupons([])
     }
@@ -276,13 +277,24 @@ export function TicketsPage() {
         ticketType: selectedType,
         paymentMethodId: selectedMethodId,
       }
-      if (couponCode && couponCode.trim().length > 0) payload.couponCode = couponCode.trim()
+      if (couponCode && couponCode.trim().length > 0) {
+        const code = couponCode.trim()
+        const selectedCoupon = userCoupons.find((c) => c.couponCode === code)
+        if (selectedCoupon?.couponType === 'FREE_RIDE' && selectedType !== 'SINGLE') {
+          throw new Error('Free ride coupons can only be used with single ride tickets')
+        }
+        payload.couponCode = code
+        if (selectedCoupon?.couponType === 'FREE_RIDE' && selectedCoupon?.rideCode) {
+          payload.rideCode = selectedCoupon.rideCode
+        }
+      }
 
       await gatewayClient.purchaseTicket(payload)
       setPurchaseSuccess(t('ticket_purchased'))
       setSelectedType(null)
       setCouponCode('')
       await loadTickets()
+      await loadCoupons()
     } catch (err) {
       setPurchaseError(err.message || 'Purchase failed')
     } finally {
@@ -412,9 +424,11 @@ export function TicketsPage() {
                   className="w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent"
                 >
                   <option value="">No coupon</option>
-                  {userCoupons.map((c) => (
+                  {userCoupons
+                    .filter((c) => c.couponType !== 'FREE_RIDE' || selectedType === 'SINGLE')
+                    .map((c) => (
                     <option key={c.couponCode} value={c.couponCode}>
-                      {c.couponCode} {c.couponType === 'DISCOUNT' && c.couponDiscountPercent ? `— ${c.couponDiscountPercent}%` : c.couponType === 'FREE_RIDE' ? '— Free ride' : ''}
+                      {c.couponCode}{c.couponType === 'DISCOUNT' && c.discountPercent ? ` — ${c.discountPercent}% off` : c.couponType === 'FREE_RIDE' ? ` — Free ride (${c.rideCode})` : ''}
                     </option>
                   ))}
                 </select>

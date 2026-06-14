@@ -67,8 +67,6 @@ export function ProfilePage() {
     setPreferenceForm,
     couponForm,
     setCouponForm,
-    redeemForm,
-    setRedeemForm,
     savingProfile,
     savingPassword,
     savingPreferences,
@@ -79,7 +77,6 @@ export function ProfilePage() {
     handlePasswordSave,
     handlePreferencesSave,
     handleLoyaltyCouponGenerate,
-    handleLoyaltyRedeem,
     handleEditSubscription,
     handleToggleSubscriptionActive,
     handleDeleteSubscription,
@@ -220,10 +217,7 @@ export function ProfilePage() {
             profileData={profileData}
             couponForm={couponForm}
             setCouponForm={setCouponForm}
-            redeemForm={redeemForm}
-            setRedeemForm={setRedeemForm}
             handleLoyaltyCouponGenerate={handleLoyaltyCouponGenerate}
-            handleLoyaltyRedeem={handleLoyaltyRedeem}
           />
         )}
       </div>
