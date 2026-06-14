@@ -1,0 +1,8 @@
+stripe:
+  # Provide a Stripe test secret key via the STRIPE_SECRET_KEY env var.
+  # Left empty by default so the service still starts in dev/test without Stripe configured;
+  # purchases will fail fast with a clear error until a key is supplied.
+  secret-key: ${STRIPE_SECRET_KEY:}
+  # Stripe does not support BAM as a charge currency, so test-mode charges are made in EUR.
+  # Tickets are still priced/displayed in BAM in the wallet.
+  currency: ${STRIPE_CURRENCY:eur}

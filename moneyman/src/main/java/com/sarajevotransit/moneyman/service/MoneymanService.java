@@ -7,6 +7,7 @@ import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
 import com.sarajevotransit.moneyman.dto.TicketPurchaseRequest;
 import com.sarajevotransit.moneyman.dto.TicketResponseDTO;
+import com.sarajevotransit.moneyman.dto.TicketValidationResponse;
 import com.sarajevotransit.moneyman.mapper.MoneymanMapper;
 import com.sarajevotransit.moneyman.exception.ResourceNotFoundException;
 import com.sarajevotransit.moneyman.model.*;
@@ -34,16 +35,18 @@ public class MoneymanService {
     private final MoneymanMapper mapper;
     private final ObjectMapper objectMapper;
     private final TicketSagaPublisher sagaPublisher;
+    private final StripePaymentService stripePaymentService;
 
     public MoneymanService(TicketRepository ticketRepository, TransactionRepository transactionRepository,
             PaymentMethodRepository paymentMethodRepository, MoneymanMapper mapper, ObjectMapper objectMapper,
-            TicketSagaPublisher sagaPublisher) {
+            TicketSagaPublisher sagaPublisher, StripePaymentService stripePaymentService) {
         this.ticketRepository = ticketRepository;
         this.transactionRepository = transactionRepository;
         this.paymentMethodRepository = paymentMethodRepository;
         this.mapper = mapper;
         this.objectMapper = objectMapper;
         this.sagaPublisher = sagaPublisher;
+        this.stripePaymentService = stripePaymentService;
     }
 
     @Transactional
@@ -55,9 +58,11 @@ public class MoneymanService {
         BigDecimal price = calculatePrice(request.getTicketType());
         LocalDateTime expiry = calculateExpiry(request.getTicketType());
 
+        // Charge the card via Stripe first — a decline throws PaymentFailedException (HTTP 402)
+        // and nothing is persisted. The returned PaymentIntent id is our external transaction id.
         log.info("Charging card ending in {} via {} token: {}", pm.getLastFour(), pm.getProvider(),
                 pm.getGatewayToken());
-        String externalId = "PAY-" + UUID.randomUUID().toString().substring(0, 8);
+        String externalId = stripePaymentService.charge(price, pm.getGatewayToken());
         String sagaId = UUID.randomUUID().toString();
 
         // Local TX 1: create Transaction(PENDING) + Ticket(PENDING)
@@ -119,6 +124,53 @@ public class MoneymanService {
     public Page<TicketResponseDTO> getUserWallet(Long userId, Pageable pageable) {
         return ticketRepository.findAllByUserIdWithTransaction(userId, pageable)
                 .map(mapper::toResponseDTO);
+    }
+
+    /**
+     * Validates a ticket by its QR code when scanned upon boarding. A SINGLE ticket is consumed
+     * (marked USED) on a successful validation; multi-ride passes (DAILY/WEEKLY/MONTHLY) stay ACTIVE.
+     * Tickets past their validity are lazily marked EXPIRED here as well.
+     */
+    @Transactional
+    public TicketValidationResponse validateTicket(String qrCodeData) {
+        Ticket ticket = ticketRepository.findByQrCodeData(qrCodeData).orElse(null);
+        if (ticket == null) {
+            return TicketValidationResponse.builder()
+                    .valid(false)
+                    .message("Ticket not found")
+                    .build();
+        }
+
+        if (ticket.getValidUntil() != null && ticket.getValidUntil().isBefore(LocalDateTime.now())) {
+            if (ticket.getStatus() == TicketStatus.ACTIVE) {
+                ticket.setStatus(TicketStatus.EXPIRED);
+                ticketRepository.save(ticket);
+            }
+            return buildValidationResponse(ticket, false, "Ticket expired");
+        }
+
+        if (ticket.getStatus() != TicketStatus.ACTIVE) {
+            return buildValidationResponse(ticket, false, "Ticket is not active (status: " + ticket.getStatus() + ")");
+        }
+
+        // Valid ride. Consume single-ride tickets; passes remain active for further boardings.
+        if (ticket.getType() == TicketType.SINGLE) {
+            ticket.setStatus(TicketStatus.USED);
+            ticketRepository.save(ticket);
+        }
+        log.info("Ticket {} validated successfully ({})", ticket.getId(), ticket.getType());
+        return buildValidationResponse(ticket, true, "Valid ticket");
+    }
+
+    private TicketValidationResponse buildValidationResponse(Ticket ticket, boolean valid, String message) {
+        return TicketValidationResponse.builder()
+                .valid(valid)
+                .ticketId(ticket.getId())
+                .type(ticket.getType())
+                .status(ticket.getStatus())
+                .validUntil(ticket.getValidUntil())
+                .message(message)
+                .build();
     }
 
     @Transactional

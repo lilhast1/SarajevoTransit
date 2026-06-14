@@ -5,6 +5,7 @@ import com.sarajevotransit.moneyman.model.Transaction;
 import com.sarajevotransit.moneyman.model.enums.PaymentStatus;
 import com.sarajevotransit.moneyman.model.enums.TicketStatus;
 import com.sarajevotransit.moneyman.repository.TransactionRepository;
+import com.sarajevotransit.moneyman.service.StripePaymentService;
 import com.sarajevotransit.moneyman.saga.event.TicketPurchaseCancelledEvent;
 import com.sarajevotransit.moneyman.saga.event.TicketPurchaseCompletedEvent;
 import com.sarajevotransit.moneyman.saga.event.TicketUserFailedEvent;
@@ -22,6 +23,7 @@ public class TicketSagaListener {
 
     private final TransactionRepository transactionRepository;
     private final TicketSagaPublisher publisher;
+    private final StripePaymentService stripePaymentService;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_MONEYMAN_USER_UPDATED)
     @Transactional
@@ -46,10 +48,12 @@ public class TicketSagaListener {
     public void onTicketUserFailed(TicketUserFailedEvent event) {
         log.warn("Saga [{}]: UserService failed — compensating. Reason: {}", event.sagaId(), event.reason());
         transactionRepository.findBySagaIdWithTicket(event.sagaId()).ifPresentOrElse(tx -> {
+            // Refund the Stripe charge since the downstream step failed.
+            stripePaymentService.refund(tx.getExternalTransactionId());
             tx.setStatus(PaymentStatus.FAILED);
             tx.getTicket().setStatus(TicketStatus.CANCELLED);
             transactionRepository.save(tx);
-            log.info("Saga [{}]: Transaction FAILED, Ticket CANCELLED — compensation COMPLETE", event.sagaId());
+            log.info("Saga [{}]: Charge refunded, Transaction FAILED, Ticket CANCELLED — compensation COMPLETE", event.sagaId());
             publisher.publishPurchaseCancelled(new TicketPurchaseCancelledEvent(
                     event.sagaId(),
                     tx.getUserId(),

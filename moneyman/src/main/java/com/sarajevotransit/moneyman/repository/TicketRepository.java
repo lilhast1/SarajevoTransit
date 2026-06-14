@@ -10,6 +10,7 @@ import org.springframework.data.repository.PagingAndSortingRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface TicketRepository extends JpaRepository<Ticket, UUID>, PagingAndSortingRepository<Ticket, UUID> {
@@ -17,6 +18,9 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID>, PagingAnd
     // N+1 Solution: Fetch transaction in the same query
     @Query("SELECT t FROM Ticket t JOIN FETCH t.transaction WHERE t.userId = :userId")
     List<Ticket> findAllByUserIdWithTransaction(Long userId);
+
+    // Used to validate a ticket when its QR code is scanned upon boarding
+    Optional<Ticket> findByQrCodeData(String qrCodeData);
 
     @Query("SELECT t FROM Ticket t JOIN FETCH t.transaction WHERE t.userId = :userId")
     Page<Ticket> findAllByUserIdWithTransaction(Long userId, Pageable pageable);

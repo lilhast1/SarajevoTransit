@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle, CreditCard, RefreshCw, Ticket, Trash2, X } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
 import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
 import { useAppContext } from '../context/AppContext'
@@ -19,7 +20,13 @@ const TICKET_STATUS_STYLES = {
   CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 }
 
-const CARD_TYPES = ['VISA', 'MASTERCARD', 'AMEX', 'MAESTRO']
+// Stripe shared test PaymentMethod tokens — each charges (or declines) in Stripe test mode.
+const STRIPE_TEST_CARDS = [
+  { token: 'pm_card_visa', label: 'Visa — success', lastFour: '4242', cardType: 'VISA' },
+  { token: 'pm_card_mastercard', label: 'Mastercard — success', lastFour: '4444', cardType: 'MASTERCARD' },
+  { token: 'pm_card_amex', label: 'Amex — success', lastFour: '8431', cardType: 'AMEX' },
+  { token: 'pm_card_visa_chargeDeclined', label: 'Visa — declined', lastFour: '0002', cardType: 'VISA' },
+]
 
 function formatDatetime(iso) {
   if (!iso) return '—'
@@ -54,11 +61,15 @@ function TicketRow({ ticket }) {
       </div>
 
       {ticket.status === 'ACTIVE' && ticket.qrCodeData && (
-        <div className="mt-2 rounded border border-emerald-200 bg-emerald-50 p-2 dark:border-emerald-900 dark:bg-emerald-950/20">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-            Ticket Code
+        <div className="mt-3 flex flex-col items-center gap-2 rounded border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/20">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+            Scan to board
           </p>
-          <code className="break-all text-xs text-emerald-800 dark:text-emerald-300">
+          {/* QR needs a light background to remain scannable in dark mode */}
+          <div className="rounded bg-white p-2">
+            <QRCodeSVG value={ticket.qrCodeData} size={148} level="M" />
+          </div>
+          <code className="break-all text-center text-[11px] text-emerald-800 dark:text-emerald-300">
             {ticket.qrCodeData}
           </code>
         </div>
@@ -107,28 +118,26 @@ function PaymentMethodCard({ method, selected, onSelect, onRemove, removing }) {
 }
 
 function AddCardForm({ onAdded, userId }) {
-  const [lastFour, setLastFour] = useState('')
-  const [cardType, setCardType] = useState('VISA')
+  const [selectedToken, setSelectedToken] = useState(STRIPE_TEST_CARDS[0].token)
   const [isDefault, setIsDefault] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (lastFour.length !== 4) return
+    const card = STRIPE_TEST_CARDS.find((c) => c.token === selectedToken)
+    if (!card) return
     setSubmitting(true)
     setError(null)
     try {
       const newMethod = await gatewayClient.addPaymentMethod({
         userId,
-        provider: 'MOCK',
-        gatewayToken: `mock_${Date.now()}`,
-        lastFour,
-        cardType,
+        provider: 'STRIPE',
+        gatewayToken: card.token,
+        lastFour: card.lastFour,
+        cardType: card.cardType,
         isDefault,
       })
-      setLastFour('')
-      setCardType('VISA')
       setIsDefault(false)
       onAdded(newMethod)
     } catch (err) {
@@ -140,27 +149,18 @@ function AddCardForm({ onAdded, userId }) {
 
   return (
     <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-2 rounded-panel border border-dashed border-border p-3">
-      <p className="text-xs font-semibold text-muted">Add Mock Card</p>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={4}
-          pattern="\d{4}"
-          placeholder="Last 4 digits"
-          value={lastFour}
-          onChange={(e) => setLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
-          required
-          className="w-32 rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
-        />
-        <select
-          value={cardType}
-          onChange={(e) => setCardType(e.target.value)}
-          className="flex-1 rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
-        >
-          {CARD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-      </div>
+      <p className="text-xs font-semibold text-muted">Add Stripe Test Card</p>
+      <select
+        value={selectedToken}
+        onChange={(e) => setSelectedToken(e.target.value)}
+        className="w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
+      >
+        {STRIPE_TEST_CARDS.map((c) => (
+          <option key={c.token} value={c.token}>
+            {c.label} •••• {c.lastFour}
+          </option>
+        ))}
+      </select>
       <label className="flex items-center gap-2 text-xs text-muted">
         <input
           type="checkbox"
@@ -173,7 +173,7 @@ function AddCardForm({ onAdded, userId }) {
       {error && <ErrorAlert error={error} onDismiss={() => setError(null)} />}
       <button
         type="submit"
-        disabled={submitting || lastFour.length !== 4}
+        disabled={submitting}
         className="self-end rounded-panel bg-accent px-4 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
       >
         {submitting ? 'Adding…' : 'Add Card'}
