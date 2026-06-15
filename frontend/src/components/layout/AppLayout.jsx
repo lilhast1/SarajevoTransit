@@ -88,7 +88,7 @@ export function AppLayout() {
 
           <div className="flex items-center gap-2">
             <p className="hidden text-xs text-muted sm:block" aria-live="polite">
-              {isAuthenticated ? t('signed_in') : t('guest')}
+              {isAuthenticated ? (session?.fullName || session?.email || t('signed_in')) : t('guest')}
             </p>
             <button
               type="button"
