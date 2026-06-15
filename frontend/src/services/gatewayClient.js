@@ -310,6 +310,13 @@ export const gatewayClient = {
   /** GET /api/finance/wallet/{userId}?page=0&size=20 */
   getWallet: (userId, query = '') =>
     request(`/api/finance/wallet/${userId}${query}`, { token: getAccessToken() }),
+  /** POST /api/finance/validate — validate a ticket by its QR code upon boarding */
+  validateTicket: (qrCodeData) =>
+    request('/api/finance/validate', {
+      method: 'POST',
+      body: JSON.stringify({ qrCodeData }),
+      token: getAccessToken(),
+    }),
   /** GET /api/payments/methods/{userId} */
   getPaymentMethods: (userId) =>
     request(`/api/payments/methods/${userId}`, { token: getAccessToken() }),

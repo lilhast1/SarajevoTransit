@@ -7,6 +7,8 @@ import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
 import com.sarajevotransit.moneyman.dto.TicketPurchaseRequest;
 import com.sarajevotransit.moneyman.dto.TicketResponseDTO;
+import com.sarajevotransit.moneyman.dto.TicketValidationRequest;
+import com.sarajevotransit.moneyman.dto.TicketValidationResponse;
 import com.sarajevotransit.moneyman.mapper.MoneymanMapper;
 import com.sarajevotransit.moneyman.model.Ticket;
 import com.sarajevotransit.moneyman.service.MoneymanService;
@@ -55,6 +57,16 @@ public class FinanceController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
+    }
+
+    @PostMapping("/validate")
+    @Operation(summary = "Validate ticket", description = "Validate a ticket by its QR code upon boarding; consumes single-ride tickets")
+    public ResponseEntity<TicketValidationResponse> validate(
+            @Valid @RequestBody TicketValidationRequest request,
+            HttpServletRequest httpRequest) {
+        // Require an authenticated caller (boarding staff / driver app).
+        extractUserId(httpRequest);
+        return ResponseEntity.ok(moneymanService.validateTicket(request.getQrCodeData()));
     }
 
     @GetMapping("/health")
