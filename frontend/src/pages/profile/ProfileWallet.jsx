@@ -26,6 +26,13 @@ const TIER_THRESHOLDS = {
   PLATINUM: 500,
 }
 
+const TIER_COUPON_RULES = [
+  { tier: 'BRONZE',   discount: null, discountCost: null,  freeRideCost: null },
+  { tier: 'SILVER',   discount: 5,    discountCost: 100,   freeRideCost: null },
+  { tier: 'GOLD',     discount: 10,   discountCost: 200,   freeRideCost: null },
+  { tier: 'PLATINUM', discount: 15,   discountCost: 300,   freeRideCost: 500 },
+]
+
 function getNextTier(currentTier) {
   const order = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM']
   const idx = order.indexOf(currentTier)
@@ -65,11 +72,15 @@ export function ProfileWallet({
     : 100
   const pointsToNextTier = nextTierThreshold ? Math.max(0, nextTierThreshold - lifetimePoints) : 0
 
+  const canRedeemCoupons = loyaltyTier !== 'BRONZE'
+  const currentTierRules = TIER_COUPON_RULES.find((r) => r.tier === loyaltyTier) || TIER_COUPON_RULES[0]
+
   const availableRewards = useMemo(
     () => LOYALTY_REWARD_OPTIONS.filter(
-      (option) => option.value === 'DISCOUNT' || (option.value === 'FREE_RIDE' && freeRideEligible),
+      (option) => (option.value === 'DISCOUNT' && canRedeemCoupons) ||
+                  (option.value === 'FREE_RIDE' && freeRideEligible),
     ),
-    [freeRideEligible],
+    [canRedeemCoupons, freeRideEligible],
   )
 
   const selectedReward = LOYALTY_REWARD_OPTIONS.find(
@@ -208,52 +219,107 @@ export function ProfileWallet({
         <div className="mt-4 grid gap-4 xl:grid-cols-2">
           <section className="space-y-3">
             <h4 className="text-sm font-semibold text-ink">Redeem points</h4>
-            <form className="space-y-3" onSubmit={handleLoyaltyCouponGenerate}>
-              <label className="block">
-                <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Reward type</span>
-                <select
-                  value={couponForm.couponType}
-                  onChange={(event) => setCouponForm((current) => ({ ...current, couponType: event.target.value, rideCode: '' }))}
-                  className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
-                >
-                  {availableRewards.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
 
-              {couponForm.couponType === 'FREE_RIDE' && (
+            {/* Tier rules table */}
+            <div className="overflow-hidden rounded-lg border border-border text-xs">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-surface-alt">
+                    <th className="px-3 py-2 text-left font-semibold text-muted">Tier</th>
+                    <th className="px-3 py-2 text-left font-semibold text-muted">Discount coupon</th>
+                    <th className="px-3 py-2 text-left font-semibold text-muted">Free ride coupon</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {TIER_COUPON_RULES.map((rule) => {
+                    const isCurrent = rule.tier === loyaltyTier
+                    return (
+                      <tr
+                        key={rule.tier}
+                        className={`border-b border-border last:border-0 ${isCurrent ? 'bg-accent/5' : ''}`}
+                      >
+                        <td className="px-3 py-2 font-medium text-ink">
+                          {rule.tier.charAt(0) + rule.tier.slice(1).toLowerCase()}
+                          {isCurrent && <span className="ml-1.5 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">You</span>}
+                        </td>
+                        <td className="px-3 py-2 text-muted">
+                          {rule.discountCost ? `${rule.discountCost} pts → ${rule.discount}% off` : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-muted">
+                          {rule.freeRideCost ? `${rule.freeRideCost} pts → free ride` : '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {!canRedeemCoupons ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm dark:border-amber-800 dark:bg-amber-900/20">
+                <p className="font-semibold text-amber-800 dark:text-amber-300">Coupons unlock at Silver tier</p>
+                <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
+                  Earn {Math.max(0, 100 - lifetimePoints)} more lifetime point{lifetimePoints === 99 ? '' : 's'} to reach Silver and start generating coupons.
+                </p>
+              </div>
+            ) : (
+              <form className="space-y-3" onSubmit={handleLoyaltyCouponGenerate}>
                 <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Ride code</span>
-                  <input
-                    value={couponForm.rideCode}
-                    onChange={(event) => setCouponForm((current) => ({ ...current, rideCode: event.target.value }))}
+                  <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Reward type</span>
+                  <select
+                    value={couponForm.couponType}
+                    onChange={(event) => setCouponForm((current) => ({ ...current, couponType: event.target.value, rideCode: '' }))}
                     className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
-                    placeholder="e.g. 11A"
-                  />
+                  >
+                    {availableRewards.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
                 </label>
-              )}
 
-              {selectedReward && (
-                <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted space-y-1">
-                  <p>{selectedReward.description}</p>
-                  {discountPercent > 0 && couponForm.couponType === 'DISCOUNT' && (
-                    <p className="text-ink font-medium">{discountPercent}% off your next ticket</p>
-                  )}
-                  {couponForm.couponType === 'FREE_RIDE' && (
-                    <p className="text-ink font-medium">100% off — completely free ride</p>
-                  )}
-                </div>
-              )}
+                {couponForm.couponType === 'FREE_RIDE' && (
+                  <label className="block">
+                    <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Ride code</span>
+                    <input
+                      value={couponForm.rideCode}
+                      onChange={(event) => setCouponForm((current) => ({ ...current, rideCode: event.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
+                      placeholder="e.g. 11A"
+                    />
+                  </label>
+                )}
 
-              <button
-                type="submit"
-                disabled={loyaltyBalance <= 0 || (couponForm.couponType === 'FREE_RIDE' && !couponForm.rideCode)}
-                className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition disabled:opacity-70"
-              >
-                Generate coupon
-              </button>
-            </form>
+                {selectedReward && (
+                  <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted space-y-1">
+                    <p>{selectedReward.description}</p>
+                    {couponForm.couponType === 'DISCOUNT' && (
+                      <p className="font-medium text-ink">
+                        Costs {currentTierRules.discountCost} pts · gives {currentTierRules.discount}% off your next ticket
+                      </p>
+                    )}
+                    {couponForm.couponType === 'FREE_RIDE' && (
+                      <p className="font-medium text-ink">
+                        Costs {currentTierRules.freeRideCost} pts · 100% off — completely free ride
+                      </p>
+                    )}
+                    <p className="text-[11px]">Your balance: <span className="font-semibold text-ink">{loyaltyBalance} pts</span></p>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={
+                    loyaltyBalance <= 0 ||
+                    (couponForm.couponType === 'FREE_RIDE' && !couponForm.rideCode) ||
+                    (couponForm.couponType === 'DISCOUNT' && loyaltyBalance < (currentTierRules.discountCost || 0)) ||
+                    (couponForm.couponType === 'FREE_RIDE' && loyaltyBalance < (currentTierRules.freeRideCost || 0))
+                  }
+                  className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition disabled:opacity-70"
+                >
+                  Generate coupon
+                </button>
+              </form>
+            )}
           </section>
 
           {/* Point history + coupons */}
