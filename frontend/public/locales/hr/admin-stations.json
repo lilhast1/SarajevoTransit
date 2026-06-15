@@ -32,5 +32,6 @@
   "field_active": "Aktivno",
   "lines_load_failed": "Nije moguce ucitati linije. Pokusajte ponovno.",
   "directions_load_failed": "Nije moguce ucitati smjerove. Pokusajte ponovno.",
-  "stations_filter_failed": "Nije moguce ucitati stajalista za odabrani smjer."
+  "stations_filter_failed": "Nije moguce ucitati stajalista za odabrani smjer.",
+  "search_placeholder": "Pretraži po kodu, nazivu ili adresi…"
 }

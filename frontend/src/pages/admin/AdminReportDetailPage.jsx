@@ -2,14 +2,10 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { AdminPagePanel } from '../../components/common/AdminPagePanel'
+import { StatusBadge } from '../../components/common/StatusBadge'
 import { gatewayClient } from '../../services/gatewayClient'
 import { ErrorAlert } from '../../components/common/Alerts'
-
-const STATUS_BADGE = {
-  RECEIVED: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  IN_PROGRESS: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  RESOLVED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-}
 
 function Field({ label, children }) {
   return (
@@ -68,17 +64,14 @@ export function AdminReportDetailPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-muted">{'Loading…'}</p>
+    return <p className="text-sm text-muted">{'Loading\u2026'}</p>
   }
 
   return (
     <div className="max-w-2xl space-y-5">
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate('/admin/reports')}
-          className="flex items-center gap-1.5 rounded-panel border border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-alt hover:text-ink"
-        >
+        <button type="button" onClick={() => navigate('/admin/reports')}
+          className="flex items-center gap-1.5 rounded-panel border border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-alt hover:text-ink">
           <ArrowLeft size={14} aria-hidden="true" />
           {t('back')}
         </button>
@@ -90,7 +83,7 @@ export function AdminReportDetailPage() {
 
       {report && (
         <>
-          <div className="rounded-panel border border-border bg-surface p-5">
+          <AdminPagePanel>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               <Field label={t('col_date')}>
                 {report.createdAt ? new Date(report.createdAt).toLocaleString() : null}
@@ -107,15 +100,11 @@ export function AdminReportDetailPage() {
               <div>
                 <dt className="text-xs text-muted">{t('col_status')}</dt>
                 <dd className="mt-0.5 flex items-center gap-2">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[report.status] ?? ''}`}>
-                    {report.status}
-                  </span>
-                  <select
-                    value={report.status}
+                  <StatusBadge status={report.status} />
+                  <select value={report.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
                     disabled={statusSaving}
-                    className="rounded border border-border bg-surface px-2 py-0.5 text-xs text-ink disabled:opacity-60"
-                  >
+                    className="rounded-panel border border-border bg-surface px-2 py-1 text-xs text-ink disabled:opacity-60">
                     {['RECEIVED', 'IN_PROGRESS', 'RESOLVED'].map((s) => (
                       <option key={s} value={s}>{s}</option>
                     ))}
@@ -133,55 +122,37 @@ export function AdminReportDetailPage() {
                 <dd className="mt-1 text-sm text-ink whitespace-pre-wrap">{report.description ?? '—'}</dd>
               </div>
             </dl>
-          </div>
+          </AdminPagePanel>
 
           {report.photoUrls?.length > 0 && (
-            <div className="rounded-panel border border-border bg-surface p-5">
+            <AdminPagePanel>
               <p className="mb-3 text-sm font-medium text-ink">
                 {t('photos_label')} <span className="text-xs text-muted">{t('click_to_enlarge', { count: report.photoUrls.length })}</span>
               </p>
               <div className="flex flex-wrap gap-3">
                 {report.photoUrls.map((src, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setLightboxSrc(src)}
-                    className="overflow-hidden rounded-panel border border-border hover:opacity-80 transition-opacity"
-                  >
-                    <img
-                      src={src}
-                      alt={t('photo_prefix', { num: i + 1 })}
-                      className="h-36 w-36 object-cover"
-                    />
+                  <button key={i} type="button" onClick={() => setLightboxSrc(src)}
+                    className="overflow-hidden rounded-panel border border-border hover:opacity-80 transition-opacity">
+                    <img src={src} alt={t('photo_prefix', { num: i + 1 })} className="h-36 w-36 object-cover" />
                   </button>
                 ))}
               </div>
-            </div>
+            </AdminPagePanel>
           )}
         </>
       )}
 
       {lightboxSrc && (
         <>
-          <button
-            type="button"
-            aria-label={t('close_image')}
-            className="fixed inset-0 z-[1300] bg-black/85"
-            onClick={() => setLightboxSrc(null)}
-          />
+          <button type="button" aria-label={t('close_image')}
+            className="fixed inset-0 z-[1300] bg-black/85" onClick={() => setLightboxSrc(null)} />
           <div className="fixed left-1/2 top-1/2 z-[1400] -translate-x-1/2 -translate-y-1/2">
-            <button
-              type="button"
-              onClick={() => setLightboxSrc(null)}
-              className="absolute -right-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-ink shadow-lg"
-            >
+            <button type="button" onClick={() => setLightboxSrc(null)}
+              className="absolute -right-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-ink shadow-lg">
               <X size={14} />
             </button>
-            <img
-              src={lightboxSrc}
-              alt={t('full_size')}
-              className="max-h-[85vh] max-w-[90vw] rounded-panel object-contain shadow-xl"
-            />
+            <img src={lightboxSrc} alt={t('full_size')}
+              className="max-h-[85vh] max-w-[90vw] rounded-panel object-contain shadow-xl" />
           </div>
         </>
       )}

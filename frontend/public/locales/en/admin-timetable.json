@@ -39,5 +39,6 @@
   "delete": "Delete",
   "delete_confirm": "Delete this timetable entry?",
   "lines_load_failed": "Unable to load lines. Please try again.",
-  "directions_load_failed": "Unable to load directions. Please try again."
+  "directions_load_failed": "Unable to load directions. Please try again.",
+  "search_placeholder": "Search by time or name…"
 }

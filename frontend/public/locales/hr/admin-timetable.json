@@ -39,5 +39,6 @@
   "delete": "Obriši",
   "delete_confirm": "Obrisati ovaj unos u vozni red?",
   "lines_load_failed": "Nije moguce ucitati linije. Pokusajte ponovno.",
-  "directions_load_failed": "Nije moguce ucitati smjerove. Pokusajte ponovno."
+  "directions_load_failed": "Nije moguce ucitati smjerove. Pokusajte ponovno.",
+  "search_placeholder": "Pretraži po vremenu ili nazivu…"
 }

@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useEffect, useState, useCallback } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, AlertCircle, Star, Bus, MapPinned,
-  Table2, Users, Bell, Clock, Truck, UserCog, Award,
+  Table2, Users, Bell, Clock, Truck, UserCog, Award, RefreshCw, AlertTriangle,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { gatewayClient } from '../../services/gatewayClient'
 
 const TAB_DEFS = [
-  { to: '/admin',               key: 'tab_dashboard',     icon: LayoutDashboard, exact: true },
+  { to: '/admin',               key: 'tab_dashboard',     icon: LayoutDashboard, exact: true, badge: 'needsRebuild' },
   { to: '/admin/reports',       key: 'tab_reports',       icon: AlertCircle },
   { to: '/admin/reviews',       key: 'tab_reviews',       icon: Star },
   { to: '/admin/lines',         key: 'tab_lines',         icon: Bus },
@@ -26,20 +26,61 @@ export function AdminLayout() {
   const { t } = useTranslation('admin-dashboard')
   const location = useLocation()
   const [maintenanceAlertCount, setMaintenanceAlertCount] = useState(0)
+  const [needsRebuild, setNeedsRebuild] = useState(false)
 
-  useEffect(() => {
-    gatewayClient.getMaintenanceAlerts()
-      .then((alerts) => setMaintenanceAlertCount(Array.isArray(alerts) ? alerts.length : 0))
-      .catch(() => {})
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const alerts = await gatewayClient.getMaintenanceAlerts()
+      setMaintenanceAlertCount(Array.isArray(alerts) ? alerts.length : 0)
+    } catch {
+      // silently ignore
+    }
   }, [])
 
-  const badges = { maintenanceAlerts: maintenanceAlertCount }
+  const fetchRebuildState = useCallback(async () => {
+    try {
+      const state = await gatewayClient.getOtpRebuildState()
+      setNeedsRebuild(!!state?.needsRebuild)
+    } catch {
+      // silently ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchAlerts()
+    fetchRebuildState()
+  }, [fetchAlerts, fetchRebuildState])
+
+  useEffect(() => {
+    const interval = setInterval(fetchRebuildState, 30_000)
+    return () => clearInterval(interval)
+  }, [fetchRebuildState])
+
+  const badges = {
+    maintenanceAlerts: maintenanceAlertCount,
+    needsRebuild: needsRebuild ? 1 : 0,
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Tab bar */}
-      <div className="border-b border-border overflow-x-auto">
-        <nav className="inline-flex min-w-full gap-0.5 sm:gap-1" aria-label="Admin navigation">
+    <div className="space-y-5">
+      {needsRebuild && (
+        <div className="flex items-center justify-between gap-3 rounded-panel border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={16} className="shrink-0" />
+            <span className="font-medium">OTP graph needs rebuild</span>
+            <span className="text-amber-600 dark:text-amber-400">&mdash; routing data has changed</span>
+          </div>
+          <NavLink
+            to="/admin"
+            className="shrink-0 rounded-panel border border-amber-400 bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600 dark:border-amber-600 dark:bg-amber-700 dark:hover:bg-amber-600"
+          >
+            View &amp; Schedule
+          </NavLink>
+        </div>
+      )}
+
+      <div className="overflow-x-auto pb-1">
+        <nav className="inline-flex min-w-full gap-0.5 border-b border-border pb-0 sm:gap-1" aria-label="Admin navigation">
           {TAB_DEFS.map(({ to, key, icon: Icon, exact, badge }) => {
             const isActive = exact
               ? location.pathname === to
@@ -55,7 +96,7 @@ export function AdminLayout() {
                     : 'border-transparent text-muted hover:border-border hover:text-ink'
                 }`}
               >
-                <Icon size={14} aria-hidden />
+                <Icon size={15} aria-hidden />
                 <span>{t(key)}</span>
                 {badgeCount > 0 && (
                   <span className="ml-0.5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
@@ -68,7 +109,6 @@ export function AdminLayout() {
         </nav>
       </div>
 
-      {/* Page content */}
       <Outlet />
     </div>
   )

@@ -3,22 +3,17 @@ import { Image } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { DataTable } from '../../components/admin/DataTable'
+import { AdminPagePanel } from '../../components/common/AdminPagePanel'
+import { StatusBadge } from '../../components/common/StatusBadge'
 import { ErrorAlert } from '../../components/common/Alerts'
 import { gatewayClient } from '../../services/gatewayClient'
 
 const STATUSES = ['ALL', 'RECEIVED', 'IN_PROGRESS', 'RESOLVED']
 
-const STATUS_BADGE = {
-  RECEIVED: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  IN_PROGRESS: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  RESOLVED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-}
-
 function trunc(str, n) {
   if (!str) return '—'
   return str.length > n ? `${str.slice(0, n)}…` : str
 }
-
 
 export function AdminReportsPage() {
   const { t } = useTranslation('admin-reports')
@@ -102,11 +97,7 @@ export function AdminReportsPage() {
       )
     },
     {
-      key: 'status', label: 'Status', render: (r) => (
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[r.status] ?? ''}`}>
-          {r.status}
-        </span>
-      )
+      key: 'status', label: 'Status', render: (r) => <StatusBadge status={r.status} />
     },
     {
       key: 'actions', label: 'Actions', render: (r) => (
@@ -114,14 +105,14 @@ export function AdminReportsPage() {
           <button
             type="button"
             onClick={() => navigate(`/admin/reports/${r.id}`)}
-            className="rounded border border-border px-2 py-0.5 text-xs text-muted hover:bg-surface-alt hover:text-ink"
+            className="rounded-panel border border-border px-2.5 py-1 text-xs font-medium text-muted transition hover:bg-surface-alt hover:text-ink"
           >
             Details
           </button>
           <select
             value={r.status}
             onChange={(e) => handleStatusChange(r.id, e.target.value)}
-            className="rounded border border-border bg-surface px-1 py-0.5 text-xs text-ink"
+            className="rounded-panel border border-border bg-surface px-2 py-1 text-xs text-ink"
           >
             {['RECEIVED', 'IN_PROGRESS', 'RESOLVED'].map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -130,7 +121,7 @@ export function AdminReportsPage() {
           <button
             type="button"
             onClick={() => handleDelete(r.id)}
-            className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+            className="rounded-panel border border-danger-soft px-2.5 py-1 text-xs font-medium text-danger transition hover:bg-danger-soft/20"
           >
             Delete
           </button>
@@ -140,23 +131,23 @@ export function AdminReportsPage() {
   ]
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold text-ink">Problem Reports</h2>
-        <p className="mt-1 text-sm text-muted">Review and manage user-submitted problem reports.</p>
-      </div>
+    <AdminPagePanel>
+      <AdminPagePanel.Header
+        title="Problem Reports"
+        subtitle="Review and manage user-submitted problem reports."
+      />
 
-      <div className="flex flex-wrap items-center gap-4">
+      <AdminPagePanel.Toolbar>
         <div className="flex gap-2">
           {STATUSES.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => { setStatusFilter(s); setPage(0) }}
-              className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
+              className={`rounded-panel border px-2.5 py-1 text-xs font-medium transition ${
                 statusFilter === s
-                  ? 'border-accent bg-accent text-white'
-                  : 'border-border text-muted hover:bg-surface-alt'
+                  ? 'border-accent bg-accent text-white shadow-sm'
+                  : 'border-border text-muted hover:border-accent-subtle hover:text-ink'
               }`}
             >
               {s}
@@ -164,24 +155,25 @@ export function AdminReportsPage() {
           ))}
         </div>
 
-        <div className="flex items-center gap-1">
-          <span className="text-sm text-muted">Sort:</span>
+        <AdminPagePanel.ToolbarDivider />
+
+        <AdminPagePanel.ToolbarGroup label="Sort:">
           {[{ value: 'desc', label: 'Latest first' }, { value: 'asc', label: 'Earliest first' }].map((opt) => (
             <button
               key={opt.value}
               type="button"
               onClick={() => { setSortDir(opt.value); setPage(0) }}
-              className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
+              className={`rounded-panel border px-2.5 py-1 text-xs font-medium transition ${
                 sortDir === opt.value
-                  ? 'border-accent bg-accent text-white'
-                  : 'border-border text-muted hover:bg-surface-alt'
+                  ? 'border-accent bg-accent text-white shadow-sm'
+                  : 'border-border text-muted hover:border-accent-subtle hover:text-ink'
               }`}
             >
               {opt.label}
             </button>
           ))}
-        </div>
-      </div>
+        </AdminPagePanel.ToolbarGroup>
+      </AdminPagePanel.Toolbar>
 
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
 
@@ -193,8 +185,7 @@ export function AdminReportsPage() {
         onPageChange={setPage}
         loading={loading}
       />
-
-    </div>
+    </AdminPagePanel>
   )
 }
 

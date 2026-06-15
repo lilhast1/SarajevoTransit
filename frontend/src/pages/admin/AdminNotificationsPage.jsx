@@ -1,22 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable } from '../../components/admin/DataTable'
-import { PanelCard } from '../../components/common/PanelCard'
+import { AdminPagePanel, SELECT_CLS } from '../../components/common/AdminPagePanel'
+import { StatusBadge } from '../../components/common/StatusBadge'
 import { ErrorAlert, SuccessAlert } from '../../components/common/Alerts'
 import { VEHICLE_TYPE_META_BY_ID } from '../../constants/vehicleColors'
 import { gatewayClient } from '../../services/gatewayClient'
 
 const VEHICLE_TYPES = Object.values(VEHICLE_TYPE_META_BY_ID)
 const NOTIFICATION_TYPES = ['GENERAL', 'DELAY', 'DISRUPTION', 'ROUTE_CHANGE', 'TIMETABLE_CHANGE', 'UPCOMING_DEPARTURE']
-
-const TYPE_BADGE = {
-  GENERAL: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  DELAY: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  DISRUPTION: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  ROUTE_CHANGE: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  TIMETABLE_CHANGE: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  UPCOMING_DEPARTURE: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-}
 
 const EMPTY_BROADCAST = { lineId: '', title: '', content: '', type: 'GENERAL' }
 const EMPTY_SINGLE = { userId: '', lineId: '', title: '', content: '', type: 'GENERAL' }
@@ -26,20 +18,18 @@ function trunc(str, n) {
   return str.length > n ? `${str.slice(0, n)}…` : str
 }
 
-function VehicleTypePills({ value, onChange }) {
-  const { t } = useTranslation('admin-notifications')
+function VehicleTypePills({ value, onChange, options }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm text-muted">{t('type_label')}</span>
-      {[{ id: '', label: t('all') }, ...VEHICLE_TYPES].map((vt) => (
+    <div className="flex flex-wrap items-center gap-1">
+      {options.map((vt) => (
         <button
           key={vt.id}
           type="button"
           onClick={() => onChange(vt.id)}
-          className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
+          className={`rounded-panel border px-2.5 py-1 text-xs font-medium transition ${
             value === vt.id
-              ? 'border-accent bg-accent text-white'
-              : 'border-border text-muted hover:bg-surface-alt'
+              ? 'border-accent bg-accent text-white shadow-sm'
+              : 'border-border text-muted hover:border-accent-subtle hover:text-ink'
           }`}
         >
           {vt.label}
@@ -51,10 +41,8 @@ function VehicleTypePills({ value, onChange }) {
 
 export function AdminNotificationsPage() {
   const { t } = useTranslation('admin-notifications')
-  // ── send form state ──────────────────────────────────────────────────────
   const [sendMode, setSendMode] = useState('broadcast')
 
-  // broadcast form
   const [bVehicleTypeId, setBVehicleTypeId] = useState('')
   const [bLines, setBLines] = useState([])
   const [broadcastForm, setBroadcastForm] = useState(EMPTY_BROADCAST)
@@ -62,13 +50,11 @@ export function AdminNotificationsPage() {
   const [success, setSuccess] = useState(null)
   const [formError, setFormError] = useState(null)
 
-  // single user form
   const [sVehicleTypeId, setSVehicleTypeId] = useState('')
   const [sLines, setSLines] = useState([])
   const [users, setUsers] = useState([])
   const [singleForm, setSingleForm] = useState(EMPTY_SINGLE)
 
-  // ── history state ─────────────────────────────────────────────────────────
   const [page, setPage] = useState(0)
   const [data, setData] = useState({ content: [], totalPages: 0 })
   const [loading, setLoading] = useState(false)
@@ -79,7 +65,6 @@ export function AdminNotificationsPage() {
   const [singleLinesError, setSingleLinesError] = useState(null)
   const [usersError, setUsersError] = useState(null)
 
-  // ── load lines for broadcast form ────────────────────────────────────────
   useEffect(() => {
     let active = true
     const q = bVehicleTypeId ? `?vehicleTypeId=${bVehicleTypeId}` : ''
@@ -91,21 +76,15 @@ export function AdminNotificationsPage() {
         const response = await gatewayClient.getLines(q)
         if (active) setBLines(response)
       } catch (err) {
-        if (active) {
-          setBLines([])
-          setBroadcastLinesError(err.message || t('lines_load_failed'))
-        }
+        if (active) { setBLines([]); setBroadcastLinesError(err.message || t('lines_load_failed')) }
       }
     }
 
     loadBroadcastLines()
 
-    return () => {
-      active = false
-    }
+    return () => { active = false }
   }, [bVehicleTypeId, t])
 
-  // ── load lines for single form ───────────────────────────────────────────
   useEffect(() => {
     let active = true
     const q = sVehicleTypeId ? `?vehicleTypeId=${sVehicleTypeId}` : ''
@@ -117,21 +96,15 @@ export function AdminNotificationsPage() {
         const response = await gatewayClient.getLines(q)
         if (active) setSLines(response)
       } catch (err) {
-        if (active) {
-          setSLines([])
-          setSingleLinesError(err.message || t('lines_load_failed'))
-        }
+        if (active) { setSLines([]); setSingleLinesError(err.message || t('lines_load_failed')) }
       }
     }
 
     loadSingleLines()
 
-    return () => {
-      active = false
-    }
+    return () => { active = false }
   }, [sVehicleTypeId, t])
 
-  // ── load users for single form ───────────────────────────────────────────
   useEffect(() => {
     if (sendMode !== 'single') return
 
@@ -142,21 +115,15 @@ export function AdminNotificationsPage() {
         const res = await gatewayClient.getAllUsers('?page=0&size=100')
         if (active) setUsers(res.content ?? res)
       } catch (err) {
-        if (active) {
-          setUsers([])
-          setUsersError(err.message || t('users_load_failed'))
-        }
+        if (active) { setUsers([]); setUsersError(err.message || t('users_load_failed')) }
       }
     }
 
     loadUsers()
 
-    return () => {
-      active = false
-    }
+    return () => { active = false }
   }, [sendMode, t])
 
-  // ── load history ─────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -171,7 +138,6 @@ export function AdminNotificationsPage() {
 
   useEffect(() => { load() }, [load])
 
-  // ── filtered rows ────────────────────────────────────────────────────────
   const visibleRows = (() => {
     let rows = data.content ?? []
     if (nameSearch.trim()) {
@@ -181,7 +147,6 @@ export function AdminNotificationsPage() {
     return rows
   })()
 
-  // ── send broadcast ───────────────────────────────────────────────────────
   async function handleBroadcast(e) {
     e.preventDefault()
     setSending(true)
@@ -204,7 +169,6 @@ export function AdminNotificationsPage() {
     }
   }
 
-  // ── send single notification ─────────────────────────────────────────────
   async function handleSingle(e) {
     e.preventDefault()
     setSending(true)
@@ -244,19 +208,14 @@ export function AdminNotificationsPage() {
     }
   }
 
-  const SELECT_CLS = 'mt-1 w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink'
-  const INPUT_CLS = 'mt-1 w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink'
+  const INPUT_CLS = `${SELECT_CLS} w-full`
 
   const columns = [
     { key: 'sentAt', label: t('col_date'), render: (r) => r.sentAt ? new Date(r.sentAt).toLocaleString() : '—' },
     { key: 'title', label: t('col_title') },
     { key: 'content', label: t('col_message'), render: (r) => trunc(r.content, 60) },
     {
-      key: 'type', label: t('col_type'), render: (r) => (
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[r.type] ?? 'bg-gray-100 text-gray-600'}`}>
-          {r.type}
-        </span>
-      )
+      key: 'type', label: t('col_type'), render: (r) => <StatusBadge status={r.type} />
     },
     {
       key: 'line', label: t('col_line'), render: (r) =>
@@ -268,26 +227,24 @@ export function AdminNotificationsPage() {
     },
     {
       key: 'actions', label: t('col_actions'), render: (r) => (
-        <button
-          type="button"
-          onClick={() => handleDelete(r.id)}
-          className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-        >
+        <button type="button" onClick={() => handleDelete(r.id)}
+          className="rounded-panel border border-danger-soft px-2.5 py-1 text-xs font-medium text-danger transition hover:bg-danger-soft/20">
           {t('delete')}
         </button>
       )
     },
   ]
 
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
-        <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
-      </div>
+  const typePillOptions = [{ id: '', label: t('all') }, ...VEHICLE_TYPES]
 
-      <PanelCard tone="soft">
-        {/* mode tabs */}
+  return (
+    <AdminPagePanel>
+      <AdminPagePanel.Header
+        title={t('title')}
+        subtitle={t('subtitle')}
+      />
+
+      <div className="rounded-panel border border-border bg-surface-soft p-4">
         <div className="mb-4 flex gap-1 border-b border-border">
           {[{ key: 'broadcast', label: t('tab_broadcast') }, { key: 'single', label: t('tab_user') }].map((tab) => (
             <button
@@ -307,56 +264,41 @@ export function AdminNotificationsPage() {
 
         {sendMode === 'broadcast' && (
           <form onSubmit={handleBroadcast} className="space-y-3">
-            <VehicleTypePills value={bVehicleTypeId} onChange={setBVehicleTypeId} />
+            <VehicleTypePills value={bVehicleTypeId} onChange={setBVehicleTypeId} options={typePillOptions} />
             {broadcastLinesError && <ErrorAlert error={broadcastLinesError} onDismiss={() => setBroadcastLinesError(null)} />}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="text-xs text-muted">{t('line_label')}</span>
-                <select
-                  required
-                  value={broadcastForm.lineId}
+                <select required value={broadcastForm.lineId}
                   onChange={(e) => setBroadcastForm((f) => ({ ...f, lineId: e.target.value }))}
-                  className={SELECT_CLS}
-                >
+                  className={INPUT_CLS}>
                   <option value="">{t('select_line')}</option>
                   {bLines.map((l) => <option key={l.id} value={l.id}>{l.code} – {l.name}</option>)}
                 </select>
               </label>
               <label className="block">
                 <span className="text-xs text-muted">{t('type_label')}</span>
-                <select
-                  value={broadcastForm.type}
+                <select value={broadcastForm.type}
                   onChange={(e) => setBroadcastForm((f) => ({ ...f, type: e.target.value }))}
-                  className={SELECT_CLS}
-                >
+                  className={INPUT_CLS}>
                   {NOTIFICATION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </label>
               <label className="block sm:col-span-2">
                 <span className="text-xs text-muted">{t('title_label')}</span>
-                <input
-                  required
-                  value={broadcastForm.title}
+                <input required value={broadcastForm.title}
                   onChange={(e) => setBroadcastForm((f) => ({ ...f, title: e.target.value }))}
-                  className={INPUT_CLS}
-                />
+                  className={INPUT_CLS} />
               </label>
               <label className="block sm:col-span-2">
                 <span className="text-xs text-muted">{t('message_label')}</span>
-                <textarea
-                  required
-                  rows={3}
-                  value={broadcastForm.content}
+                <textarea required rows={3} value={broadcastForm.content}
                   onChange={(e) => setBroadcastForm((f) => ({ ...f, content: e.target.value }))}
-                  className={INPUT_CLS}
-                />
+                  className={INPUT_CLS} />
               </label>
             </div>
-            <button
-              type="submit"
-              disabled={sending}
-              className="rounded-panel border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-            >
+            <button type="submit" disabled={sending}
+              className="rounded-panel bg-accent px-4 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong disabled:opacity-60">
               {sending ? t('sending') : t('send_broadcast')}
             </button>
           </form>
@@ -368,12 +310,9 @@ export function AdminNotificationsPage() {
               {usersError && <ErrorAlert error={usersError} onDismiss={() => setUsersError(null)} />}
               <label className="block sm:col-span-2">
                 <span className="text-xs text-muted">{t('user_label')}</span>
-                <select
-                  required
-                  value={singleForm.userId}
+                <select required value={singleForm.userId}
                   onChange={(e) => setSingleForm((f) => ({ ...f, userId: e.target.value }))}
-                  className={SELECT_CLS}
-                >
+                  className={INPUT_CLS}>
                   <option value="">{t('select_user')}</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>
@@ -382,56 +321,42 @@ export function AdminNotificationsPage() {
               </label>
             </div>
 
-            <VehicleTypePills value={sVehicleTypeId} onChange={setSVehicleTypeId} />
+            <VehicleTypePills value={sVehicleTypeId} onChange={setSVehicleTypeId} options={typePillOptions} />
             {singleLinesError && <ErrorAlert error={singleLinesError} onDismiss={() => setSingleLinesError(null)} />}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="text-xs text-muted">{t('line_optional')}</span>
-                <select
-                  value={singleForm.lineId}
+                <select value={singleForm.lineId}
                   onChange={(e) => setSingleForm((f) => ({ ...f, lineId: e.target.value }))}
-                  className={SELECT_CLS}
-                >
+                  className={INPUT_CLS}>
                   <option value="">{t('no_line')}</option>
                   {sLines.map((l) => <option key={l.id} value={l.id}>{l.code} – {l.name}</option>)}
                 </select>
               </label>
               <label className="block">
                 <span className="text-xs text-muted">{t('type_label')}</span>
-                <select
-                  value={singleForm.type}
+                <select value={singleForm.type}
                   onChange={(e) => setSingleForm((f) => ({ ...f, type: e.target.value }))}
-                  className={SELECT_CLS}
-                >
+                  className={INPUT_CLS}>
                   {NOTIFICATION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </label>
               <label className="block sm:col-span-2">
                 <span className="text-xs text-muted">{t('title_label')}</span>
-                <input
-                  required
-                  value={singleForm.title}
+                <input required value={singleForm.title}
                   onChange={(e) => setSingleForm((f) => ({ ...f, title: e.target.value }))}
-                  className={INPUT_CLS}
-                />
+                  className={INPUT_CLS} />
               </label>
               <label className="block sm:col-span-2">
                 <span className="text-xs text-muted">{t('message_label')}</span>
-                <textarea
-                  required
-                  rows={3}
-                  value={singleForm.content}
+                <textarea required rows={3} value={singleForm.content}
                   onChange={(e) => setSingleForm((f) => ({ ...f, content: e.target.value }))}
-                  className={INPUT_CLS}
-                />
+                  className={INPUT_CLS} />
               </label>
             </div>
-            <button
-              type="submit"
-              disabled={sending}
-              className="rounded-panel border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-            >
+            <button type="submit" disabled={sending}
+              className="rounded-panel bg-accent px-4 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong disabled:opacity-60">
               {sending ? t('sending') : t('send_user')}
             </button>
           </form>
@@ -441,36 +366,28 @@ export function AdminNotificationsPage() {
           <ErrorAlert error={formError} onDismiss={() => setFormError(null)} />
           <SuccessAlert message={success} onDismiss={() => setSuccess(null)} />
         </div>
-      </PanelCard>
+      </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-ink">{t('history_title')}</h3>
+        <h3 className="mb-3 text-base font-semibold text-ink">{t('history_title')}</h3>
 
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1">
             <span className="text-sm text-muted">{t('sort')}</span>
             {[{ value: 'desc', label: t('latest_first') }, { value: 'asc', label: t('earliest_first') }].map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => { setSortDir(opt.value); setPage(0) }}
-                className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
+              <button key={opt.value} type="button" onClick={() => { setSortDir(opt.value); setPage(0) }}
+                className={`rounded-panel border px-2.5 py-1 text-xs font-medium transition ${
                   sortDir === opt.value
-                    ? 'border-accent bg-accent text-white'
-                    : 'border-border text-muted hover:bg-surface-alt'
-                }`}
-              >
+                    ? 'border-accent bg-accent text-white shadow-sm'
+                    : 'border-border text-muted hover:border-accent-subtle hover:text-ink'
+                }`}>
                 {opt.label}
               </button>
             ))}
           </div>
-          <input
-            type="search"
-            placeholder={t('search_placeholder')}
-            value={nameSearch}
-            onChange={(e) => setNameSearch(e.target.value)}
-            className="w-72 rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted"
-          />
+          <input type="search" placeholder={t('search_placeholder')}
+            value={nameSearch} onChange={(e) => setNameSearch(e.target.value)}
+            className={SELECT_CLS} />
         </div>
 
         <ErrorAlert error={listError} onDismiss={() => setListError(null)} />
@@ -484,7 +401,7 @@ export function AdminNotificationsPage() {
           loading={loading}
         />
       </div>
-    </div>
+    </AdminPagePanel>
   )
 }
 

@@ -7,6 +7,7 @@ import { gatewayClient } from '../../services/gatewayClient'
 import { transitApi } from '../../services/transitApi'
 import { VS_TYPE_MAP, STATUS_STYLES, STATUS_LABELS } from '../VehiclesPage'
 import { TransitMap } from '../../components/map/TransitMap'
+import { AdminPagePanel } from '../../components/common/AdminPagePanel'
 
 const TABS = ['fleet', 'maintenance']
 const VEHICLE_TYPES = ['BUS', 'TRAM', 'TROLLEY', 'MINIBUS']
@@ -1168,19 +1169,21 @@ export function AdminVehiclesPage() {
   )
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
-            <Truck size={18} />Fleet Management
-          </h2>
-          <p className="text-xs text-muted">{vehicles.length} vehicles total</p>
-        </div>
-        <button type="button" onClick={loadData}
-          className="rounded-panel border border-border p-1.5 text-muted hover:bg-surface-alt hover:text-ink">
-          <RefreshCw size={14} />
-        </button>
-      </div>
+    <AdminPagePanel>
+      <AdminPagePanel.Header
+        title={
+          <span className="flex items-center gap-2">
+            <Truck size={20} />Fleet Management
+          </span>
+        }
+        subtitle={`${vehicles.length} vehicles total`}
+        actions={
+          <button type="button" onClick={loadData}
+            className="rounded-panel border border-border p-1.5 text-muted hover:bg-surface-alt hover:text-ink">
+            <RefreshCw size={14} />
+          </button>
+        }
+      />
 
       <div className="border-b border-border">
         <nav className="flex gap-0.5">
@@ -1206,6 +1209,6 @@ export function AdminVehiclesPage() {
         <FleetTab vehicles={vehicles} lines={lines} drivers={drivers} onUpdate={handleVehicleUpdate} onAdd={handleVehicleAdd} />
       )}
       {activeTab === 'maintenance' && <MaintenanceTab vehicles={vehicles} onUpdate={handleVehicleUpdate} />}
-    </div>
+    </AdminPagePanel>
   )
 }

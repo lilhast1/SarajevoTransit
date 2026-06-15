@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable } from '../../components/admin/DataTable'
+import { AdminPagePanel } from '../../components/common/AdminPagePanel'
+import { StatusBadge } from '../../components/common/StatusBadge'
 import { ErrorAlert } from '../../components/common/Alerts'
 import { useAppContext } from '../../context/AppContext'
 import { gatewayClient } from '../../services/gatewayClient'
@@ -46,13 +48,7 @@ export function AdminUsersPage() {
     { key: 'email', label: t('col_email') },
     {
       key: 'role', label: t('col_role'), render: (r) => (
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-          r.role === 'ADMIN'
-            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-        }`}>
-          {r.role ?? 'USER'}
-        </span>
+        <StatusBadge status={r.role === 'ADMIN' ? 'IN_PROGRESS' : 'GENERAL'} label={r.role ?? 'USER'} />
       )
     },
     {
@@ -62,12 +58,12 @@ export function AdminUsersPage() {
     {
       key: 'actions', label: t('col_actions'), render: (r) =>
         r.id === currentUserId ? (
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-400 dark:bg-gray-800">{t('you')}</span>
+          <span className="rounded-full bg-surface-alt px-2 py-0.5 text-xs text-muted">{t('you')}</span>
         ) : (
           <button
             type="button"
             onClick={() => handleDelete(r.id)}
-            className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+            className="rounded-panel border border-danger-soft px-2.5 py-1 text-xs font-medium text-danger transition hover:bg-danger-soft/20"
           >
             {t('delete')}
           </button>
@@ -76,11 +72,11 @@ export function AdminUsersPage() {
   ]
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
-        <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
-      </div>
+    <AdminPagePanel>
+      <AdminPagePanel.Header
+        title={t('title')}
+        subtitle={t('subtitle')}
+      />
 
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
 
@@ -92,7 +88,7 @@ export function AdminUsersPage() {
         onPageChange={setPage}
         loading={loading}
       />
-    </div>
+    </AdminPagePanel>
   )
 }
 
