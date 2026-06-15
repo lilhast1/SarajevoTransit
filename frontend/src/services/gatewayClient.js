@@ -2,6 +2,7 @@ import { getAccessToken } from '../utils/authStorage'
 import { ApiError, getErrorMessage } from '../utils/apiErrors'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+const REQUEST_TIMEOUT_MS = 60_000
 
 async function buildErrorMessage(response) {
   const contentType = response.headers.get('content-type') || ''
@@ -31,7 +32,10 @@ async function buildErrorMessage(response) {
 }
 
 async function request(path, options = {}) {
-  const { token, headers: customHeaders, ...restOptions } = options
+  const { token, headers: customHeaders, timeout = REQUEST_TIMEOUT_MS, ...restOptions } = options
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeout)
 
   let response
   try {
@@ -41,12 +45,16 @@ async function request(path, options = {}) {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(customHeaders || {}),
       },
+      signal: controller.signal,
       ...restOptions,
     })
   } catch (error) {
+    clearTimeout(timer)
     const networkError = new ApiError('Network request failed', 'NETWORK', error)
     throw new ApiError(getErrorMessage(networkError), 'NETWORK', error)
   }
+
+  clearTimeout(timer)
 
   if (!response.ok) {
     if (response.status === 401) {
@@ -511,6 +519,41 @@ export const gatewayClient = {
   clearTripDelay: (timetableId, serviceDate) =>
     request(`/api/v1/admin/realtime/trip-delays/${timetableId}?serviceDate=${serviceDate}`, {
       method: 'DELETE',
+      token: getAccessToken(),
+    }),
+
+  // ── Vehicles (batch) ──────────────────────────────────────────────────────
+  /** POST /api/vehicles/batch */
+  batchAddVehicles: (payload) =>
+    request('/api/vehicles/batch', { method: 'POST', body: JSON.stringify(payload), token: getAccessToken() }),
+  /** PATCH /api/vehicles/{id}/assign-block */
+  assignVehicleToBlock: (vehicleId, blockId) =>
+    request(`/api/vehicles/${vehicleId}/assign-block`, {
+      method: 'PATCH',
+      body: JSON.stringify({ blockId }),
+      token: getAccessToken(),
+    }),
+  /** DELETE /api/vehicles/{id}/assign-block */
+  unassignVehicleFromBlock: (vehicleId) =>
+    request(`/api/vehicles/${vehicleId}/assign-block`, {
+      method: 'DELETE',
+      token: getAccessToken(),
+    }),
+
+  // ── OTP Graph Status ───────────────────────────────────────────────────────
+  /** GET /api/v1/admin/otp-rebuild-state */
+  getOtpRebuildState: () =>
+    request('/api/v1/admin/otp-rebuild-state', { token: getAccessToken() }),
+  /** POST /api/v1/admin/otp-rebuild/trigger */
+  triggerOtpRebuild: () =>
+    request('/api/v1/admin/otp-rebuild/trigger', {
+      method: 'POST',
+      token: getAccessToken(),
+    }),
+  /** POST /api/v1/admin/otp-rebuild/complete — marks rebuild as completed */
+  markOtpRebuildComplete: () =>
+    request('/api/v1/admin/otp-rebuild/complete', {
+      method: 'POST',
       token: getAccessToken(),
     }),
 }

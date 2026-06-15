@@ -11,12 +11,12 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PanelCard } from '../../components/common/PanelCard'
+import { AdminPagePanel } from '../../components/common/AdminPagePanel'
+import { GraphRebuildPanel } from '../../components/admin/GraphRebuildPanel'
 import { gatewayClient } from '../../services/gatewayClient'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
-
-// ── Constants ────────────────────────────────────────────────────────────────
 
 const PERIODS = ['TODAY', 'WEEK', 'MONTH']
 
@@ -28,16 +28,12 @@ const CAT_COLORS   = {
 }
 const POLL_MS = 30_000
 
-// ── Small helpers ─────────────────────────────────────────────────────────────
-
 function fmt(n, decimals = 0) {
   if (n == null) return '—'
   return Number(n).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
 }
 function fmtBAM(n) { return n == null ? '—' : `${fmt(n, 2)} BAM` }
 function fmtRating(n) { return n == null ? '—' : Number(n).toFixed(1) }
-
-// ── Sub-components ────────────────────────────────────────────────────────────
 
 function KpiCard({ icon: Icon, label, value, color, loading }) {
   return (
@@ -60,7 +56,7 @@ function KpiCard({ icon: Icon, label, value, color, loading }) {
 function ChartCard({ title, children, loading, minH = 220 }) {
   return (
     <PanelCard>
-      <h3 className="mb-3 text-sm font-semibold text-ink">{title}</h3>
+      <h3 className="mb-3 text-base font-semibold text-ink">{title}</h3>
       {loading
         ? <div className="animate-pulse rounded bg-border" style={{ minHeight: minH }} />
         : <div style={{ minHeight: minH }}>{children}</div>}
@@ -95,8 +91,6 @@ function SimpleTable({ headers, rows, loading }) {
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
-
 export function AdminDashboardPage() {
   const { t } = useTranslation('admin-dashboard')
   const { theme } = useAppContext()
@@ -118,7 +112,6 @@ export function AdminDashboardPage() {
   const [loadingFin, setLoadingFin]     = useState(false)
   const pollRef = useRef(null)
 
-  // Resolve line ids → {code, name}
   const fetchLines = useCallback(async () => {
     try {
       const lines = await gatewayClient.getLines()
@@ -130,7 +123,6 @@ export function AdminDashboardPage() {
     } catch (_) {}
   }, [])
 
-  // Resolve top buyer userIds → fullName
   const resolveNames = useCallback(async (buyers) => {
     if (!buyers?.length) return
     const results = await Promise.allSettled(
@@ -145,7 +137,6 @@ export function AdminDashboardPage() {
     setBuyerNames(map)
   }, [])
 
-  // Fetch finance stats (also used by poller)
   const fetchFinance = useCallback(async (p) => {
     setLoadingFin(true)
     try {
@@ -156,7 +147,6 @@ export function AdminDashboardPage() {
     finally { setLoadingFin(false) }
   }, [resolveNames])
 
-  // Initial full load — all services in parallel
   useEffect(() => {
     async function init() {
       setLoadingInit(true)
@@ -176,18 +166,14 @@ export function AdminDashboardPage() {
     fetchLines()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetch finance when period changes
   useEffect(() => {
     if (!loadingInit) fetchFinance(period)
   }, [period]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Poll finance KPIs every 30 s
   useEffect(() => {
     pollRef.current = setInterval(() => fetchFinance(period), POLL_MS)
     return () => clearInterval(pollRef.current)
   }, [period, fetchFinance])
-
-  // ── Theme-aware chart styles ───────────────────────────────────────────────
 
   const tooltipStyle = useMemo(() => theme === 'dark'
     ? { backgroundColor: '#1e1e2e', border: '1px solid #374151', borderRadius: '6px', color: '#f1f5f9', fontSize: 12 }
@@ -196,11 +182,9 @@ export function AdminDashboardPage() {
 
   const gridColor = theme === 'dark' ? '#374151' : '#e5e7eb'
 
-  // ── Derived chart data (memoised) ──────────────────────────────────────────
-
   const revenueData = useMemo(() =>
     (finance?.revenueTimeSeries ?? []).map((p) => ({
-      date: p.date ? `${p.date.slice(8)}-${p.date.slice(5, 7)}` : p.date, // "DD-MM"
+      date: p.date ? `${p.date.slice(8)}-${p.date.slice(5, 7)}` : p.date,
       revenue: Number(p.revenue ?? 0),
       tickets: Number(p.count ?? 0),
     })), [finance])
@@ -219,7 +203,7 @@ export function AdminDashboardPage() {
 
   const ratingTrendData = useMemo(() =>
     (feedback?.ratingTrend ?? []).map((p) => ({
-      month: p.month?.slice(5) ?? p.month, // "MM"
+      month: p.month?.slice(5) ?? p.month,
       rating: Number((p.avgRating ?? 0).toFixed(2)),
       reviews: Number(p.reviewCount ?? 0),
     })), [feedback])
@@ -272,15 +256,12 @@ export function AdminDashboardPage() {
       fmtBAM(b.totalSpent),
     ]), [finance, buyerNames])
 
-  // KPI values
   const totalRevenue  = fmtBAM(finance?.totalRevenue)
   const totalTickets  = fmt(finance?.totalTickets)
   const activeTickets = fmt(finance?.activeTickets)
   const openReports   = fmt((feedback?.reportsByStatus?.RECEIVED ?? null))
   const avgRating     = fmtRating(feedback?.averageRating)
   const totalReviews  = fmt(feedback?.totalReviews)
-
-  // ── Export helpers ─────────────────────────────────────────────────────────
 
   function exportPDF() {
     const doc = new jsPDF()
@@ -371,47 +352,39 @@ export function AdminDashboardPage() {
 
   const isLoading = loadingInit
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
-          <p className="mt-0.5 text-sm text-muted">{t('subtitle')}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Period selector */}
-          <div className="flex rounded-panel border border-border overflow-hidden text-sm">
-            {PERIODS.map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 transition ${period === p ? 'bg-accent text-white' : 'text-muted hover:bg-surface-alt'}`}
-              >
-                {PERIOD_LABEL[p]}
-              </button>
-            ))}
+    <AdminPagePanel>
+      <AdminPagePanel.Header
+        title={t('title')}
+        subtitle={t('subtitle')}
+        actions={
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-panel border border-border overflow-hidden text-sm">
+              {PERIODS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-3 py-1.5 transition ${period === p ? 'bg-accent text-white' : 'text-muted hover:bg-surface-alt'}`}
+                >
+                  {PERIOD_LABEL[p]}
+                </button>
+              ))}
+            </div>
+            {loadingFin && <RefreshCw size={14} className="animate-spin text-muted" />}
+            <button onClick={exportPDF}
+              className="flex items-center gap-1.5 rounded-panel border border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-alt transition">
+              <Download size={14} /> {t('btn_pdf')}
+            </button>
+            <button onClick={exportExcel}
+              className="flex items-center gap-1.5 rounded-panel border border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-alt transition">
+              <Table2 size={14} /> {t('btn_excel')}
+            </button>
           </div>
-          {loadingFin && <RefreshCw size={14} className="animate-spin text-muted" />}
-          {/* Export */}
-          <button
-            onClick={exportPDF}
-            className="flex items-center gap-1.5 rounded-panel border border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-alt transition"
-          >
-            <Download size={14} /> {t('btn_pdf')}
-          </button>
-          <button
-            onClick={exportExcel}
-            className="flex items-center gap-1.5 rounded-panel border border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-alt transition"
-          >
-            <Table2 size={14} /> {t('btn_excel')}
-          </button>
-        </div>
-      </div>
+        }
+      />
 
-      {/* KPI Cards */}
+      <GraphRebuildPanel />
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard icon={TrendingUp}   label={t('kpi_revenue')}        value={totalRevenue}  color="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"  loading={isLoading || loadingFin} />
         <KpiCard icon={TicketIcon}   label={t('kpi_tickets_sold')}   value={totalTickets}  color="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"      loading={isLoading || loadingFin} />
@@ -421,7 +394,6 @@ export function AdminDashboardPage() {
         <KpiCard icon={FileText}     label={t('kpi_total_reviews')}  value={totalReviews}  color="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"  loading={isLoading} />
       </div>
 
-      {/* Charts row 1 — Revenue + Ticket type */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <ChartCard title={t('chart_revenue')} loading={isLoading || loadingFin}>
@@ -458,7 +430,6 @@ export function AdminDashboardPage() {
         </ChartCard>
       </div>
 
-      {/* Charts row 2 — Busiest hours + Rating trend */}
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard title={t('chart_busiest_hours')} loading={isLoading || loadingFin}>
           <ResponsiveContainer width="100%" height={200}>
@@ -485,7 +456,6 @@ export function AdminDashboardPage() {
         </ChartCard>
       </div>
 
-      {/* Chart row 3 — Reports by category */}
       <ChartCard title={t('chart_reports_category')} loading={isLoading}>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={categoryData} layout="vertical" margin={{ top: 4, right: 16, left: 100, bottom: 0 }}>
@@ -502,10 +472,9 @@ export function AdminDashboardPage() {
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* Tables row 1 — Delays + Busiest lines */}
       <div className="grid gap-4 lg:grid-cols-2">
         <PanelCard>
-          <h3 className="mb-3 text-sm font-semibold text-ink">{t('section_delays')}</h3>
+          <h3 className="mb-3 text-base font-semibold text-ink">{t('section_delays')}</h3>
           <SimpleTable
             headers={[t('col_line'), t('col_name'), t('col_avg_delay'), t('col_active')]}
             rows={delayRows.slice(0, 8)}
@@ -513,13 +482,9 @@ export function AdminDashboardPage() {
           />
           {!isLoading && delayChartData.length > 0 && (
             <div className="mt-4 border-t border-border pt-3">
-              <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">{t('chart_avg_delay_label')}</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{t('chart_avg_delay_label')}</p>
               <ResponsiveContainer width="100%" height={Math.max(80, delayChartData.length * 28)}>
-                <BarChart
-                  data={delayChartData}
-                  layout="vertical"
-                  margin={{ top: 0, right: 32, left: 28, bottom: 0 }}
-                >
+                <BarChart data={delayChartData} layout="vertical" margin={{ top: 0, right: 32, left: 28, bottom: 0 }}>
                   <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
                   <YAxis type="category" dataKey="line" tick={{ fontSize: 11 }} width={26} />
                   <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v} min`, t('tooltip_avg_delay')]} />
@@ -531,7 +496,7 @@ export function AdminDashboardPage() {
         </PanelCard>
 
         <PanelCard>
-          <h3 className="mb-3 text-sm font-semibold text-ink">{t('section_busiest_lines')}</h3>
+          <h3 className="mb-3 text-base font-semibold text-ink">{t('section_busiest_lines')}</h3>
           <SimpleTable
             headers={[t('col_line'), t('col_name'), t('col_subscribers')]}
             rows={subsRows.slice(0, 8)}
@@ -540,10 +505,9 @@ export function AdminDashboardPage() {
         </PanelCard>
       </div>
 
-      {/* Tables row 2 — Most reported + Top buyers */}
       <div className="grid gap-4 lg:grid-cols-2">
         <PanelCard>
-          <h3 className="mb-3 text-sm font-semibold text-ink">{t('section_reported_lines')}</h3>
+          <h3 className="mb-3 text-base font-semibold text-ink">{t('section_reported_lines')}</h3>
           <SimpleTable
             headers={[t('col_line'), t('col_name'), t('col_reports')]}
             rows={reportedRows}
@@ -552,7 +516,7 @@ export function AdminDashboardPage() {
         </PanelCard>
 
         <PanelCard>
-          <h3 className="mb-3 text-sm font-semibold text-ink">{t('section_top_buyers')}</h3>
+          <h3 className="mb-3 text-base font-semibold text-ink">{t('section_top_buyers')}</h3>
           <SimpleTable
             headers={[t('col_passenger'), t('col_tickets'), t('col_revenue')]}
             rows={buyerRows}
@@ -560,8 +524,7 @@ export function AdminDashboardPage() {
           />
         </PanelCard>
       </div>
-
-    </div>
+    </AdminPagePanel>
   )
 }
 

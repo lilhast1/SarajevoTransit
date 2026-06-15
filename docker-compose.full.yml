@@ -344,26 +344,55 @@ services:
     networks:
       - sarajevo-transit-net
 
-  # ── OTP (optional — start with: docker compose --profile otp up) ─────────────
-  # Requires otp-data/ to contain a pre-built graph.obj.
+  # ── OTP Blue-Green (optional — start with: docker compose --profile otp up) ───
+  # Requires ./otp-data/ directory with a pre-built graph.obj.
   # Run scripts/rebuild-otp.sh once first to generate it.
 
-  otp:
+  otp-blue:
     image: opentripplanner/opentripplanner:latest
-    container_name: sarajevo-transit-otp
+    container_name: otp-blue
     profiles: ["otp"]
     command: ["--load", "--serve"]
     ports:
-      - "${OTP_HOST_PORT:-18080}:8080"
+      - "${OTP_BLUE_PORT:-18080}:8080"
     volumes:
       - ./otp-data:/var/opentripplanner
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/otp/actuators/health || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 120s
+    networks:
+      - sarajevo-transit-net
+
+  otp-green:
+    image: opentripplanner/opentripplanner:latest
+    container_name: otp-green
+    profiles: ["otp-green"]
+    command: ["--load", "--serve"]
+    ports:
+      - "${OTP_GREEN_PORT:-18081}:8080"
+    volumes:
+      - ./otp-data:/var/opentripplanner
+    restart: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+    networks:
+      - sarajevo-transit-net
+
+  otp-build:
+    image: opentripplanner/opentripplanner:latest
+    container_name: otp-build
+    profiles: ["tools"]
+    command: ["--build", "--save"]
+    volumes:
+      - ./otp-data:/var/opentripplanner
     networks:
       - sarajevo-transit-net
 
@@ -378,12 +407,28 @@ services:
       EUREKA_SERVER_URL: http://eurekaserver:8761/eureka
       EUREKA_INSTANCE_HOSTNAME: otpproxyservice
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
-      OTP_BASE_URL: http://otp:8080
+      OTP_BASE_URL: http://otp-blue:8080
+      OTP_BLUE_URL: http://otp-blue:8080
+      OTP_GREEN_URL: http://otp-green:8080
+      OTP_ACTIVE_COLOR: BLUE
+      OTP_DATA_DIR: /app/otp-data
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      ROUTING_BASE_URL: http://routingservice:9999
+      ROUTING_GTFS_ADMIN_TOKEN: ${ROUTING_GTFS_ADMIN_TOKEN:-change-me}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./otp-data:/app/otp-data
+      - ./docker-compose.otp.yml:/app/docker-compose.otp.yml:ro
     depends_on:
       eurekaserver:
         condition: service_healthy
-      otp:
-        condition: service_started
+      otp-blue:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - sarajevo-transit-net
 

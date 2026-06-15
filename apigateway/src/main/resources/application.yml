@@ -73,6 +73,11 @@ spring:
             predicates:
               - Path=/api/v1/admin/realtime/**
 
+          - id: routingservice-admin-otp-rebuild-route
+            uri: lb://routingservice
+            predicates:
+              - Path=/api/v1/admin/otp-rebuild/**, /api/v1/admin/otp-rebuild-state
+
           - id: moneyman-route
             uri: lb://moneyman
             predicates:

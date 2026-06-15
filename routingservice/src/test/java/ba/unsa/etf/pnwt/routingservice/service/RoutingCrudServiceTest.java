@@ -45,6 +45,7 @@ class RoutingCrudServiceTest {
     @Mock private VehicleTypeRepository vehicleTypeRepository;
     @Mock private RoutingMapper mapper;
     @Mock private TimetableEventPublisher timetableEventPublisher;
+    @Mock private OtpRebuildService otpRebuildService;
 
     private RoutingCrudService service;
 
@@ -59,7 +60,8 @@ class RoutingCrudServiceTest {
                 routePointRepository,
                 vehicleTypeRepository,
                 mapper,
-                timetableEventPublisher
+                timetableEventPublisher,
+                otpRebuildService
         );
     }
 

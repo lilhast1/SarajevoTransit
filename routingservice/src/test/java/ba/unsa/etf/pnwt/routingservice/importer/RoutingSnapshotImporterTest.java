@@ -20,6 +20,7 @@ class RoutingSnapshotImporterTest {
             null,
             null,
             null,
+            null,
             null
     );
 

@@ -1,13 +1,39 @@
 services:
-  otp:
+  otp-blue:
     image: opentripplanner/opentripplanner:latest
-    container_name: otp
+    container_name: otp-blue
     command: ["--load", "--serve"]
     ports:
-      - "${OTP_HOST_PORT:-18080}:8080"
+      - "${OTP_BLUE_PORT:-18080}:8080"
     volumes:
       - ./otp-data:/var/opentripplanner
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+    networks:
+      - sarajevo-transit-net
+
+  otp-green:
+    image: opentripplanner/opentripplanner:latest
+    container_name: otp-green
+    command: ["--load", "--serve"]
+    ports:
+      - "${OTP_GREEN_PORT:-18081}:8080"
+    volumes:
+      - ./otp-data:/var/opentripplanner
+    restart: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+    networks:
+      - sarajevo-transit-net
 
   otp-build:
     image: opentripplanner/opentripplanner:latest
@@ -15,3 +41,7 @@ services:
     command: ["--build", "--save"]
     volumes:
       - ./otp-data:/var/opentripplanner
+
+networks:
+  sarajevo-transit-net:
+    external: true

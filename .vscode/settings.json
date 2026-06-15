@@ -12,6 +12,6 @@
             "password": "password"
         }
     ],
-    "workbench.colorTheme": "Monokai Pro (Filter Octagon)",
+    "workbench.colorTheme": "Monokai",
     "java.configuration.updateBuildConfiguration": "interactive"
 }
