@@ -95,7 +95,7 @@ public class MoneymanServiceTest {
         when(stripePaymentService.charge(any(BigDecimal.class), any()))
                 .thenThrow(new PaymentFailedException("Your card was declined."));
 
-        TicketPurchaseRequest request = new TicketPurchaseRequest(1L, TicketType.SINGLE, 1L);
+        TicketPurchaseRequest request = new TicketPurchaseRequest(1L, TicketType.SINGLE, 1L, null, null);
 
         assertThrows(PaymentFailedException.class, () -> moneymanService.purchaseTicket(request));
         verify(transactionRepository, never()).save(any());

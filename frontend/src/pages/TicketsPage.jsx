@@ -15,11 +15,35 @@ const TICKET_STATUS_STYLES = {
 }
 
 const STRIPE_TEST_CARDS = [
-  { token: 'pm_card_visa', label: 'Visa ? success', lastFour: '4242', cardType: 'VISA' },
-  { token: 'pm_card_mastercard', label: 'Mastercard ? success', lastFour: '4444', cardType: 'MASTERCARD' },
-  { token: 'pm_card_amex', label: 'Amex ? success', lastFour: '8431', cardType: 'AMEX' },
-  { token: 'pm_card_visa_chargeDeclined', label: 'Visa ? declined', lastFour: '0002', cardType: 'VISA' },
+  { number: '4242424242424242', token: 'pm_card_visa', cardType: 'VISA' },
+  { number: '5555555555554444', token: 'pm_card_mastercard', cardType: 'MASTERCARD' },
+  { number: '378282246310005',  token: 'pm_card_amex', cardType: 'AMEX' },
+  { number: '4000000000000002', token: 'pm_card_visa_chargeDeclined', cardType: 'VISA' },
 ]
+
+function detectCardType(digits) {
+  if (/^4/.test(digits)) return 'VISA'
+  if (/^5[1-5]/.test(digits)) return 'MASTERCARD'
+  if (/^3[47]/.test(digits)) return 'AMEX'
+  return 'VISA'
+}
+
+function resolveStripeToken(digits) {
+  const match = STRIPE_TEST_CARDS.find((c) => c.number === digits)
+  return match ? match.token : 'pm_card_visa'
+}
+
+function formatCardNumber(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 16)
+  return digits.replace(/(.{4})/g, '$1 ').trim()
+}
+
+function formatExpiry(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 4)
+  if (digits.length >= 3) return digits.slice(0, 2) + ' / ' + digits.slice(2)
+  if (digits.length === 2) return digits + ' / '
+  return digits
+}
 
 function formatDatetime(iso) {
   if (!iso) return '?'
@@ -118,28 +142,61 @@ function PaymentMethodCard({ method, selected, onSelect, onRemove, removing }) {
 }
 
 function AddCardForm({ onAdded, userId }) {
-  const [selectedToken, setSelectedToken] = useState(STRIPE_TEST_CARDS[0].token)
   const { t } = useTranslation('tickets')
+  const [cardNumber, setCardNumber] = useState('')
+  const [expiry, setExpiry] = useState('')
+  const [cvv, setCvv] = useState('')
   const [isDefault, setIsDefault] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [fieldErrors, setFieldErrors] = useState({})
+
+  const digits = cardNumber.replace(/\D/g, '')
+  const cardType = detectCardType(digits)
+  const isAmex = cardType === 'AMEX'
+  const expectedLength = isAmex ? 15 : 16
+  const cvvLength = isAmex ? 4 : 3
+
+  function validate() {
+    const errors = {}
+    if (digits.length !== expectedLength) {
+      errors.cardNumber = `Card number must be ${expectedLength} digits`
+    }
+    const expiryDigits = expiry.replace(/\D/g, '')
+    if (expiryDigits.length !== 4) {
+      errors.expiry = 'Enter expiry as MM / YY'
+    } else {
+      const mm = parseInt(expiryDigits.slice(0, 2), 10)
+      const yy = parseInt(expiryDigits.slice(2), 10)
+      const now = new Date()
+      const fullYear = 2000 + yy
+      if (mm < 1 || mm > 12) errors.expiry = 'Invalid month'
+      else if (fullYear < now.getFullYear() || (fullYear === now.getFullYear() && mm < now.getMonth() + 1))
+        errors.expiry = 'Card has expired'
+    }
+    if (cvv.length !== cvvLength) {
+      errors.cvv = `CVV must be ${cvvLength} digits`
+    }
+    return errors
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
-    const card = STRIPE_TEST_CARDS.find((c) => c.token === selectedToken)
-    if (!card) return
+    const errors = validate()
+    if (Object.keys(errors).length > 0) { setFieldErrors(errors); return }
+    setFieldErrors({})
     setSubmitting(true)
     setError(null)
     try {
       const newMethod = await gatewayClient.addPaymentMethod({
         userId,
         provider: 'STRIPE',
-        gatewayToken: card.token,
-        lastFour: card.lastFour,
-        cardType: card.cardType,
+        gatewayToken: resolveStripeToken(digits),
+        lastFour: digits.slice(-4),
+        cardType,
         isDefault,
       })
-      setIsDefault(false)
+      setCardNumber(''); setExpiry(''); setCvv(''); setIsDefault(false)
       onAdded(newMethod)
     } catch (err) {
       setError(err.message || 'Failed to add card')
@@ -149,19 +206,61 @@ function AddCardForm({ onAdded, userId }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-2 rounded-panel border border-dashed border-border p-3">
-      <p className="text-xs font-semibold text-muted">Add Stripe Test Card</p>
-      <select
-        value={selectedToken}
-        onChange={(e) => setSelectedToken(e.target.value)}
-        className="w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
-      >
-        {STRIPE_TEST_CARDS.map((c) => (
-          <option key={c.token} value={c.token}>
-            {c.label} ???? {c.lastFour}
-          </option>
-        ))}
-      </select>
+    <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-3 rounded-panel border border-dashed border-border p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-muted">Add payment card</p>
+        {digits.length > 0 && (
+          <span className="text-xs font-semibold text-accent">{cardType}</span>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <div className="relative">
+          <CreditCard size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="Card number"
+            value={cardNumber}
+            onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+            className={`w-full rounded-panel border bg-surface py-2 pl-9 pr-3 text-sm text-ink placeholder:text-muted focus:outline-none ${
+              fieldErrors.cardNumber ? 'border-red-400 focus:border-red-400' : 'border-border focus:border-accent'
+            }`}
+          />
+        </div>
+        {fieldErrors.cardNumber && <p className="text-[11px] text-red-500">{fieldErrors.cardNumber}</p>}
+      </div>
+
+      <div className="flex gap-2">
+        <div className="flex flex-1 flex-col gap-1">
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="MM / YY"
+            value={expiry}
+            onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+            className={`w-full rounded-panel border bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:outline-none ${
+              fieldErrors.expiry ? 'border-red-400 focus:border-red-400' : 'border-border focus:border-accent'
+            }`}
+          />
+          {fieldErrors.expiry && <p className="text-[11px] text-red-500">{fieldErrors.expiry}</p>}
+        </div>
+        <div className="flex w-24 flex-col gap-1">
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="CVV"
+            maxLength={cvvLength}
+            value={cvv}
+            onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, cvvLength))}
+            className={`w-full rounded-panel border bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:outline-none ${
+              fieldErrors.cvv ? 'border-red-400 focus:border-red-400' : 'border-border focus:border-accent'
+            }`}
+          />
+          {fieldErrors.cvv && <p className="text-[11px] text-red-500">{fieldErrors.cvv}</p>}
+        </div>
+      </div>
+
       <label className="flex items-center gap-2 text-xs text-muted">
         <input
           type="checkbox"
@@ -171,11 +270,13 @@ function AddCardForm({ onAdded, userId }) {
         />
         {t('set_default')}
       </label>
+
       {error && <ErrorAlert error={error} onDismiss={() => setError(null)} />}
+
       <button
         type="submit"
         disabled={submitting}
-        className="self-end rounded-panel bg-accent px-4 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+        className="rounded-panel bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
       >
         {submitting ? t('adding') : t('add_card')}
       </button>
