@@ -202,6 +202,12 @@ cd frontend && npm install && npm run dev
 
 Frontend runs at http://localhost:5173 and proxies all API calls to the gateway at `localhost:8080`.
 
+### 4. Run frontend tests
+
+```bash
+cd frontend && npm test
+```
+
 ---
 
 ## API Gateway Routes
