@@ -1,6 +1,8 @@
 import { getAccessToken } from '../utils/authStorage'
+import { ApiError, getErrorMessage } from '../utils/apiErrors'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+const REQUEST_TIMEOUT_MS = 60_000
 
 async function buildErrorMessage(response) {
   const contentType = response.headers.get('content-type') || ''
@@ -30,22 +32,37 @@ async function buildErrorMessage(response) {
 }
 
 async function request(path, options = {}) {
-  const { token, headers: customHeaders, ...restOptions } = options
+  const { token, headers: customHeaders, timeout = REQUEST_TIMEOUT_MS, ...restOptions } = options
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(customHeaders || {}),
-    },
-    ...restOptions,
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeout)
+
+  let response
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(customHeaders || {}),
+      },
+      signal: controller.signal,
+      ...restOptions,
+    })
+  } catch (error) {
+    clearTimeout(timer)
+    const networkError = new ApiError('Network request failed', 'NETWORK', error)
+    throw new ApiError(getErrorMessage(networkError), 'NETWORK', error)
+  }
+
+  clearTimeout(timer)
 
   if (!response.ok) {
     if (response.status === 401) {
       window.dispatchEvent(new CustomEvent('session-expired'))
     }
-    throw new Error(await buildErrorMessage(response))
+
+    const responseError = new ApiError(await buildErrorMessage(response), response.status)
+    throw new ApiError(getErrorMessage(responseError), response.status, responseError)
   }
 
   if (response.status === 204) return null
@@ -101,6 +118,58 @@ export const gatewayClient = {
 
   /** GET /api/v1/users/me */
   getCurrentUser: () => request('/api/v1/users/me'),
+  /** GET /api/v1/users/{id} */
+  getUserById: (id) => request(`/api/v1/users/${id}`, { token: getAccessToken() }),
+  /** PUT /api/v1/users/{id} */
+  updateUserProfile: (id, payload) =>
+    request(`/api/v1/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/v1/users/{id}/preferences */
+  getUserPreferences: (id) => request(`/api/v1/users/${id}/preferences`, { token: getAccessToken() }),
+  /** PUT /api/v1/users/{id}/preferences */
+  updateUserPreferences: (id, payload) =>
+    request(`/api/v1/users/${id}/preferences`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** PUT /api/v1/users/{id}/password */
+  updateUserPassword: (id, payload) =>
+    request(`/api/v1/users/${id}/password`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/v1/users/{id}/travel-history */
+  getUserTravelHistory: (id, query = '') =>
+    request(`/api/v1/users/${id}/travel-history${query}`, { token: getAccessToken() }),
+  /** GET /api/v1/users/{id}/summary */
+  getUserSummary: (id) => request(`/api/v1/users/${id}/summary`, { token: getAccessToken() }),
+  /** POST /api/v1/users/{id}/loyalty/coupons */
+  generateUserLoyaltyCoupon: (id, payload) =>
+    request(`/api/v1/users/${id}/loyalty/coupons`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** GET /api/v1/users/{id}/loyalty/coupons */
+  getUserLoyaltyCoupons: (id) =>
+    request(`/api/v1/users/${id}/loyalty/coupons`, { token: getAccessToken() }),
+  /** GET /api/v1/users/{id}/loyalty/balance */
+  getUserLoyaltyBalance: (id) => request(`/api/v1/users/${id}/loyalty/balance`, { token: getAccessToken() }),
+  /** GET /api/v1/users/{id}/loyalty/transactions */
+  getUserLoyaltyTransactions: (id, query = '') =>
+    request(`/api/v1/users/${id}/loyalty/transactions${query}`, { token: getAccessToken() }),
+  /** POST /api/v1/users/{id}/loyalty/redeem */
+  redeemUserLoyaltyPoints: (id, payload) =>
+    request(`/api/v1/users/${id}/loyalty/redeem`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
 
   // ── Vehicles ──────────────────────────────────────────────────────────
   /** GET /api/vehicles?size=200 */
@@ -151,6 +220,84 @@ export const gatewayClient = {
       body: JSON.stringify(payload),
       token: getAccessToken(),
     }),
+  /** PUT /api/vehicles/{id} */
+  updateVehicle: (vehicleId, payload) =>
+    request(`/api/vehicles/${vehicleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** PATCH /api/vehicles/{id}/assign-line */
+  assignVehicleToLine: (vehicleId, payload) =>
+    request(`/api/vehicles/${vehicleId}/assign-line`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  /** PATCH /api/vehicles/{id}/assign-driver */
+  assignVehicleToDriver: (vehicleId, driverId) =>
+    request(`/api/vehicles/${vehicleId}/assign-driver`, {
+      method: 'PATCH',
+      body: JSON.stringify({ driverId }),
+      token: getAccessToken(),
+    }),
+  /** GET /api/vehicles/maintenance-alerts */
+  getMaintenanceAlerts: () =>
+    request('/api/vehicles/maintenance-alerts', { token: getAccessToken() }),
+
+  // ── Drivers ────────────────────────────────────────────────────────────
+  getDriverProfiles: () => request('/api/vehicles/drivers', { token: getAccessToken() }),
+  getDriverProfile: (driverId) => request(`/api/vehicles/drivers/${driverId}`, { token: getAccessToken() }),
+  getDriverByUser: (userId) => request(`/api/vehicles/drivers/by-user/${userId}`, { token: getAccessToken() }),
+  createDriverProfile: (payload) =>
+    request('/api/vehicles/drivers', { method: 'POST', body: JSON.stringify(payload), token: getAccessToken() }),
+  updateDriverProfile: (driverId, payload) =>
+    request(`/api/vehicles/drivers/${driverId}`, { method: 'PUT', body: JSON.stringify(payload), token: getAccessToken() }),
+  getDriverAvailability: (driverId, from, to) => {
+    const params = new URLSearchParams()
+    if (from) params.set('from', from)
+    if (to) params.set('to', to)
+    return request(`/api/vehicles/drivers/${driverId}/availability?${params}`, { token: getAccessToken() })
+  },
+  setDriverAvailability: (driverId, payload) =>
+    request(`/api/vehicles/drivers/${driverId}/availability`, {
+      method: 'POST', body: JSON.stringify(payload), token: getAccessToken(),
+    }),
+  getDriverAssignments: (driverId) =>
+    request(`/api/vehicles/drivers/${driverId}/assignments`, { token: getAccessToken() }),
+  getDriverStatistics: (driverId) =>
+    request(`/api/vehicles/drivers/${driverId}/statistics`, { token: getAccessToken() }),
+  createDriverServiceRequest: (driverId, payload) =>
+    request(`/api/vehicles/drivers/${driverId}/service-requests`, {
+      method: 'POST', body: JSON.stringify(payload), token: getAccessToken(),
+    }),
+  getDriverServiceRequestsByDriver: (driverId) =>
+    request(`/api/vehicles/drivers/${driverId}/service-requests`, { token: getAccessToken() }),
+  getAvailableDrivers: (date, vehicleType) => {
+    const params = new URLSearchParams({ date })
+    if (vehicleType) params.set('vehicleType', vehicleType)
+    return request(`/api/vehicles/drivers/available?${params}`, { token: getAccessToken() })
+  },
+
+  // ── Driver assignments ────────────────────────────────────────────────
+  getAssignmentsByDate: (date) =>
+    request(`/api/vehicles/driver-assignments?date=${date}`, { token: getAccessToken() }),
+  createAssignment: (payload) =>
+    request('/api/vehicles/driver-assignments', {
+      method: 'POST', body: JSON.stringify(payload), token: getAccessToken(),
+    }),
+  cancelAssignment: (assignmentId) =>
+    request(`/api/vehicles/driver-assignments/${assignmentId}`, {
+      method: 'DELETE', token: getAccessToken(),
+    }),
+  getAllDriverServiceRequests: (status) => {
+    const params = status ? `?status=${status}` : ''
+    return request(`/api/vehicles/driver-assignments/service-requests${params}`, { token: getAccessToken() })
+  },
+  resolveDriverServiceRequest: (requestId, payload) =>
+    request(`/api/vehicles/driver-assignments/service-requests/${requestId}`, {
+      method: 'PATCH', body: JSON.stringify(payload), token: getAccessToken(),
+    }),
 
   // ── Finance / Tickets ──────────────────────────────────────────────────
   /** POST /api/finance/purchase */
@@ -195,6 +342,14 @@ export const gatewayClient = {
       body: JSON.stringify(payload),
       token: getAccessToken(),
     }),
+  /** GET /api/v1/reports?reporterUserId={userId}&page=X&size=X — scoped to own reports for non-admins */
+  getMyReports: (userId, page = 0, size = 10) =>
+    request(`/api/v1/reports?reporterUserId=${userId}&page=${page}&size=${size}&sort=createdAt,desc`, {
+      token: getAccessToken(),
+    }),
+  /** GET /api/v1/reports/{id} */
+  getMyReportById: (id) =>
+    request(`/api/v1/reports/${id}`, { token: getAccessToken() }),
   /** POST /api/v1/auth/logout */
   logout: () => request('/api/v1/auth/logout', { method: 'POST' }),
 
@@ -210,6 +365,19 @@ export const gatewayClient = {
   deleteReport: (id) =>
     request(`/api/v1/reports/${id}`, { method: 'DELETE', token: getAccessToken() }),
 
+  // ── Reviews ───────────────────────────────────────────────────────────────
+  createReview: (payload) =>
+    request('/api/v1/reviews', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  getReviewsByLine: (lineId, page = 0) =>
+    request(`/api/v1/reviews?lineId=${lineId}&page=${page}&size=10&sort=createdAt,desc`),
+  getReviewSummary: (lineId) =>
+    request(`/api/v1/reviews/summary/${lineId}`),
+  getUserReviews: (userId) =>
+    request(`/api/v1/reviews/reviewer/${userId}`, { token: getAccessToken() }),
   // ── Admin: Reviews ────────────────────────────────────────────────────────
   getReviews: (query = '') => request(`/api/v1/reviews${query}`, { token: getAccessToken() }),
   updateReviewModeration: (id, moderationStatus) =>
@@ -265,7 +433,6 @@ export const gatewayClient = {
 
   // ── Admin: Users ──────────────────────────────────────────────────────────
   getAllUsers: (query = '') => request(`/api/v1/users${query}`, { token: getAccessToken() }),
-  getUserById: (id) => request(`/api/v1/users/${id}`, { token: getAccessToken() }),
   deleteUser: (id) =>
     request(`/api/v1/users/${id}`, { method: 'DELETE', token: getAccessToken() }),
 
@@ -286,4 +453,114 @@ export const gatewayClient = {
     }),
   deleteNotification: (id) =>
     request(`/notifications/${id}`, { method: 'DELETE', token: getAccessToken() }),
+
+  // ── User Notifications ──────────────────────────────────────────────────
+  getUserNotifications: (userId, page = 0, size = 20) =>
+    request(`/notifications/user/${userId}?page=${page}&size=${size}&sort=sentAt,desc`, { token: getAccessToken() }),
+  getUnreadCount: (userId) =>
+    request(`/notifications/user/${userId}/unread/count`, { token: getAccessToken() }),
+  getUnreadNotifications: (userId) =>
+    request(`/notifications/user/${userId}/unread`, { token: getAccessToken() }),
+  markAsRead: (id) =>
+    request(`/notifications/${id}/read`, { method: 'PATCH', token: getAccessToken() }),
+  markAllAsRead: (userId) =>
+    request(`/notifications/user/${userId}/read-all`, { method: 'PATCH', token: getAccessToken() }),
+
+  // ── Subscriptions (Notification Service) ─────────────────────────────────
+  createSubscription: (payload) =>
+    request('/subscriptions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  deactivateSubscription: (id) =>
+    request(`/subscriptions/${id}/deactivate`, {
+      method: 'PATCH',
+      token: getAccessToken(),
+    }),
+  activateSubscription: (id) =>
+    request(`/subscriptions/${id}/activate`, {
+      method: 'PATCH',
+      token: getAccessToken(),
+    }),
+  updateSubscription: (id, payload) =>
+    request(`/subscriptions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  deleteSubscription: (id) =>
+    request(`/subscriptions/${id}`, { method: 'DELETE', token: getAccessToken() }),
+  getUserSubscriptions: (userId) =>
+    request(`/subscriptions/user/${userId}/active`, { token: getAccessToken() }),
+  getAllUserSubscriptions: (userId) =>
+    request(`/subscriptions/user/${userId}`, { token: getAccessToken() }),
+  getSubscriptionById: (id) =>
+    request(`/subscriptions/${id}`, { token: getAccessToken() }),
+
+  // ── Admin: Loyalty tier configs ────────────────────────────────────────────
+  getLoyaltyTierConfigs: () =>
+    request('/api/v1/admin/loyalty/tiers', { token: getAccessToken() }),
+  updateLoyaltyTierConfig: (id, payload) =>
+    request(`/api/v1/admin/loyalty/tiers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+
+  // Admin dashboard stats
+  getAdminStats: (period = 'MONTH') =>
+    request(`/api/finance/admin/stats?period=${period}`, { token: getAccessToken() }),
+  getAdminFeedbackStats: () =>
+    request('/api/v1/reports/admin/stats', { token: getAccessToken() }),
+  getLineSubscriptionStats: () =>
+    request('/subscriptions/admin/line-stats', { token: getAccessToken() }),
+  getTripDelays: () =>
+    request('/api/v1/admin/realtime/trip-delays', { token: getAccessToken() }),
+  setTripDelay: (payload) =>
+    request('/api/v1/admin/realtime/trip-delays', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token: getAccessToken(),
+    }),
+  clearTripDelay: (timetableId, serviceDate) =>
+    request(`/api/v1/admin/realtime/trip-delays/${timetableId}?serviceDate=${serviceDate}`, {
+      method: 'DELETE',
+      token: getAccessToken(),
+    }),
+
+  // ── Vehicles (batch) ──────────────────────────────────────────────────────
+  /** POST /api/vehicles/batch */
+  batchAddVehicles: (payload) =>
+    request('/api/vehicles/batch', { method: 'POST', body: JSON.stringify(payload), token: getAccessToken() }),
+  /** PATCH /api/vehicles/{id}/assign-block */
+  assignVehicleToBlock: (vehicleId, blockId) =>
+    request(`/api/vehicles/${vehicleId}/assign-block`, {
+      method: 'PATCH',
+      body: JSON.stringify({ blockId }),
+      token: getAccessToken(),
+    }),
+  /** DELETE /api/vehicles/{id}/assign-block */
+  unassignVehicleFromBlock: (vehicleId) =>
+    request(`/api/vehicles/${vehicleId}/assign-block`, {
+      method: 'DELETE',
+      token: getAccessToken(),
+    }),
+
+  // ── OTP Graph Status ───────────────────────────────────────────────────────
+  /** GET /api/v1/admin/otp-rebuild-state */
+  getOtpRebuildState: () =>
+    request('/api/v1/admin/otp-rebuild-state', { token: getAccessToken() }),
+  /** POST /api/v1/admin/otp-rebuild/trigger */
+  triggerOtpRebuild: () =>
+    request('/api/v1/admin/otp-rebuild/trigger', {
+      method: 'POST',
+      token: getAccessToken(),
+    }),
+  /** POST /api/v1/admin/otp-rebuild/complete — marks rebuild as completed */
+  markOtpRebuildComplete: () =>
+    request('/api/v1/admin/otp-rebuild/complete', {
+      method: 'POST',
+      token: getAccessToken(),
+    }),
 }

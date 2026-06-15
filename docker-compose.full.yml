@@ -1,0 +1,458 @@
+services:
+
+  # ── Infrastructure ────────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16
+    container_name: sarajevo-transit-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_MULTIPLE_DATABASES: userdb,feedbackdb,sarajevo_transit_routing,sarajevo_transit_vehicle,sarajevo_transit_payment
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sarajevo-transit-net
+
+  mysql:
+    image: mysql:8
+    container_name: sarajevo-transit-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: notification_db
+      MYSQL_USER: notif_user
+      MYSQL_PASSWORD: ${NOTIF_DB_PASSWORD}
+    ports:
+      - "3312:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sarajevo-transit-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: sarajevo-transit-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sarajevo-transit-net
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: sarajevo-transit-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sarajevo-transit-net
+
+  # ── Spring Cloud Infrastructure ───────────────────────────────────────────────
+
+  configserver:
+    build:
+      context: ./configserver
+    container_name: sarajevo-transit-configserver
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - sarajevo-transit-net
+
+  eurekaserver:
+    build:
+      context: ./eurekaserver
+    container_name: sarajevo-transit-eureka
+    ports:
+      - "8761:8761"
+    environment:
+      CONFIG_SERVER_URL: http://configserver:8888
+    depends_on:
+      configserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - sarajevo-transit-net
+
+  # ── Microservices ─────────────────────────────────────────────────────────────
+
+  userservice:
+    build:
+      context: ./userservice
+    container_name: sarajevo-transit-userservice
+    ports:
+      - "8082:8082"
+    environment:
+      CONFIG_SERVER_URL: http://configserver:8888
+      EUREKA_SERVER_URL: http://eurekaserver:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: userservice
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+      DB_URL: jdbc:postgresql://postgres:5432/userdb
+      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - sarajevo-transit-net
+
+  feedbackservice:
+    build:
+      context: ./feedbackservice
+    container_name: sarajevo-transit-feedbackservice
+    ports:
+      - "8091:8091"
+    environment:
+      CONFIG_SERVER_URL: http://configserver:8888
+      EUREKA_SERVER_URL: http://eurekaserver:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: feedbackservice
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+      DB_URL: jdbc:postgresql://postgres:5432/feedbackdb
+      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_MAIN_LAZY_INITIALIZATION: "true"
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8091/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - sarajevo-transit-net
+
+  notificationservice:
+    build:
+      context: ./notificationservice
+    container_name: sarajevo-transit-notificationservice
+    ports:
+      - "8086:8086"
+    environment:
+      CONFIG_SERVER_URL: http://configserver:8888
+      EUREKA_SERVER_URL: http://eurekaserver:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: notificationservice
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+      DB_URL: jdbc:mysql://mysql:3306/notification_db
+      NOTIF_DB_PASSWORD: ${NOTIF_DB_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8086/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - sarajevo-transit-net
+
+  vehicleservice:
+    build:
+      context: ./vehicleservice
+    container_name: sarajevo-transit-vehicleservice
+    ports:
+      - "8083:8083"
+    environment:
+      CONFIG_SERVER_URL: http://configserver:8888
+      EUREKA_SERVER_URL: http://eurekaserver:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: vehicleservice
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sarajevo_transit_vehicle
+      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_MAIN_LAZY_INITIALIZATION: "true"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - sarajevo-transit-net
+
+  routingservice:
+    build:
+      context: ./routingservice
+    container_name: sarajevo-transit-routingservice
+    ports:
+      - "9999:9999"
+    environment:
+      EUREKA_SERVER_URL: http://eurekaserver:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: routingservice
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/sarajevo_transit_routing?reWriteBatchedInserts=true"
+      DB_PASSWORD: ${DB_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9999/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - sarajevo-transit-net
+
+  moneyman:
+    build:
+      context: ./moneyman
+    container_name: sarajevo-transit-moneyman
+    ports:
+      - "8081:8081"
+    environment:
+      EUREKA_SERVER_URL: http://eurekaserver:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: moneyman
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sarajevo_transit_payment
+      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - sarajevo-transit-net
+
+  apigateway:
+    build:
+      context: ./apigateway
+    container_name: sarajevo-transit-apigateway
+    ports:
+      - "8080:8080"
+    environment:
+      CONFIG_SERVER_URL: http://configserver:8888
+      EUREKA_SERVER_URL: http://eurekaserver:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: apigateway
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      userservice:
+        condition: service_healthy
+      feedbackservice:
+        condition: service_healthy
+      notificationservice:
+        condition: service_healthy
+      vehicleservice:
+        condition: service_healthy
+      routingservice:
+        condition: service_healthy
+      moneyman:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - sarajevo-transit-net
+
+  # ── OTP Blue-Green (optional — start with: docker compose --profile otp up) ───
+  # Requires ./otp-data/ directory with a pre-built graph.obj.
+  # Run scripts/rebuild-otp.sh once first to generate it.
+
+  otp-blue:
+    image: opentripplanner/opentripplanner:latest
+    container_name: otp-blue
+    profiles: ["otp"]
+    command: ["--load", "--serve"]
+    ports:
+      - "${OTP_BLUE_PORT:-18080}:8080"
+    volumes:
+      - ./otp-data:/var/opentripplanner
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+    networks:
+      - sarajevo-transit-net
+
+  otp-green:
+    image: opentripplanner/opentripplanner:latest
+    container_name: otp-green
+    profiles: ["otp-green"]
+    command: ["--load", "--serve"]
+    ports:
+      - "${OTP_GREEN_PORT:-18081}:8080"
+    volumes:
+      - ./otp-data:/var/opentripplanner
+    restart: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+    networks:
+      - sarajevo-transit-net
+
+  otp-build:
+    image: opentripplanner/opentripplanner:latest
+    container_name: otp-build
+    profiles: ["tools"]
+    command: ["--build", "--save"]
+    volumes:
+      - ./otp-data:/var/opentripplanner
+    networks:
+      - sarajevo-transit-net
+
+  otpproxyservice:
+    build:
+      context: ./otpproxyservice
+    container_name: sarajevo-transit-otpproxy
+    profiles: ["otp"]
+    ports:
+      - "8084:8084"
+    environment:
+      EUREKA_SERVER_URL: http://eurekaserver:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: otpproxyservice
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+      OTP_BASE_URL: http://otp-blue:8080
+      OTP_BLUE_URL: http://otp-blue:8080
+      OTP_GREEN_URL: http://otp-green:8080
+      OTP_ACTIVE_COLOR: BLUE
+      OTP_DATA_DIR: /app/otp-data
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      ROUTING_BASE_URL: http://routingservice:9999
+      ROUTING_GTFS_ADMIN_TOKEN: ${ROUTING_GTFS_ADMIN_TOKEN:-change-me}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./otp-data:/app/otp-data
+      - ./docker-compose.otp.yml:/app/docker-compose.otp.yml:ro
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      otp-blue:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - sarajevo-transit-net
+
+  # ── Frontend ──────────────────────────────────────────────────────────────────
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: sarajevo-transit-frontend
+    ports:
+      - "3000:80"
+    environment:
+      JP_API_TOKEN: ${JP_API_TOKEN}
+    depends_on:
+      apigateway:
+        condition: service_healthy
+    networks:
+      - sarajevo-transit-net
+
+networks:
+  sarajevo-transit-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mysql_data:
+  redis_data:

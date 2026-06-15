@@ -1,0 +1,23 @@
+{
+  "sign_in_required": "Sign in to access the Driver Portal.",
+  "access_denied": "Access denied. This page is for drivers only.",
+  "title": "Driver Portal",
+  "request_status": "Request Status Change",
+  "vehicle_label": "Vehicle",
+  "loading_vehicles": "Loading vehicles…",
+  "vehicles_load_failed": "Unable to load vehicles. Please try again.",
+  "no_vehicles": "No vehicles available",
+  "requested_status": "Requested Status",
+  "reason_notes": "Reason / Notes",
+  "reason_placeholder": "Describe the issue or reason for this request…",
+  "submit_request": "Submit Request",
+  "submitting": "Submitting…",
+  "request_submitted": "Request submitted. The admin will review it shortly.",
+  "my_requests": "My Requests",
+  "refresh_requests": "Refresh requests",
+  "no_requests": "No requests submitted yet.",
+  "role": "Driver",
+  "requested_label": "Requested:",
+  "note_label": "Note:",
+  "resolved_label": "Resolved:"
+}

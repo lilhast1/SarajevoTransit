@@ -2,11 +2,14 @@ package com.sarajevotransit.userservice.service;
 
 import com.sarajevotransit.userservice.dto.LoyaltyBalanceResponse;
 import com.sarajevotransit.userservice.dto.LoyaltyEarnRequest;
-import com.sarajevotransit.userservice.dto.LoyaltyRedeemRequest;
 import com.sarajevotransit.userservice.dto.LoyaltyTransactionResponse;
+import com.sarajevotransit.userservice.dto.GenerateLoyaltyCouponRequest;
+import com.sarajevotransit.userservice.dto.LoyaltyCouponResponse;
 import com.sarajevotransit.userservice.exception.InsufficientLoyaltyPointsException;
 import com.sarajevotransit.userservice.mapper.LoyaltyTransactionMapper;
 import com.sarajevotransit.userservice.model.DigitalWallet;
+import com.sarajevotransit.userservice.model.LoyaltyCouponType;
+import com.sarajevotransit.userservice.model.LoyaltyTierConfig;
 import com.sarajevotransit.userservice.model.LoyaltyTransaction;
 import com.sarajevotransit.userservice.model.LoyaltyTransactionType;
 import com.sarajevotransit.userservice.model.UserProfile;
@@ -44,6 +47,9 @@ class LoyaltyServiceTest {
     @Mock
     private LoyaltyTransactionMapper loyaltyTransactionMapper;
 
+    @Mock
+    private LoyaltyTierConfigService tierConfigService;
+
     @InjectMocks
     private LoyaltyService loyaltyService;
 
@@ -74,38 +80,51 @@ class LoyaltyServiceTest {
     }
 
     @Test
-    void redeemPoints_shouldThrowWhenBalanceIsInsufficient() {
+    void generateCoupon_shouldThrowWhenBalanceIsInsufficient() {
         UserProfile user = buildUserWithPoints(2L, 5);
         when(userService.findUserById(2L)).thenReturn(user);
 
-        assertThatThrownBy(() -> loyaltyService.redeemPoints(
+        LoyaltyTierConfig bronzeTier = new LoyaltyTierConfig();
+        bronzeTier.setTierName("BRONZE");
+        bronzeTier.setCouponCostDiscount(0);
+        bronzeTier.setCouponCostFreeRide(null);
+        when(tierConfigService.getTierByLifetimePoints(0)).thenReturn(bronzeTier);
+
+        assertThatThrownBy(() -> loyaltyService.generateCoupon(
                 2L,
-                new LoyaltyRedeemRequest(10, "Discount", "discount")))
-                .isInstanceOf(InsufficientLoyaltyPointsException.class)
-                .hasMessageContaining("enough loyalty points");
+                new GenerateLoyaltyCouponRequest(LoyaltyCouponType.DISCOUNT, null)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("not available");
 
         verify(loyaltyTransactionRepository, never()).save(any(LoyaltyTransaction.class));
         verify(userProfileRepository, never()).save(any(UserProfile.class));
     }
 
     @Test
-    void redeemPoints_shouldDecreaseBalanceAndPersistTransaction() {
-        UserProfile user = buildUserWithPoints(3L, 40);
+    void generateCoupon_shouldDecreaseBalanceAndPersistTransaction() {
+        UserProfile user = buildUserWithPoints(3L, 500);
         when(userService.findUserById(3L)).thenReturn(user);
         when(loyaltyTransactionRepository.save(any(LoyaltyTransaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        LoyaltyBalanceResponse response = loyaltyService.redeemPoints(
-                3L,
-                new LoyaltyRedeemRequest(15, "Ride discount", "discount"));
+        LoyaltyTierConfig platinumTier = new LoyaltyTierConfig();
+        platinumTier.setTierName("PLATINUM");
+        platinumTier.setCouponCostDiscount(300);
+        platinumTier.setFreeRideEligible(true);
+        platinumTier.setDiscountPercent(15);
+        when(tierConfigService.getTierByLifetimePoints(0)).thenReturn(platinumTier);
 
-        assertThat(response.currentBalance()).isEqualTo(25);
+        LoyaltyCouponResponse response = loyaltyService.generateCoupon(
+                3L,
+                new GenerateLoyaltyCouponRequest(LoyaltyCouponType.DISCOUNT, null));
+
+        assertThat(response.pointsSpent()).isEqualTo(300);
 
         ArgumentCaptor<LoyaltyTransaction> transactionCaptor = ArgumentCaptor.forClass(LoyaltyTransaction.class);
         verify(loyaltyTransactionRepository).save(transactionCaptor.capture());
         LoyaltyTransaction transaction = transactionCaptor.getValue();
-        assertThat(transaction.getPointsSpent()).isEqualTo(15);
+        assertThat(transaction.getPointsSpent()).isEqualTo(300);
         assertThat(transaction.getPointsEarned()).isZero();
     }
 
@@ -147,6 +166,12 @@ class LoyaltyServiceTest {
                 "ticket_purchase",
                 null,
                 null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                LocalDateTime.now(),
                 LocalDateTime.now());
 
         when(userService.findUserById(5L)).thenReturn(user);

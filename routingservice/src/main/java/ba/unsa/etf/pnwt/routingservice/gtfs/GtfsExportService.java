@@ -73,6 +73,16 @@ public class GtfsExportService {
         List<Station> stations = stationRepository.findByIsActiveTrue();
         List<Timetable> timetables = timetableRepository.findByIsActiveTrueOrderByDepartureTimeAsc();
 
+        Set<Integer> activeLineIds = new HashSet<>();
+        for (Line line : lines) {
+            activeLineIds.add(line.getId());
+        }
+
+        Set<Integer> activeStationIds = new HashSet<>();
+        for (Station station : stations) {
+            activeStationIds.add(station.getId());
+        }
+
         Map<Integer, Direction> directionById = new HashMap<>();
         for (Direction direction : directions) {
             directionById.put(direction.getId(), direction);
@@ -85,13 +95,22 @@ public class GtfsExportService {
         Map<Integer, List<DirectionStation>> stationsByDirection = groupDirectionStations(directionIds);
         Map<Integer, List<RoutePoint>> pointsByDirection = groupRoutePoints(directionIds);
 
+        // Pre-compute which timetables have all stops active so trips and stop_times stay consistent
+        Set<Integer> timetableIdsWithAllActiveStops = new HashSet<>();
+        for (Timetable timetable : timetables) {
+            List<DirectionStation> stops = stationsByDirection.getOrDefault(timetable.getDirection().getId(), List.of());
+            if (!stops.isEmpty() && stops.stream().allMatch(ds -> activeStationIds.contains(ds.getStation().getId()))) {
+                timetableIdsWithAllActiveStops.add(timetable.getId());
+            }
+        }
+
         List<String[]> agencyRows = buildAgencyRows();
         List<String[]> stopsRows = buildStopsRows(stations);
         List<String[]> routesRows = buildRoutesRows(lines);
 
         CalendarBuild calendarBuild = buildCalendarRows(timetables);
-        List<String[]> tripsRows = buildTripsRows(timetables, directionById, calendarBuild.serviceIdByTimetableId(), warnings);
-        StopTimesBuild stopTimesBuild = buildStopTimesRows(timetables, stationsByDirection, warnings);
+        TripsBuild tripsBuild = buildTripsRows(timetables, directionById, activeLineIds, timetableIdsWithAllActiveStops, calendarBuild.serviceIdByTimetableId(), warnings);
+        StopTimesBuild stopTimesBuild = buildStopTimesRows(timetables, stationsByDirection, tripsBuild.emittedTimetableIds(), warnings);
         List<String[]> shapesRows = buildShapesRows(pointsByDirection, warnings);
         List<String[]> feedInfoRows = buildFeedInfoRows();
 
@@ -100,7 +119,7 @@ public class GtfsExportService {
         files.put("stops.txt", toCsv(stopsRows));
         files.put("routes.txt", toCsv(routesRows));
         files.put("calendar.txt", toCsv(calendarBuild.rows()));
-        files.put("trips.txt", toCsv(tripsRows));
+        files.put("trips.txt", toCsv(tripsBuild.rows()));
         files.put("stop_times.txt", toCsv(stopTimesBuild.rows()));
         files.put("shapes.txt", toCsv(shapesRows));
         files.put("feed_info.txt", toCsv(feedInfoRows));
@@ -112,7 +131,7 @@ public class GtfsExportService {
                 fileName,
                 zip,
                 routesRows.size() - 1,
-                tripsRows.size() - 1,
+                tripsBuild.rows().size() - 1,
                 stopTimesBuild.rows().size() - 1,
                 shapesRows.size() - 1,
                 warnings
@@ -191,16 +210,30 @@ public class GtfsExportService {
         return new CalendarBuild(rows, serviceIdByTimetableId);
     }
 
-    private List<String[]> buildTripsRows(
+    private TripsBuild buildTripsRows(
             List<Timetable> timetables,
             Map<Integer, Direction> directionById,
+            Set<Integer> activeLineIds,
+            Set<Integer> timetableIdsWithAllActiveStops,
             Map<Integer, String> serviceIdByTimetableId,
             List<String> warnings
     ) {
         List<String[]> rows = new ArrayList<>();
         rows.add(new String[]{"route_id", "service_id", "trip_id", "trip_headsign", "direction_id", "shape_id"});
+        Set<Integer> emittedTimetableIds = new HashSet<>();
 
         for (Timetable timetable : timetables) {
+            Integer lineId = timetable.getLine().getId();
+            if (!activeLineIds.contains(lineId)) {
+                warnings.add("Skipped trip for timetable id=" + timetable.getId() + " because line id=" + lineId + " is inactive");
+                continue;
+            }
+
+            if (!timetableIdsWithAllActiveStops.contains(timetable.getId())) {
+                warnings.add("Skipped trip for timetable id=" + timetable.getId() + " because direction has inactive or missing stops");
+                continue;
+            }
+
             Direction direction = directionById.get(timetable.getDirection().getId());
             if (direction == null) {
                 warnings.add("Skipped trip for timetable id=" + timetable.getId() + " because direction is missing");
@@ -221,14 +254,16 @@ public class GtfsExportService {
                     String.valueOf(toDirectionId(direction)),
                     shapeId(direction.getId())
             });
+            emittedTimetableIds.add(timetable.getId());
         }
 
-        return rows;
+        return new TripsBuild(rows, emittedTimetableIds);
     }
 
     private StopTimesBuild buildStopTimesRows(
             List<Timetable> timetables,
             Map<Integer, List<DirectionStation>> stationsByDirection,
+            Set<Integer> emittedTimetableIds,
             List<String> warnings
     ) {
         List<String[]> rows = new ArrayList<>();
@@ -236,6 +271,10 @@ public class GtfsExportService {
 
         int emitted = 0;
         for (Timetable timetable : timetables) {
+            if (!emittedTimetableIds.contains(timetable.getId())) {
+                continue;
+            }
+
             Integer directionId = timetable.getDirection().getId();
             List<DirectionStation> orderedStops = stationsByDirection.getOrDefault(directionId, List.of());
             if (orderedStops.isEmpty()) {
@@ -466,6 +505,9 @@ public class GtfsExportService {
     }
 
     private record CalendarBuild(List<String[]> rows, Map<Integer, String> serviceIdByTimetableId) {
+    }
+
+    private record TripsBuild(List<String[]> rows, Set<Integer> emittedTimetableIds) {
     }
 
     private record StopTimesBuild(List<String[]> rows, int emittedCount) {

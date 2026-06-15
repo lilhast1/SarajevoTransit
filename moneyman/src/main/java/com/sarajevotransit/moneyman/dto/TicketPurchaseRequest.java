@@ -29,4 +29,8 @@ public class TicketPurchaseRequest {
 
     @NotNull(message = "Payment Method ID is required")
     private Long paymentMethodId;
+
+    private String couponCode;
+
+    private String rideCode;
 }

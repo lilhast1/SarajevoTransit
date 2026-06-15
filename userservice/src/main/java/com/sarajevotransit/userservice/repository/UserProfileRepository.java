@@ -1,6 +1,7 @@
 package com.sarajevotransit.userservice.repository;
 
 import com.sarajevotransit.userservice.model.UserProfile;
+import com.sarajevotransit.userservice.model.UserRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -25,4 +26,6 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Long> 
     boolean existsByEmailIgnoreCase(String email);
 
     boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
+
+    List<UserProfile> findByRole(UserRole role);
 }

@@ -1,0 +1,13 @@
+{
+  "title": "Korisnici",
+  "subtitle": "Pregledajte i upravljajte registrovanim korisnicima.",
+  "col_id": "ID",
+  "col_name": "Puno ime",
+  "col_email": "E-mail",
+  "col_role": "Uloga",
+  "col_joined": "Registrovan",
+  "col_actions": "Akcije",
+  "you": "Vi",
+  "delete": "Obriši",
+  "delete_confirm": "Obrisati ovog korisnika? Ova radnja se ne može poništiti — svi podaci korisnika bit će uklonjeni."
+}

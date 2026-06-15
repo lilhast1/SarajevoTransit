@@ -6,6 +6,7 @@ import { AuthPage } from './pages/AuthPage.jsx'
 import { LineDetailPage } from './pages/LineDetailPage.jsx'
 import { LinesPage } from './pages/LinesPage.jsx'
 import { NotFoundPage } from './pages/NotFoundPage.jsx'
+import { NotificationsPage } from './pages/NotificationsPage.jsx'
 import { ProfilePage } from './pages/ProfilePage.jsx'
 import { ReportProblemPage } from './pages/ReportProblemPage.jsx'
 import { RoutePlannerPage } from './pages/RoutePlannerPage.jsx'
@@ -17,14 +18,22 @@ import { VehicleDetailPage } from './pages/VehicleDetailPage.jsx'
 import { DriverPage } from './pages/DriverPage.jsx'
 import { TicketsPage } from './pages/TicketsPage.jsx'
 
+import { MyReportsPage } from './pages/MyReportsPage.jsx'
+import { MyReportDetailPage } from './pages/MyReportDetailPage.jsx'
+import { AdminLayout } from './components/layout/AdminLayout.jsx'
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.jsx'
 import { AdminReportsPage } from './pages/admin/AdminReportsPage.jsx'
+import { AdminReportDetailPage } from './pages/admin/AdminReportDetailPage.jsx'
 import { AdminReviewsPage } from './pages/admin/AdminReviewsPage.jsx'
 import { AdminLinesPage } from './pages/admin/AdminLinesPage.jsx'
 import { AdminStationsPage } from './pages/admin/AdminStationsPage.jsx'
 import { AdminTimetablePage } from './pages/admin/AdminTimetablePage.jsx'
 import { AdminUsersPage } from './pages/admin/AdminUsersPage.jsx'
 import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage.jsx'
+import { AdminDelaysPage } from './pages/admin/AdminDelaysPage.jsx'
+import { AdminVehiclesPage } from './pages/admin/AdminVehiclesPage.jsx'
+import { AdminDriversPage } from './pages/admin/AdminDriversPage.jsx'
+import { AdminTiersPage } from './pages/admin/AdminTiersPage.jsx'
 
 
 function App() {
@@ -55,10 +64,37 @@ function App() {
         />
 
         <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/report"
           element={
             <ProtectedRoute>
               <ReportProblemPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/my-reports"
+          element={
+            <ProtectedRoute>
+              <MyReportsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/my-reports/:id"
+          element={
+            <ProtectedRoute>
+              <MyReportDetailPage />
             </ProtectedRoute>
           }
         />
@@ -73,15 +109,21 @@ function App() {
         />
 
         {/* Admin routes - require ADMIN role */}
-        <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-        <Route path="/admin/reports" element={<AdminRoute><AdminReportsPage /></AdminRoute>} />
-        <Route path="/admin/reports/:id" element={<AdminRoute><AdminReportDetailPage /></AdminRoute>} />
-        <Route path="/admin/reviews" element={<AdminRoute><AdminReviewsPage /></AdminRoute>} />
-        <Route path="/admin/lines" element={<AdminRoute><AdminLinesPage /></AdminRoute>} />
-        <Route path="/admin/stations" element={<AdminRoute><AdminStationsPage /></AdminRoute>} />
-        <Route path="/admin/timetables" element={<AdminRoute><AdminTimetablePage /></AdminRoute>} />
-        <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
-        <Route path="/admin/notifications" element={<AdminRoute><AdminNotificationsPage /></AdminRoute>} />
+        <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+          <Route path="reports/:id" element={<AdminReportDetailPage />} />
+          <Route path="reviews" element={<AdminReviewsPage />} />
+          <Route path="lines" element={<AdminLinesPage />} />
+          <Route path="stations" element={<AdminStationsPage />} />
+          <Route path="timetables" element={<AdminTimetablePage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="notifications" element={<AdminNotificationsPage />} />
+          <Route path="delays" element={<AdminDelaysPage />} />
+          <Route path="vehicles" element={<AdminVehiclesPage />} />
+          <Route path="drivers" element={<AdminDriversPage />} />
+          <Route path="tiers" element={<AdminTiersPage />} />
+        </Route>
 
         {/* 404 fallback */}
         <Route path="*" element={<NotFoundPage />} />

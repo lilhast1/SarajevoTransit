@@ -1,0 +1,49 @@
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Proxy API paths to the gateway (mirrors Vite dev proxy)
+    location /api {
+        proxy_pass http://apigateway:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /notifications {
+        proxy_pass http://apigateway:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /subscriptions {
+        proxy_pass http://apigateway:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # Proxy live vehicle positions to external API (mirrors Vite dev proxy)
+    location /jp-api/ {
+        proxy_pass https://javniprevozks.ba/;
+        proxy_set_header Host javniprevozks.ba;
+        proxy_set_header Authorization "Bearer ${JP_API_TOKEN}";
+        proxy_set_header Accept "application/json";
+        proxy_ssl_server_name on;
+    }
+
+    # Locale files must never be cached so language changes take effect immediately
+    location /locales/ {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        expires 0;
+        try_files $uri =404;
+    }
+
+    # React Router fallback — all unmatched paths serve index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

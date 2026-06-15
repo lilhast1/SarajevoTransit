@@ -33,4 +33,13 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     List<Subscription> findActiveForLineAtTime(@Param("lineId") Long lineId,
                                                @Param("targetTime") LocalTime targetTime,
                                                @Param("dayAbbr") String dayAbbr);
+
+    @Query("""
+            SELECT s.lineId, s.lineCode, s.lineName, COUNT(s)
+            FROM Subscription s
+            WHERE s.isActive = true AND s.lineId IS NOT NULL
+            GROUP BY s.lineId, s.lineCode, s.lineName
+            ORDER BY COUNT(s) DESC
+            """)
+    List<Object[]> topLinesBySubscriberCount();
 }

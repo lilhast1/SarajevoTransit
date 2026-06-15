@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.sarajevotransit.vehicleservice.dtos.VehicleStatusBatchItemDto;
+import com.sarajevotransit.vehicleservice.messaging.VehicleEventPublisher;
 import com.sarajevotransit.vehicleservice.model.ServiceRecord;
 import com.sarajevotransit.vehicleservice.model.Vehicle;
 import com.sarajevotransit.vehicleservice.model.VehicleLocationHistory;
@@ -30,14 +31,16 @@ public class VehicleService {
     private final VehicleRepository vRepository;
     private final VehicleLocationRepository locRepository;
     private final ServiceRecordRepository sRepository;
+    private final VehicleEventPublisher vehicleEventPublisher;
 
     public static final Double EARTH_RADIUS = 6371000.0;
 
     public VehicleService(VehicleRepository vehicleRepository, VehicleLocationRepository vehicleLocationRepository,
-            ServiceRecordRepository serviceRecordRepository) {
+            ServiceRecordRepository serviceRecordRepository, VehicleEventPublisher vehicleEventPublisher) {
         this.vRepository = vehicleRepository;
         this.locRepository = vehicleLocationRepository;
         this.sRepository = serviceRecordRepository;
+        this.vehicleEventPublisher = vehicleEventPublisher;
     }
 
     public Page<Vehicle> getAllVehicles(Pageable pageable) {
@@ -54,8 +57,18 @@ public class VehicleService {
 
     public Vehicle setVehicleStatus(Long id, VehicleStatus status) {
         var v = this.vRepository.getReferenceById(id);
+        Long driverId = v.getAssignedDriverId();
         v.setStatus(status);
+        if (status != VehicleStatus.OPERATIONAL) {
+            v.setAssignedLineId(null);
+            v.setAssignedLineCode(null);
+            v.setAssignedLineName(null);
+            v.setAssignedDriverId(null);
+            v.setInternalId(null);
+        }
         vRepository.save(v);
+        vehicleEventPublisher.publishMaintenanceStatusChanged(
+                v.getId(), v.getRegistrationNumber(), status.name(), driverId);
         return v;
     }
 
@@ -125,6 +138,41 @@ public class VehicleService {
     public Long addVehicle(Vehicle v) {
         v = this.vRepository.save(v);
         return v.getId();
+    }
+
+    public Vehicle updateVehicleFull(Long id, String registrationNumber, String internalId,
+                                      com.sarajevotransit.vehicleservice.model.enums.VehicleType type,
+                                      Integer capacity, java.time.LocalDate manufactureDate,
+                                      VehicleStatus status, Integer serviceCycleIntervalDays) {
+        Vehicle v = vRepository.getReferenceById(id);
+        if (registrationNumber != null) v.setRegistrationNumber(registrationNumber);
+        if (internalId != null) v.setInternalId(internalId.isEmpty() ? null : internalId);
+        if (type != null) v.setType(type);
+        if (capacity != null) v.setCapacity(capacity);
+        if (manufactureDate != null) v.setManufactureDate(manufactureDate);
+        if (status != null) v.setStatus(status);
+        if (serviceCycleIntervalDays != null) v.setServiceCycleIntervalDays(serviceCycleIntervalDays);
+        return vRepository.save(v);
+    }
+
+    public Vehicle assignLine(Long vehicleId, Long lineId, String lineCode, String lineName) {
+        Vehicle v = vRepository.getReferenceById(vehicleId);
+        if (v.getStatus() != VehicleStatus.OPERATIONAL) {
+            throw new IllegalStateException("Vehicle must be OPERATIONAL to assign a line");
+        }
+        v.setAssignedLineId(lineId);
+        v.setAssignedLineCode(lineCode);
+        v.setAssignedLineName(lineName);
+        return vRepository.save(v);
+    }
+
+    public Vehicle assignDriver(Long vehicleId, Long driverId) {
+        Vehicle v = vRepository.getReferenceById(vehicleId);
+        if (v.getStatus() != VehicleStatus.OPERATIONAL) {
+            throw new IllegalStateException("Vehicle must be OPERATIONAL to assign a driver");
+        }
+        v.setAssignedDriverId(driverId);
+        return vRepository.save(v);
     }
 
     public List<Vehicle> batchUpdateStatus(List<VehicleStatusBatchItemDto> updates) {

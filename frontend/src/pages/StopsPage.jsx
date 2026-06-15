@@ -1,27 +1,20 @@
 import { AlertCircle, MapPin, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { PanelCard } from '../components/common/PanelCard'
 import { ErrorAlert } from '../components/common/Alerts'
 import { LoadingSkeletons, EmptyState } from '../components/common/LoadingStates'
 import { transitApi } from '../services/transitApi'
 
-/**
- * Stops Discovery Page - demonstrates:
- * - Real-time search & filtering
- * - Loading and error states
- * - Optimized re-renders with useMemo
- * - SPA navigation to detail pages
- * - Empty state handling
- */
 export function StopsPage() {
   const [allStops, setAllStops] = useState([])
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [hasInitialized, setHasInitialized] = useState(false)
+  const { t } = useTranslation('stops')
 
-  // Initial load of all stops
   useEffect(() => {
     let active = true
     setLoading(true)
@@ -66,8 +59,8 @@ export function StopsPage() {
   }, [allStops, query])
 
   const resultCount = useMemo(
-    () => `${filteredStops.length} stop${filteredStops.length !== 1 ? 's' : ''}`,
-    [filteredStops],
+    () => t('stop_count', { count: filteredStops.length }),
+    [filteredStops, t],
   )
 
   const handleClearSearch = () => setQuery('')
@@ -80,22 +73,19 @@ export function StopsPage() {
   return (
     <div className="space-y-4">
       <PanelCard tone="soft">
-        <h2 className="text-xl font-semibold text-ink">Transit Stops</h2>
-        <p className="mt-1 text-sm text-muted">
-          Find all transit stops in Sarajevo. Search by name, address, or stop code. Click a stop to view
-          which lines serve it and upcoming departures.
-        </p>
+        <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
+        <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
 
         <div className="mt-4 flex gap-2">
           <div className="flex-1">
             <label htmlFor="stop-search" className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-              Search stops
+              {t('search_aria')}
             </label>
             <input
               id="stop-search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by name, address, or code..."
+              placeholder={t('search_placeholder')}
               className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
               autoFocus
             />
@@ -107,7 +97,7 @@ export function StopsPage() {
                 onClick={handleClearSearch}
                 className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
               >
-                Clear
+                {t('clear')}
               </button>
             </div>
           )}
@@ -133,15 +123,15 @@ export function StopsPage() {
         {!loading && error ? (
           <EmptyState
             icon={AlertCircle}
-            title="Failed to load stops"
+            title={t('failed')}
             description={error}
             action={
               <button
                 onClick={handleRetry}
                 className="inline-flex items-center gap-2 rounded-lg border border-accent bg-accent px-3 py-2 text-sm font-medium text-white transition hover:bg-accent/90"
               >
-                <RefreshCw size={14} />
-                Try again
+                <RefreshCw size={14} aria-hidden="true" />
+                {t('retry')}
               </button>
             }
           />
@@ -151,19 +141,15 @@ export function StopsPage() {
         {!loading && hasInitialized && filteredStops.length === 0 ? (
           <EmptyState
             icon={MapPin}
-            title="No stops found"
-            description={
-              query 
-                ? `No stops match "${query}". Try a different search.` 
-                : 'No stops available'
-            }
+            title={t('no_stops')}
+            description={query ? t('no_match', { query }) : t('no_available')}
             action={
               query ? (
                 <button
                   onClick={handleClearSearch}
                   className="inline-flex items-center gap-2 text-sm font-medium text-accent transition hover:underline"
                 >
-                  Clear search to see all stops
+                  {t('clear_to_see_all')}
                 </button>
               ) : null
             }
@@ -181,13 +167,13 @@ export function StopsPage() {
               <div className="flex-1">
                 <p className="font-semibold text-ink">{stop.name}</p>
                 {stop.address && <p className="text-sm text-muted">{stop.address}</p>}
-                {stop.code && <p className="mt-1 text-xs text-muted">Code: {stop.code}</p>}
+                {stop.code && <p className="mt-1 text-xs text-muted">{t('code_prefix', { code: stop.code })}</p>}
               </div>
               <Link
                 to={`/stops/${stop.id}`}
                 className="flex-shrink-0 rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface"
               >
-                Details
+                {t('details')}
               </Link>
             </PanelCard>
           ))}

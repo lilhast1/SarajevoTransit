@@ -17,7 +17,8 @@ import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
 import { TransitMap } from '../components/map/TransitMap'
 import { useAppContext } from '../context/AppContext'
 import { gatewayClient } from '../services/gatewayClient'
-import { VS_TYPE_MAP, STATUS_STYLES, STATUS_LABELS } from './VehiclesPage'
+import { useTranslation } from 'react-i18next'
+import { VS_TYPE_MAP, STATUS_STYLES, STATUS_LABELS, STATUS_I18N } from './VehiclesPage'
 
 const VEHICLE_STATUSES = ['OPERATIONAL', 'IN_MAINTENANCE', 'OUT_OF_SERVICE', 'RETIRED']
 
@@ -57,6 +58,7 @@ function defaultTo() {
 // ── Status Changer ─────────────────────────────────────────────────────────────
 
 function StatusChanger({ currentStatus, vehicleId, onStatusChanged }) {
+  const { t } = useTranslation('vehicles')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [successMsg, setSuccessMsg] = useState(null)
@@ -69,7 +71,7 @@ function StatusChanger({ currentStatus, vehicleId, onStatusChanged }) {
     try {
       await gatewayClient.updateVehicleStatus(vehicleId, newStatus)
       onStatusChanged(newStatus)
-      setSuccessMsg(`Status updated to ${STATUS_LABELS[newStatus]}`)
+      setSuccessMsg(t('status_updated_to', { status: t(STATUS_I18N[newStatus] || 'status_operational') }))
       setTimeout(() => setSuccessMsg(null), 3000)
     } catch (err) {
       setError(err.message || 'Failed to update status')
@@ -81,8 +83,8 @@ function StatusChanger({ currentStatus, vehicleId, onStatusChanged }) {
   return (
     <section className="flex flex-col gap-3 rounded-panel border border-border p-4">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <CheckCircle size={15} />
-        Change Status
+        <CheckCircle size={15} aria-hidden="true" />
+        {t('change_status')}
       </h3>
       <div className="flex flex-wrap gap-2">
         {VEHICLE_STATUSES.map((s) => {
@@ -99,8 +101,8 @@ function StatusChanger({ currentStatus, vehicleId, onStatusChanged }) {
                   : 'border-border text-muted hover:bg-surface-alt hover:text-ink disabled:opacity-50'
               }`}
             >
-              {saving && !isActive ? <Loader2 size={11} className="animate-spin inline mr-1" /> : null}
-              {STATUS_LABELS[s]}
+              {saving && !isActive ? <Loader2 size={11} className="animate-spin inline mr-1" aria-hidden="true" /> : null}
+              {t(STATUS_I18N[s] || 'status_operational')}
             </button>
           )
         })}
@@ -114,6 +116,7 @@ function StatusChanger({ currentStatus, vehicleId, onStatusChanged }) {
 // ── GPS History ────────────────────────────────────────────────────────────────
 
 function GpsHistorySection({ vehicleId }) {
+  const { t } = useTranslation('vehicles')
   const [from, setFrom] = useState(defaultFrom)
   const [to, setTo] = useState(defaultTo)
   const [points, setPoints] = useState(null)
@@ -140,13 +143,13 @@ function GpsHistorySection({ vehicleId }) {
   return (
     <section className="flex flex-col gap-3 rounded-panel border border-border p-4">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <MapPin size={15} />
-        GPS History
+        <MapPin size={15} aria-hidden="true" />
+        {t('gps_history')}
       </h3>
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted">From</span>
+          <span className="text-xs text-muted">{t('from')}</span>
           <input
             type="datetime-local"
             value={from}
@@ -155,7 +158,7 @@ function GpsHistorySection({ vehicleId }) {
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted">To</span>
+          <span className="text-xs text-muted">{t('to')}</span>
           <input
             type="datetime-local"
             value={to}
@@ -169,8 +172,8 @@ function GpsHistorySection({ vehicleId }) {
           disabled={loading}
           className="flex items-center gap-1.5 rounded-panel border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
         >
-          {loading && <Loader2 size={13} className="animate-spin" />}
-          Load History
+          {loading && <Loader2 size={13} className="animate-spin" aria-hidden="true" />}
+          {t('load_history')}
         </button>
       </div>
 
@@ -178,7 +181,7 @@ function GpsHistorySection({ vehicleId }) {
 
       {points !== null && (
         points.length === 0 ? (
-          <p className="text-sm text-muted">No history data for this interval.</p>
+          <p className="text-sm text-muted">{t('no_history')}</p>
         ) : (
           <>
             <p className="text-xs text-muted">
@@ -198,6 +201,7 @@ function GpsHistorySection({ vehicleId }) {
 // ── Service Records ────────────────────────────────────────────────────────────
 
 function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
+  const { t } = useTranslation('vehicles')
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -230,9 +234,17 @@ function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setSaving(true)
     setFormError(null)
     setFormSuccess(null)
+    if (new Date(form.serviceStart) < new Date()) {
+      setFormError(t('error_past_start'))
+      return
+    }
+    if (form.serviceEnd && new Date(form.serviceEnd) <= new Date(form.serviceStart)) {
+      setFormError(t('error_end_before_start'))
+      return
+    }
+    setSaving(true)
     try {
       const payload = {
         serviceStart: toIso(form.serviceStart),
@@ -242,7 +254,7 @@ function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
         cost: form.cost ? parseFloat(form.cost) : null,
       }
       await gatewayClient.addServiceRecord(vehicleId, payload)
-      setFormSuccess('Service record added.')
+      setFormSuccess(t('record_added'))
       setForm(EMPTY_RECORD_FORM)
       setShowForm(false)
       await loadRecords()
@@ -257,8 +269,8 @@ function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
     <section className="flex flex-col gap-3 rounded-panel border border-border p-4">
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <Wrench size={15} />
-          Service Records
+          <Wrench size={15} aria-hidden="true" />
+          {t('service_records')}
         </h3>
         {isAuthenticated && (
           <button
@@ -266,8 +278,8 @@ function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
             onClick={() => { setShowForm((prev) => !prev); setFormError(null); setFormSuccess(null) }}
             className="flex items-center gap-1 rounded-panel border border-border px-2.5 py-1 text-xs text-muted transition hover:bg-surface-alt hover:text-ink"
           >
-            {showForm ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            {showForm ? 'Cancel' : '+ Add Record'}
+            {showForm ? <ChevronUp size={13} aria-hidden="true" /> : <ChevronDown size={13} aria-hidden="true" />}
+            {showForm ? t('cancel') : t('add_record')}
           </button>
         )}
       </div>
@@ -279,55 +291,57 @@ function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-panel border border-border bg-surface-alt p-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted">Service Start *</span>
+              <span className="text-xs font-medium text-muted">{t('service_start')}</span>
               <input
                 required
                 type="datetime-local"
                 value={form.serviceStart}
+                min={new Date().toISOString().slice(0, 16)}
                 onChange={(e) => setField('serviceStart', e.target.value)}
                 className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted">Service End</span>
+              <span className="text-xs font-medium text-muted">{t('service_end')}</span>
               <input
                 type="datetime-local"
                 value={form.serviceEnd}
+                min={form.serviceStart || new Date().toISOString().slice(0, 16)}
                 onChange={(e) => setField('serviceEnd', e.target.value)}
                 className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
               />
             </label>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted">Description</span>
+            <span className="text-xs font-medium text-muted">{t('description')}</span>
             <input
               type="text"
               value={form.description}
               onChange={(e) => setField('description', e.target.value)}
-              placeholder="Engine overhaul, brake inspection…"
+              placeholder={t('description_placeholder')}
               className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
             />
           </label>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted">Parts Changed</span>
+              <span className="text-xs font-medium text-muted">{t('parts_changed')}</span>
               <input
                 type="text"
                 value={form.partsChanged}
                 onChange={(e) => setField('partsChanged', e.target.value)}
-                placeholder="Brake pads, filters…"
+                placeholder={t('parts_placeholder')}
                 className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted">Cost (KM)</span>
+              <span className="text-xs font-medium text-muted">{t('cost')}</span>
               <input
                 type="number"
                 min="0"
                 step="0.01"
                 value={form.cost}
                 onChange={(e) => setField('cost', e.target.value)}
-                placeholder="0.00"
+                placeholder={t('cost_placeholder')}
                 className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
               />
             </label>
@@ -338,8 +352,8 @@ function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
               disabled={saving}
               className="flex items-center gap-1.5 rounded-panel bg-accent px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              {saving && <Loader2 size={13} className="animate-spin" />}
-              {saving ? 'Saving…' : 'Save Record'}
+              {saving && <Loader2 size={13} className="animate-spin" aria-hidden="true" />}
+              {saving ? t('saving') : t('save_record')}
             </button>
           </div>
         </form>
@@ -349,11 +363,11 @@ function ServiceRecordsSection({ vehicleId, isAuthenticated }) {
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted">
-          <Loader2 size={14} className="animate-spin" />
-          Loading records…
+          <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+          {t('loading_records')}
         </div>
       ) : records.length === 0 ? (
-        <p className="text-sm text-muted">No service records yet.</p>
+        <p className="text-sm text-muted">{t('no_records')}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {records.map((r) => (
@@ -399,6 +413,7 @@ const REQUEST_STATUS_STYLES = {
 }
 
 function PendingRequestsSection({ vehicleId, session, onStatusChanged }) {
+  const { t } = useTranslation('vehicles')
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -444,8 +459,8 @@ function PendingRequestsSection({ vehicleId, session, onStatusChanged }) {
   return (
     <section className="flex flex-col gap-3 rounded-panel border border-amber-200 bg-amber-50/30 p-4 dark:border-amber-900/40 dark:bg-amber-950/10">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <Bell size={15} />
-        Pending Status Requests
+        <Bell size={15} aria-hidden="true" />
+        {t('pending_requests')}
         {requests.length > 0 && (
           <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
             {requests.length}
@@ -457,11 +472,11 @@ function PendingRequestsSection({ vehicleId, session, onStatusChanged }) {
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted">
-          <Loader2 size={13} className="animate-spin" />
-          Loading…
+          <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+          {t('loading_short')}
         </div>
       ) : requests.length === 0 ? (
-        <p className="text-sm text-muted">No pending requests for this vehicle.</p>
+        <p className="text-sm text-muted">{t('no_pending')}</p>
       ) : (
         requests.map((req) => (
           <div key={req.id} className="rounded-panel border border-border bg-surface px-3 py-3">
@@ -469,10 +484,10 @@ function PendingRequestsSection({ vehicleId, session, onStatusChanged }) {
               <div>
                 <div className="flex items-center gap-2">
                   <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${REQUEST_STATUS_STYLES.PENDING}`}>
-                    PENDING
+                    {t('pending_label')}
                   </span>
                   <span className="text-xs font-medium text-ink">
-                    → {STATUS_LABELS[req.requestedStatus] || req.requestedStatus}
+                    → {t(STATUS_I18N[req.requestedStatus] || 'status_operational')}
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs text-muted">
@@ -485,7 +500,7 @@ function PendingRequestsSection({ vehicleId, session, onStatusChanged }) {
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <input
                 type="text"
-                placeholder="Resolution note (optional)"
+                placeholder={t('resolution_note')}
                 value={resolveNotes[req.id] || ''}
                 onChange={(e) => setResolveNotes((prev) => ({ ...prev, [req.id]: e.target.value }))}
                 className="min-w-0 flex-1 rounded-panel border border-border bg-surface px-3 py-1 text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
@@ -496,8 +511,8 @@ function PendingRequestsSection({ vehicleId, session, onStatusChanged }) {
                 onClick={() => handleResolve(req.id, req.requestedStatus, 'APPROVED')}
                 className="flex items-center gap-1 rounded-panel bg-emerald-600 px-3 py-1 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
               >
-                <CheckCircle size={12} />
-                Approve
+                <CheckCircle size={12} aria-hidden="true" />
+                {t('approve')}
               </button>
               <button
                 type="button"
@@ -505,8 +520,8 @@ function PendingRequestsSection({ vehicleId, session, onStatusChanged }) {
                 onClick={() => handleResolve(req.id, req.requestedStatus, 'REJECTED')}
                 className="flex items-center gap-1 rounded-panel border border-red-300 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-60 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
               >
-                <XCircle size={12} />
-                Reject
+                <XCircle size={12} aria-hidden="true" />
+                {t('reject')}
               </button>
             </div>
           </div>
@@ -517,9 +532,10 @@ function PendingRequestsSection({ vehicleId, session, onStatusChanged }) {
 }
 
 export function VehicleDetailPage() {
+  const { t } = useTranslation('vehicles')
   const { id } = useParams()
   const navigate = useNavigate()
-  const { isAuthenticated, session } = useAppContext()
+  const { isAuthenticated, isAdmin, session } = useAppContext()
 
   const [vehicle, setVehicle] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -543,8 +559,8 @@ export function VehicleDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 gap-2 text-muted">
-        <Loader2 size={18} className="animate-spin" />
-        <span className="text-sm">Loading vehicle…</span>
+        <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+        <span className="text-sm">{t('loading')}</span>
       </div>
     )
   }
@@ -557,28 +573,27 @@ export function VehicleDetailPage() {
           onClick={() => navigate('/vehicles')}
           className="flex items-center gap-1.5 self-start text-sm text-muted transition hover:text-ink"
         >
-          <ArrowLeft size={15} />
-          Back to Fleet
+          <ArrowLeft size={15} aria-hidden="true" />
+          {t('back')}
         </button>
-        <ErrorAlert error={error || 'Vehicle not found'} />
+        <ErrorAlert error={error || t('not_found')} />
       </div>
     )
   }
 
   const typeInfo = VS_TYPE_MAP[vehicle.type] || VS_TYPE_MAP.BUS
   const statusStyle = STATUS_STYLES[vehicle.status] || STATUS_STYLES.OPERATIONAL
-  const statusLabel = STATUS_LABELS[vehicle.status] || vehicle.status
+  const statusLabel = t(STATUS_I18N[vehicle.status] || 'status_operational')
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
-      {/* Back */}
       <button
         type="button"
         onClick={() => navigate('/vehicles')}
         className="flex items-center gap-1.5 self-start text-sm text-muted transition hover:text-ink"
       >
-        <ArrowLeft size={15} />
-        Back to Fleet
+        <ArrowLeft size={15} aria-hidden="true" />
+        {t('back')}
       </button>
 
       {/* Header card */}
@@ -603,19 +618,19 @@ export function VehicleDetailPage() {
             {vehicle.internalId && (
               <div>
                 <div className="font-medium text-ink">{vehicle.internalId}</div>
-                <div>Internal ID</div>
+                <div>{t('internal_id')}</div>
               </div>
             )}
             {vehicle.capacity && (
               <div>
                 <div className="font-medium text-ink">{vehicle.capacity}</div>
-                <div>Capacity</div>
+                <div>{t('capacity_label')}</div>
               </div>
             )}
             {vehicle.manufactureDate && (
               <div>
                 <div className="font-medium text-ink">{vehicle.manufactureDate}</div>
-                <div>Manufactured</div>
+                <div>{t('manufactured_label')}</div>
               </div>
             )}
             {vehicle.lastLat != null && (
@@ -623,7 +638,7 @@ export function VehicleDetailPage() {
                 <div className="font-medium text-ink">
                   {vehicle.lastLat.toFixed(5)}, {vehicle.lastLon.toFixed(5)}
                 </div>
-                <div>Last GPS{vehicle.lastGpsUpdate ? ` · ${formatDatetime(vehicle.lastGpsUpdate)}` : ''}</div>
+                <div>{t('last_gps')}{vehicle.lastGpsUpdate ? ` · ${formatDatetime(vehicle.lastGpsUpdate)}` : ''}</div>
               </div>
             )}
           </div>
@@ -631,8 +646,8 @@ export function VehicleDetailPage() {
 
         {!isAuthenticated && (
           <p className="mt-3 rounded-panel border border-border bg-surface-alt px-3 py-2 text-xs text-muted">
-            <AlertCircle size={12} className="mr-1 inline" />
-            Sign in to change status and add service records.
+            <AlertCircle size={12} className="mr-1 inline" aria-hidden="true" />
+            {t('sign_in_prompt')}
           </p>
         )}
       </div>
@@ -650,7 +665,7 @@ export function VehicleDetailPage() {
       <GpsHistorySection vehicleId={vehicle.id} />
 
       {/* Service Records */}
-      <ServiceRecordsSection vehicleId={vehicle.id} isAuthenticated={isAuthenticated} />
+      <ServiceRecordsSection vehicleId={vehicle.id} isAuthenticated={isAdmin} />
 
       {/* Pending Status Requests — admin only */}
       {isAuthenticated && session?.role === 'ADMIN' && (

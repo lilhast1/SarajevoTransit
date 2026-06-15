@@ -1,27 +1,32 @@
-import { useEffect, useState, useCallback } from 'react'
-import { Plus, X, Users, ChevronUp } from 'lucide-react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { Plus, X, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { DataTable } from '../../components/admin/DataTable'
-import { PanelCard } from '../../components/common/PanelCard'
+import { AdminPagePanel, SELECT_CLS } from '../../components/common/AdminPagePanel'
+import { StatusBadge } from '../../components/common/StatusBadge'
 import { ErrorAlert } from '../../components/common/Alerts'
 import { VEHICLE_TYPE_META_BY_ID } from '../../constants/vehicleColors'
 import { gatewayClient } from '../../services/gatewayClient'
 
 const VEHICLE_TYPES = Object.values(VEHICLE_TYPE_META_BY_ID)
-
 const EMPTY_FORM = { code: '', name: '', vehicleTypeId: 1, isActive: true }
 
-function SubscribersPanel({ line, onClose }) {
+function SubscribersPanel({ line }) {
+  const { t } = useTranslation('admin-lines')
   const [page, setPage] = useState(0)
   const [data, setData] = useState({ content: [], totalPages: 0 })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const res = await gatewayClient.getSubscriptionsByLine(line.id, page)
       setData(res)
-    } catch {
-      // silently ignore
+    } catch (err) {
+      setData({ content: [], totalPages: 0 })
+      setError(err.message || t('subscribers_load_failed'))
     } finally {
       setLoading(false)
     }
@@ -38,27 +43,19 @@ function SubscribersPanel({ line, onClose }) {
         r.startInterval && r.endInterval ? `${r.startInterval.slice(0, 5)} – ${r.endInterval.slice(0, 5)}` : '—'
     },
     {
-      key: 'isActive', label: 'Active', render: (r) => (
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-          {r.isActive ? 'Yes' : 'No'}
-        </span>
-      )
+      key: 'isActive', label: 'Active', render: (r) => <StatusBadge status={r.isActive ? 'ACTIVE' : 'INACTIVE'} />
     },
   ]
 
   return (
-    <div className="mt-2 rounded-panel border border-border bg-surface-alt p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-ink">
-          Subscribers — {line.code} {line.name}
-        </h4>
-        <button type="button" onClick={onClose} className="text-muted hover:text-ink">
-          <ChevronUp size={16} />
-        </button>
-      </div>
-      {loading && <p className="text-sm text-muted">Loading…</p>}
+    <div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+        {t('subscribers_title', { code: line.code, name: line.name })}
+      </p>
+      <ErrorAlert error={error} onDismiss={() => setError(null)} />
+      {loading && <p className="text-sm text-muted">{t('loading')}</p>}
       {!loading && (data.content ?? []).length === 0 && (
-        <p className="text-sm text-muted">No subscribers for this line.</p>
+        <p className="text-sm text-muted">{t('no_subscribers')}</p>
       )}
       {!loading && (data.content ?? []).length > 0 && (
         <DataTable
@@ -75,6 +72,7 @@ function SubscribersPanel({ line, onClose }) {
 }
 
 export function AdminLinesPage() {
+  const { t } = useTranslation('admin-lines')
   const [vehicleTypeId, setVehicleTypeId] = useState('')
   const [lines, setLines] = useState([])
   const [loading, setLoading] = useState(false)
@@ -84,6 +82,15 @@ export function AdminLinesPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [expandedLineId, setExpandedLineId] = useState(null)
+  const [search, setSearch] = useState('')
+
+  const filteredLines = useMemo(() => {
+    const q = search.toLowerCase().trim()
+    if (!q) return lines
+    return lines.filter((l) =>
+      l.code?.toLowerCase().includes(q) || l.name?.toLowerCase().includes(q)
+    )
+  }, [lines, search])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -125,12 +132,14 @@ export function AdminLinesPage() {
 
   async function handleSave(e) {
     e.preventDefault()
-    const duplicate = lines.find(
-      (l) => l.code.trim().toLowerCase() === form.code.trim().toLowerCase() && l.id !== editingLine?.id
-    )
-    if (duplicate) {
-      setError(`A line with code "${form.code.trim()}" already exists.`)
-      return
+    if (!editingLine) {
+      const duplicate = lines.find(
+        (l) => l.code.trim().toLowerCase() === form.code.trim().toLowerCase()
+      )
+      if (duplicate) {
+        setError(`A line with code "${form.code.trim()}" already exists.`)
+        return
+      }
     }
     setSaving(true)
     setError(null)
@@ -155,10 +164,7 @@ export function AdminLinesPage() {
     if (!window.confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} line "${line.name}"?`)) return
     try {
       await gatewayClient.updateLine(line.id, {
-        code: line.code,
-        name: line.name,
-        vehicleTypeId: line.vehicleTypeId,
-        isActive: !line.isActive,
+        code: line.code, name: line.name, vehicleTypeId: line.vehicleTypeId, isActive: !line.isActive,
       })
       load()
     } catch (err) {
@@ -170,51 +176,51 @@ export function AdminLinesPage() {
     setExpandedLineId((prev) => (prev === lineId ? null : lineId))
   }
 
+  const typePillOptions = [{ id: '', label: t('all') }, ...VEHICLE_TYPES]
+
   const columns = [
-    { key: 'code', label: 'Code' },
-    { key: 'name', label: 'Name' },
+    { key: 'code', label: t('col_code') },
+    { key: 'name', label: t('col_name') },
     {
-      key: 'vehicleTypeId', label: 'Type', render: (r) =>
+      key: 'vehicleTypeId', label: t('col_type'), render: (r) =>
         VEHICLE_TYPE_META_BY_ID[r.vehicleTypeId]?.label ?? r.vehicleTypeName ?? '—'
     },
     {
-      key: 'isActive', label: 'Active', render: (r) => (
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-          {r.isActive ? 'Yes' : 'No'}
-        </span>
-      )
+      key: 'isActive', label: t('col_active'), render: (r) => <StatusBadge status={r.isActive ? 'ACTIVE' : 'INACTIVE'} />
     },
     {
-      key: 'actions', label: 'Actions', render: (r) => (
+      key: 'actions', label: t('col_actions'), render: (r) => (
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => openEdit(r)}
-            className="rounded border border-border px-2 py-0.5 text-xs text-ink hover:bg-surface-alt"
+            className="rounded-panel border border-border px-2.5 py-1 text-xs font-medium text-ink transition hover:bg-surface-alt"
           >
-            Edit
+            {t('edit')}
           </button>
           <button
             type="button"
             onClick={() => handleToggleActive(r)}
-            className={`rounded border px-2 py-0.5 text-xs ${
+            className={`rounded-panel border px-2.5 py-1 text-xs font-medium transition ${
               r.isActive
-                ? 'border-yellow-300 text-yellow-700 hover:bg-yellow-50 dark:hover:bg-yellow-950'
-                : 'border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950'
+                ? 'border-warning-soft text-warning hover:bg-warning-soft/20'
+                : 'border-success-soft text-success hover:bg-success-soft/20'
             }`}
           >
-            {r.isActive ? 'Deactivate' : 'Activate'}
+            {r.isActive ? t('deactivate') : t('activate')}
           </button>
           <button
             type="button"
             onClick={() => toggleSubscribers(r.id)}
-            className={`flex items-center gap-1 rounded border px-2 py-0.5 text-xs transition ${
+            className={`flex items-center gap-1 rounded-panel border px-2.5 py-1 text-xs font-medium transition ${
               expandedLineId === r.id
-                ? 'border-accent bg-accent text-white'
-                : 'border-border text-muted hover:bg-surface-alt hover:text-ink'
+                ? 'border-accent bg-accent text-white shadow-sm'
+                : 'border-border text-muted hover:border-accent-subtle hover:text-ink'
             }`}
           >
-            <Users size={11} /> Subscribers
+            <Users size={11} />
+            {t('subscribers')}
+            {expandedLineId === r.id ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
           </button>
         </div>
       )
@@ -222,118 +228,105 @@ export function AdminLinesPage() {
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-ink">Lines</h2>
-          <p className="mt-1 text-sm text-muted">Create, edit, and activate/deactivate transit lines.</p>
-        </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="flex items-center gap-1.5 rounded-panel border border-accent bg-accent px-3 py-2 text-sm font-medium text-white"
-        >
-          <Plus size={15} /> New Line
-        </button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-muted">Type:</span>
-        {[{ id: '', label: 'All' }, ...VEHICLE_TYPES].map((vt) => (
+    <AdminPagePanel>
+      <AdminPagePanel.Header
+        title={t('title')}
+        subtitle={t('subtitle')}
+        actions={
           <button
-            key={vt.id}
             type="button"
-            onClick={() => setVehicleTypeId(vt.id)}
-            className={`rounded-panel border px-3 py-1 text-xs font-medium transition ${
-              vehicleTypeId === vt.id
-                ? 'border-accent bg-accent text-white'
-                : 'border-border text-muted hover:bg-surface-alt'
-            }`}
+            onClick={openCreate}
+            className="flex items-center gap-1.5 rounded-panel bg-accent px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong"
           >
-            {vt.label}
+            <Plus size={15} /> {t('new_line')}
           </button>
-        ))}
-      </div>
+        }
+      />
+
+      <AdminPagePanel.Toolbar>
+        <input
+          type="text"
+          placeholder={t('search_placeholder')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none max-w-[260px]"
+        />
+        <AdminPagePanel.ToolbarDivider />
+        <div className="flex flex-wrap gap-1">
+          {typePillOptions.map((vt) => (
+            <button
+              key={vt.id}
+              type="button"
+              onClick={() => setVehicleTypeId(vt.id)}
+              className={`rounded-panel border px-2.5 py-1 text-xs font-medium transition ${
+                vehicleTypeId === vt.id
+                  ? 'border-accent bg-accent text-white shadow-sm'
+                  : 'border-border text-muted hover:border-accent-subtle hover:text-ink'
+              }`}
+            >
+              {vt.label}
+            </button>
+          ))}
+        </div>
+      </AdminPagePanel.Toolbar>
 
       {formOpen && (
-        <PanelCard tone="soft">
+        <div className="rounded-panel border border-border bg-surface-soft p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-ink">{editingLine ? 'Edit Line' : 'New Line'}</h3>
+            <h3 className="text-sm font-semibold text-ink">{editingLine ? t('edit_title') : t('new_title')}</h3>
             <button type="button" onClick={closeForm} className="text-muted hover:text-ink"><X size={16} /></button>
           </div>
           <form onSubmit={handleSave} className="grid gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="text-xs text-muted">Code</span>
-              <input
-                required
-                value={form.code}
-                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-                className="mt-1 w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink"
-              />
+              <span className="text-xs text-muted">{t('col_code')}</span>
+              <input required value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+                className={`${SELECT_CLS} mt-1 w-full`} />
             </label>
             <label className="block">
-              <span className="text-xs text-muted">Name</span>
-              <input
-                required
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="mt-1 w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink"
-              />
+              <span className="text-xs text-muted">{t('col_name')}</span>
+              <input required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                className={`${SELECT_CLS} mt-1 w-full`} />
             </label>
             <label className="block">
-              <span className="text-xs text-muted">Vehicle Type</span>
-              <select
-                value={form.vehicleTypeId}
+              <span className="text-xs text-muted">{t('col_type')}</span>
+              <select value={form.vehicleTypeId}
                 onChange={(e) => setForm((f) => ({ ...f, vehicleTypeId: Number(e.target.value) }))}
-                className="mt-1 w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink"
-              >
-                {VEHICLE_TYPES.map((vt) => (
-                  <option key={vt.id} value={vt.id}>{vt.label}</option>
-                ))}
+                className={`${SELECT_CLS} mt-1 w-full`}>
+                {VEHICLE_TYPES.map((vt) => <option key={vt.id} value={vt.id}>{vt.label}</option>)}
               </select>
             </label>
             <label className="flex items-center gap-2 self-end pb-1.5">
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
-              />
-              <span className="text-sm text-ink">Active</span>
+              <input type="checkbox" checked={form.isActive}
+                onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))} />
+              <span className="text-sm text-ink">{t('col_active')}</span>
             </label>
             <div className="flex gap-2 sm:col-span-2">
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-panel border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-              >
-                {saving ? 'Saving…' : 'Save'}
+              <button type="submit" disabled={saving}
+                className="rounded-panel bg-accent px-4 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong disabled:opacity-60">
+                {saving ? t('saving') : t('save')}
               </button>
-              <button type="button" onClick={closeForm} className="rounded-panel border border-border px-4 py-1.5 text-sm text-ink">
-                Cancel
+              <button type="button" onClick={closeForm}
+                className="rounded-panel border border-border px-4 py-1.5 text-sm text-ink transition hover:bg-surface-alt">
+                {t('cancel')}
               </button>
             </div>
           </form>
-        </PanelCard>
+        </div>
       )}
 
       <ErrorAlert error={error} onDismiss={() => setError(null)} />
 
       <DataTable
         columns={columns}
-        rows={lines}
+        rows={filteredLines}
         page={0}
         totalPages={1}
         onPageChange={() => {}}
         loading={loading}
+        expandedRowId={expandedLineId}
+        renderExpandedRow={(row) => <SubscribersPanel line={row} />}
       />
-
-      {expandedLineId && (
-        <SubscribersPanel
-          line={lines.find((l) => l.id === expandedLineId)}
-          onClose={() => setExpandedLineId(null)}
-        />
-      )}
-    </div>
+    </AdminPagePanel>
   )
 }
 

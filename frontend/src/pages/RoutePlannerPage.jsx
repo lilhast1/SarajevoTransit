@@ -1,6 +1,9 @@
-import { ArrowLeft, Loader2, MapPin, Route, Search } from 'lucide-react'
+import { ArrowLeft, ArrowUpDown, ChevronDown, Loader2, MapPin, Route, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { TransitMap } from '../components/map/TransitMap'
+import { ErrorAlert } from '../components/common/Alerts'
 import { sarajevoCenter } from '../data/mockTransitData'
 import { useAppContext } from '../context/AppContext'
 import { transitApi } from '../services/transitApi'
@@ -12,6 +15,20 @@ const STATIONARY_TIMEOUT_MS = 60 * 1000
 const MOVEMENT_THRESHOLD_METERS = 3
 
 const VEHICLE_TYPE_META = VEHICLE_TYPE_META_BY_ID
+
+function lightenColor(hex, amount) {
+  const hexStr = String(hex || '').replace('#', '')
+  if (!/^[0-9a-fA-F]{6}$/.test(hexStr)) return hex
+  const channel = (start) => {
+    const value = parseInt(hexStr.slice(start, start + 2), 16)
+    const next = value + (255 - value) * amount
+    return Math.max(0, Math.min(255, Math.round(next)))
+  }
+  const r = channel(0).toString(16).padStart(2, '0')
+  const g = channel(2).toString(16).padStart(2, '0')
+  const b = channel(4).toString(16).padStart(2, '0')
+  return `#${r}${g}${b}`
+}
 
 function getLegDisplayLabel(leg) {
   const mode = String(leg?.mode || '').toUpperCase().trim()
@@ -57,6 +74,7 @@ function headingFromPositions(previous, next) {
 }
 
 function PollingStatusBadge({ status, lastUpdatedAt, theme }) {
+  const { t } = useTranslation('routePlanner')
   const [now, setNow] = useState(Date.now())
 
   useEffect(() => {
@@ -72,14 +90,14 @@ function PollingStatusBadge({ status, lastUpdatedAt, theme }) {
 
   const fillColor = theme === 'dark' ? '#cbd5e1' : '#334155'
 
-  let text = 'Idle'
+  let text = t('status_idle')
 
   if (status === 'loading') {
-    text = 'Updating'
+    text = t('status_updating')
   } else if (status === 'ok') {
-    text = `Updated ${Math.floor(elapsedMs / 1000)}s`
+    text = t('status_updated', { seconds: Math.floor(elapsedMs / 1000) })
   } else if (status === 'error') {
-    text = 'Retrying'
+    text = t('status_retrying')
   }
 
   const fillDeg = status === 'error' ? 360 : progressDeg
@@ -101,6 +119,8 @@ function PollingStatusBadge({ status, lastUpdatedAt, theme }) {
 }
 
 export function RoutePlannerPage() {
+  const { t } = useTranslation('routePlanner')
+  const navigate = useNavigate()
   const { addTripHistoryItem, theme } = useAppContext()
   const [stops, setStops] = useState([])
   const [fromQuery, setFromQuery] = useState('')
@@ -113,17 +133,63 @@ export function RoutePlannerPage() {
   const [selectedItineraryIndex, setSelectedItineraryIndex] = useState(0)
   const [selectedDetailIndex, setSelectedDetailIndex] = useState(null)
   const [selectedLegIndex, setSelectedLegIndex] = useState(null)
+  const [expandedLegIndex, setExpandedLegIndex] = useState(null)
+  const [highlightedVisitedStopId, setHighlightedVisitedStopId] = useState(null)
   const [pickingMode, setPickingMode] = useState('none')
   const [activeVehicleTypes, setActiveVehicleTypes] = useState([1, 2, 3, 4])
   const [vehicles, setVehicles] = useState([])
   const [pollingStatus, setPollingStatus] = useState('idle')
   const [lastVehiclesUpdatedAt, setLastVehiclesUpdatedAt] = useState(null)
+  const [plannerError, setPlannerError] = useState(null)
+  const [fromFocused, setFromFocused] = useState(false)
+  const [toFocused, setToFocused] = useState(false)
 
   const pollTimerRef = useRef(null)
   const vehicleMovementRef = useRef({})
 
   useEffect(() => {
-    transitApi.getStops().then(setStops)
+    let active = true
+
+    const loadStops = async () => {
+      try {
+        setPlannerError(null)
+        const response = await transitApi.getStops()
+        if (active) setStops(response)
+      } catch (err) {
+        if (active) {
+          setStops([])
+          setPlannerError(err.message || t('load_failed'))
+        }
+      }
+    }
+
+    loadStops()
+
+    return () => {
+      active = false
+    }
+  }, [t])
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('routePlanner')
+    if (!saved) return
+    try {
+      const state = JSON.parse(saved)
+      if (state.routeMode && state.results?.length) {
+        setFromStop(state.fromStop)
+        setToStop(state.toStop)
+        setFromQuery(state.fromQuery || '')
+        setToQuery(state.toQuery || '')
+        setResults(state.results)
+        setRouteMode(true)
+        setSelectedItineraryIndex(state.selectedItineraryIndex ?? 0)
+        setSelectedDetailIndex(state.selectedDetailIndex ?? null)
+        setSelectedLegIndex(state.selectedLegIndex ?? null)
+        setExpandedLegIndex(state.expandedLegIndex ?? null)
+      }
+    } catch {
+      sessionStorage.removeItem('routePlanner')
+    }
   }, [])
 
   const fromMatches = useMemo(
@@ -189,6 +255,42 @@ export function RoutePlannerPage() {
     })
     return collected
   }, [displayItinerary, selectedLegIndex])
+
+  const visitedMapStops = useMemo(() => {
+    if (!displayItinerary?.legs) return []
+    const stopByName = new Map(stops.map((s) => [s.name, s]))
+    const seen = new Set()
+    const result = []
+    displayItinerary.legs.forEach((leg) => {
+      if (!leg.visitedStops) return
+      const legColor = getColorForLegRouteType(leg.routeType, leg.mode)
+      leg.visitedStops.forEach((vs) => {
+        if (seen.has(vs.name)) return
+        seen.add(vs.name)
+        const localStop = stopByName.get(vs.name)
+        result.push({
+          id: localStop?.id ?? vs.name,
+          name: vs.name,
+          latitude: localStop?.latitude ?? null,
+          longitude: localStop?.longitude ?? null,
+          color: legColor,
+          hoverColor: lightenColor(legColor, 0.3),
+        })
+      })
+    })
+    return result
+  }, [displayItinerary, stops])
+
+  const allMapStops = useMemo(() => {
+    const seen = new Set()
+    return [...legStops, ...visitedMapStops].filter((stop) => {
+      if (stop.latitude == null || stop.longitude == null) return false
+      const key = stop.name
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [legStops, visitedMapStops])
 
   const focusPositions = useMemo(() => {
     if (!displayItinerary?.legs?.length) return []
@@ -299,6 +401,7 @@ export function RoutePlannerPage() {
 
     setRouteMode(true)
     setLoading(true)
+    setPlannerError(null)
     try {
       const response = await transitApi.getOptimalRoute({
         fromLat: fromCoords.lat,
@@ -311,6 +414,21 @@ export function RoutePlannerPage() {
       setSelectedItineraryIndex(0)
       setSelectedDetailIndex(null)
       setSelectedLegIndex(null)
+      setExpandedLegIndex(null)
+      setHighlightedVisitedStopId(null)
+
+      sessionStorage.setItem('routePlanner', JSON.stringify({
+        fromStop,
+        toStop,
+        fromQuery,
+        toQuery,
+        results: response.itineraries,
+        routeMode: true,
+        selectedItineraryIndex: 0,
+        selectedDetailIndex: null,
+        selectedLegIndex: null,
+        expandedLegIndex: null,
+      }))
 
       if (response.itineraries?.[0]) {
         const primaryTransitLeg = response.itineraries[0].legs.find((leg) => String(leg.mode || '').toUpperCase() !== 'WALK')
@@ -323,18 +441,31 @@ export function RoutePlannerPage() {
           traveledAt: new Date().toISOString(),
         })
       }
+    } catch (err) {
+      setResults([])
+      setSelectedItineraryIndex(0)
+      setSelectedDetailIndex(null)
+      setSelectedLegIndex(null)
+      setExpandedLegIndex(null)
+      setHighlightedVisitedStopId(null)
+      setPlannerError(err.message || t('load_failed'))
     } finally {
       setLoading(false)
     }
   }
 
   const exitRouteMode = () => {
+    sessionStorage.removeItem('routePlanner')
     setRouteMode(false)
     setLoading(false)
     setResults([])
     setSelectedItineraryIndex(0)
     setSelectedDetailIndex(null)
     setSelectedLegIndex(null)
+    setExpandedLegIndex(null)
+    setHighlightedVisitedStopId(null)
+    setFromFocused(false)
+    setToFocused(false)
   }
 
   const handleMapClick = (latlng) => {
@@ -361,6 +492,33 @@ export function RoutePlannerPage() {
     }
   }
 
+  const handleShuffle = () => {
+    const tempStop = fromStop
+    const tempQuery = fromQuery
+    setFromStop(toStop)
+    setFromQuery(toQuery)
+    setToStop(tempStop)
+    setToQuery(tempQuery)
+  }
+
+  const handleUseCurrentLocation = (target) => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        const stop = { id: 'current-location', name: 'Current Location', latitude, longitude }
+        if (target === 'from') {
+          setFromStop(stop)
+          setFromQuery('Current Location')
+        } else {
+          setToStop(stop)
+          setToQuery('Current Location')
+        }
+      },
+      () => {},
+    )
+  }
+
   const toggleVehicleType = (typeId) => {
     setActiveVehicleTypes((current) =>
       current.includes(typeId) ? current.filter((id) => id !== typeId) : [...current, typeId].sort(),
@@ -369,287 +527,350 @@ export function RoutePlannerPage() {
 
   return (
     <div className="relative">
-      <div className={`grid gap-4 transition-all duration-300 ${planningMode ? 'lg:grid-cols-[minmax(260px,25%)_1fr]' : 'grid-cols-1'}`}>
-        {planningMode ? (
-          <aside className="order-2 lg:order-1 rounded-panel border border-border bg-surface p-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-auto">
-            <button
-              type="button"
-              onClick={exitRouteMode}
-              className="mb-3 inline-flex items-center gap-2 rounded-panel border border-border bg-surface-soft px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
-            >
-              <ArrowLeft size={14} />
-              Back to live map
-            </button>
+      <div className="grid gap-4 lg:grid-cols-[minmax(260px,25%)_1fr]">
+        <aside className="order-2 lg:order-1 rounded-panel border border-border bg-surface p-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-auto">
+          <div className="flex items-center gap-2 text-ink mb-3">
+            <Route size={18} />
+            <h2 className="text-base font-semibold">{t('title')}</h2>
+          </div>
 
-            {loading ? (
-              <div className="flex h-48 items-center justify-center gap-2 text-sm text-muted">
-                <Loader2 size={16} className="animate-spin" />
-                Finding routes...
-              </div>
-            ) : selectedDetailIndex !== null && results[selectedDetailIndex] ? (
-              <div className="space-y-3">
+          {plannerError ? <ErrorAlert error={plannerError} onDismiss={() => setPlannerError(null)} className="mb-3" /> : null}
+
+          <div className="relative mb-2">
+            <label htmlFor="planner-from" className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{t('from')}</label>
+            <input
+              id="planner-from"
+              value={fromQuery}
+              onChange={(e) => { setFromQuery(e.target.value); setFromStop(null) }}
+              onFocus={() => setFromFocused(true)}
+              onBlur={() => setTimeout(() => setFromFocused(false), 200)}
+              placeholder={t('from_placeholder')}
+              className="mt-1 w-full rounded-panel border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+            />
+            {(fromFocused || (fromQuery && !fromStop)) && !fromStop && (
+              <div className="absolute left-0 right-0 top-full z-20 mt-2 grid max-h-56 gap-1 overflow-auto rounded-panel border border-border bg-surface p-2 shadow-lg">
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedDetailIndex(null)
-                    setSelectedLegIndex(null)
-                  }}
-                  className="inline-flex items-center gap-2 rounded-panel border border-border bg-surface-soft px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleUseCurrentLocation('from')}
+                  className="flex items-center gap-2 rounded-panel px-2 py-1.5 text-left text-sm text-ink transition hover:bg-surface-alt"
                 >
-                  <ArrowLeft size={14} />
-                  Back to routes
+                  <span className="text-accent">📍</span>
+                  Use current location
                 </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { setPickingMode('from'); setFromFocused(false) }}
+                  className="flex items-center gap-2 rounded-panel px-2 py-1.5 text-left text-sm text-ink transition hover:bg-surface-alt"
+                >
+                  <MapPin size={14} className="text-accent" />
+                  {t('pick_from_map')}
+                </button>
+                {fromQuery && fromMatches.length > 0 && <div className="my-1 border-t border-border" />}
+                {fromMatches.map((stop) => (
+                  <button
+                    key={stop.id}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { setFromStop(stop); setFromQuery(stop.name) }}
+                    className="rounded-panel px-2 py-1.5 text-left text-sm text-ink transition hover:bg-surface-alt"
+                  >
+                    {stop.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-                <h3 className="text-base font-semibold text-ink">Route details</h3>
-                <div className="grid gap-2">
-                  {results[selectedDetailIndex].legs?.map((leg, idx) => (
+          <div className="flex items-end gap-2 mb-2">
+            <div className="relative flex-1">
+              <label htmlFor="planner-to" className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{t('to')}</label>
+              <input
+                id="planner-to"
+                value={toQuery}
+                onChange={(e) => { setToQuery(e.target.value); setToStop(null) }}
+                onFocus={() => setToFocused(true)}
+                onBlur={() => setTimeout(() => setToFocused(false), 200)}
+                placeholder={t('to_placeholder')}
+                className="mt-1 w-full rounded-panel border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+              />
+              {(toFocused || (toQuery && !toStop)) && !toStop && (
+                <div className="absolute left-0 right-0 top-full z-20 mt-2 grid max-h-56 gap-1 overflow-auto rounded-panel border border-border bg-surface p-2 shadow-lg">
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleUseCurrentLocation('to')}
+                    className="flex items-center gap-2 rounded-panel px-2 py-1.5 text-left text-sm text-ink transition hover:bg-surface-alt"
+                  >
+                    <span className="text-accent">📍</span>
+                    Use current location
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { setPickingMode('to'); setToFocused(false) }}
+                    className="flex items-center gap-2 rounded-panel px-2 py-1.5 text-left text-sm text-ink transition hover:bg-surface-alt"
+                  >
+                    <MapPin size={14} className="text-accent" />
+                    {t('pick_from_map')}
+                  </button>
+                  {toQuery && toMatches.length > 0 && <div className="my-1 border-t border-border" />}
+                  {toMatches.map((stop) => (
                     <button
-                      key={`${leg.lineCode || leg.lineName || leg.mode}-${idx}`}
+                      key={stop.id}
                       type="button"
-                      onClick={() => setSelectedLegIndex(idx)}
-                      className="w-full rounded-panel border p-3 text-left text-sm transition"
-                      style={{
-                        borderColor:
-                          selectedLegIndex === idx
-                            ? getColorForLegRouteType(leg.routeType, leg.mode)
-                            : withAlpha(getColorForLegRouteType(leg.routeType, leg.mode), 0.45),
-                        backgroundColor:
-                          selectedLegIndex === idx
-                            ? withAlpha(getColorForLegRouteType(leg.routeType, leg.mode), theme === 'dark' ? 0.24 : 0.16)
-                            : withAlpha(getColorForLegRouteType(leg.routeType, leg.mode), theme === 'dark' ? 0.18 : 0.1),
-                      }}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => { setToStop(stop); setToQuery(stop.name) }}
+                      className="rounded-panel px-2 py-1.5 text-left text-sm text-ink transition hover:bg-surface-alt"
                     >
-                      <p className="font-semibold" style={{ color: getColorForLegRouteType(leg.routeType, leg.mode) }}>{getLegDisplayLabel(leg)}</p>
-                      <p className="mt-1 text-muted">
-                        {leg.fromName} {'->'} {leg.toName}
-                      </p>
-                      <p className="mt-1 text-xs text-muted">Distance: {Math.round(leg.distanceMeters)} m</p>
+                      {stop.name}
                     </button>
                   ))}
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <h3 className="text-base font-semibold text-ink">Found routes</h3>
-                {results.length === 0 ? (
-                  <p className="text-sm text-muted">No routes found yet.</p>
-                ) : (
-                  results.map((itinerary, index) => (
-                    (() => {
-                      const primaryLeg = itinerary.legs?.find((leg) => String(leg.mode || '').toUpperCase() !== 'WALK') || itinerary.legs?.[0]
-                      const cardColor = getColorForLegRouteType(primaryLeg?.routeType, primaryLeg?.mode)
-                      return (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => {
-                        setSelectedItineraryIndex(index)
-                        setSelectedDetailIndex(index)
-                        setSelectedLegIndex(null)
-                      }}
-                      className={`w-full rounded-panel border p-3 text-left transition ${
-                        selectedItineraryIndex === index
-                          ? 'border-accent bg-accent/5 ring-1 ring-accent'
-                          : 'border-border bg-surface-soft hover:bg-surface-alt'
-                      }`}
-                      style={{
-                        borderColor:
-                          selectedItineraryIndex === index
-                            ? undefined
-                            : withAlpha(cardColor, theme === 'dark' ? 0.42 : 0.38),
-                        backgroundColor:
-                          selectedItineraryIndex === index
-                            ? undefined
-                            : withAlpha(cardColor, theme === 'dark' ? 0.14 : 0.08),
-                      }}
-                    >
-                      <div className="flex flex-wrap gap-3 text-sm">
-                        <span className="font-semibold text-ink">{formatDurationFromSeconds(itinerary.durationSeconds)}</span>
-                        <span className="text-muted">Transfers: {itinerary.transfers}</span>
-                      </div>
-                      <p className="mt-1 text-xs text-muted">
-                        Departure: {formatDepartureFromTimestamp(itinerary.legs?.[0]?.startTime)}
-                      </p>
-                      <ol className="mt-2 space-y-1">
-                        {itinerary.legs?.map((leg, legIndex) => (
-                          <li key={`${index}-${legIndex}`} className="flex items-center gap-2 text-xs text-ink">
-                            <span
-                              className="h-2 w-2 rounded-full"
-                              style={{ backgroundColor: getColorForLegRouteType(leg.routeType, leg.mode) }}
-                            />
-                            <span className="font-semibold" style={{ color: getColorForLegRouteType(leg.routeType, leg.mode) }}>
-                              {getLegDisplayLabel(leg)}
-                            </span>
-                            <span className="text-muted">{leg.fromName} {'->'} {leg.toName}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    </button>
-                      )
-                    })()
-                  ))
-                )}
-              </div>
-            )}
-          </aside>
-        ) : null}
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleShuffle}
+              disabled={!fromStop && !toStop}
+              title="Swap locations"
+              className="mb-0.5 flex h-[38px] w-[38px] items-center justify-center rounded-panel border border-border bg-surface text-muted transition hover:bg-surface-alt hover:text-ink disabled:opacity-40"
+            >
+              <ArrowUpDown size={15} />
+            </button>
+          </div>
 
-        <section className={`order-1 relative overflow-visible rounded-panel border border-border bg-surface ${planningMode ? 'lg:order-2' : ''}`}>
-          {!planningMode ? (
-            <>
-              <div className="pointer-events-none absolute right-3 top-3 z-[999]">
-                <PollingStatusBadge status={pollingStatus} lastUpdatedAt={lastVehiclesUpdatedAt} theme={theme} />
-              </div>
-              <div className="pointer-events-auto absolute bottom-3 left-3 z-[999] flex flex-wrap items-center gap-2 rounded-full border border-border bg-surface/90 px-2 py-1 backdrop-blur">
-                {Object.entries(VEHICLE_TYPE_META).map(([rawId, meta]) => {
-                  const typeId = Number(rawId)
-                  const active = activeVehicleTypes.includes(typeId)
-                  return (
-                    <button
-                      key={typeId}
-                      type="button"
-                      onClick={() => toggleVehicleType(typeId)}
-                      className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
-                        active
-                          ? 'border-transparent text-white'
-                          : 'border-border bg-surface text-muted hover:bg-surface-alt hover:text-ink'
-                      }`}
-                      style={active ? { backgroundColor: meta.color } : undefined}
-                    >
-                      {meta.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </>
-          ) : null}
+          <button
+            type="button"
+            onClick={onPlanRoute}
+            disabled={!fromStop || !toStop || loading}
+            className="mb-4 inline-flex w-full items-center justify-center gap-2 rounded-panel border border-accent bg-accent px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
+            {loading ? t('planning') : t('find_route')}
+          </button>
+
+          {results.length > 0 && (
+            <div className="border-t border-border pt-3 space-y-3">
+              {loading ? (
+                <div className="flex h-32 items-center justify-center gap-2 text-sm text-muted">
+                  <Loader2 size={16} className="animate-spin" />
+                  {t('finding')}
+                </div>
+              ) : selectedDetailIndex !== null && results[selectedDetailIndex] ? (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDetailIndex(null)
+                      setSelectedLegIndex(null)
+                      setExpandedLegIndex(null)
+                      setHighlightedVisitedStopId(null)
+                    }}
+                    className="inline-flex items-center gap-2 rounded-panel border border-border bg-surface-soft px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
+                  >
+                    <ArrowLeft size={14} />
+                    {t('back_to_routes')}
+                  </button>
+
+                  <h3 className="text-base font-semibold text-ink">{t('route_details')}</h3>
+                  <div className="grid gap-2">
+                    {results[selectedDetailIndex].legs?.map((leg, idx) => {
+                      const legColor = getColorForLegRouteType(leg.routeType, leg.mode)
+                      const isExpanded = expandedLegIndex === idx
+                      const hasVisitedStops = leg.visitedStops?.length > 0
+                      return (
+                        <div key={`${leg.lineCode || leg.lineName || leg.mode}-${idx}`}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedLegIndex(idx)
+                              setExpandedLegIndex(isExpanded ? null : idx)
+                            }}
+                            className="w-full rounded-panel border p-3 text-left text-sm transition"
+                            style={{
+                              borderColor:
+                                selectedLegIndex === idx
+                                  ? legColor
+                                  : withAlpha(legColor, 0.45),
+                              backgroundColor:
+                                selectedLegIndex === idx
+                                  ? withAlpha(legColor, theme === 'dark' ? 0.24 : 0.16)
+                                  : withAlpha(legColor, theme === 'dark' ? 0.18 : 0.1),
+                            }}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-semibold truncate" style={{ color: legColor }}>{getLegDisplayLabel(leg)}</p>
+                                <p className="mt-1 text-muted truncate">
+                                  {leg.fromName} {'->'} {leg.toName}
+                                </p>
+                                <p className="mt-1 text-xs text-muted">{t('distance', { distance: Math.round(leg.distanceMeters) })}</p>
+                              </div>
+                              {hasVisitedStops && (
+                                <ChevronDown
+                                  size={16}
+                                  className="shrink-0 text-muted transition-transform duration-200"
+                                  style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                                />
+                              )}
+                            </div>
+                          </button>
+                          {isExpanded && hasVisitedStops && (
+                            <div className="mx-1 mt-1 mb-2 divide-y divide-border rounded-lg border border-border bg-surface">
+                              {leg.visitedStops.map((stop, stopIdx) => {
+                                const localStop = stops.find((s) => s.name === stop.name)
+                                const stopId = localStop?.id ?? `${idx}-${stopIdx}`
+                                const isHovered = highlightedVisitedStopId === stopId
+                                return (
+                                  <div
+                                    key={stop.gtfsId || `vs-${idx}-${stopIdx}`}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => localStop && navigate(`/stops/${localStop.id}`)}
+                                    onMouseEnter={() => setHighlightedVisitedStopId(stopId)}
+                                    onMouseLeave={() => setHighlightedVisitedStopId(null)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' && localStop) navigate(`/stops/${localStop.id}`) }}
+                                    className={`flex cursor-pointer items-start gap-2 px-3 py-2 text-sm text-ink transition ${
+                                      isHovered ? 'bg-accent/10' : 'hover:bg-surface-alt'
+                                    }`}
+                                  >
+                                    <span className="mt-0.5 flex-shrink-0 rounded-full bg-accent/20 px-2 text-xs font-semibold text-accent">
+                                      #{stopIdx + 1}
+                                    </span>
+                                    <span className="font-medium">{stop.name}</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <h3 className="text-base font-semibold text-ink">{t('found_routes')}</h3>
+                  {results.length === 0 ? (
+                    <p className="text-sm text-muted">{t('no_routes')}</p>
+                  ) : (
+                    results.map((itinerary, index) => (
+                      (() => {
+                        const primaryLeg = itinerary.legs?.find((leg) => String(leg.mode || '').toUpperCase() !== 'WALK') || itinerary.legs?.[0]
+                        const cardColor = getColorForLegRouteType(primaryLeg?.routeType, primaryLeg?.mode)
+                        return (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => {
+                          setSelectedItineraryIndex(index)
+                          setSelectedDetailIndex(index)
+                          setSelectedLegIndex(null)
+                        }}
+                        className={`w-full rounded-panel border p-3 text-left transition ${
+                          selectedItineraryIndex === index
+                            ? 'border-accent bg-accent/5 ring-1 ring-accent'
+                            : 'border-border bg-surface-soft hover:bg-surface-alt'
+                        }`}
+                        style={{
+                          borderColor:
+                            selectedItineraryIndex === index
+                              ? undefined
+                              : withAlpha(cardColor, theme === 'dark' ? 0.42 : 0.38),
+                          backgroundColor:
+                            selectedItineraryIndex === index
+                              ? undefined
+                              : withAlpha(cardColor, theme === 'dark' ? 0.14 : 0.08),
+                        }}
+                      >
+                        <div className="flex flex-wrap gap-3 text-sm">
+                          <span className="font-semibold text-ink">{formatDurationFromSeconds(itinerary.durationSeconds)}</span>
+                          <span className="text-muted">{t('transfers', { count: itinerary.transfers })}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted">
+                          {t('departure', { time: formatDepartureFromTimestamp(itinerary.legs?.[0]?.startTime) })}
+                        </p>
+                        <ol className="mt-2 space-y-1">
+                          {itinerary.legs?.map((leg, legIndex) => (
+                            <li key={`${index}-${legIndex}`} className="flex items-center gap-2 text-xs text-ink">
+                              <span
+                                className="h-2 w-2 rounded-full"
+                                style={{ backgroundColor: getColorForLegRouteType(leg.routeType, leg.mode) }}
+                              />
+                              <span className="font-semibold" style={{ color: getColorForLegRouteType(leg.routeType, leg.mode) }}>
+                                {getLegDisplayLabel(leg)}
+                              </span>
+                              <span className="text-muted">{leg.fromName} {'->'} {leg.toName}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </button>
+                        )
+                      })()
+                    ))
+                  )}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={exitRouteMode}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-panel border border-border bg-surface-soft px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
+              >
+                <ArrowLeft size={14} />
+                {t('back_to_map')}
+              </button>
+            </div>
+          )}
+        </aside>
+
+        <section className="order-1 lg:order-2 relative overflow-visible rounded-panel border border-border bg-surface">
+          <div className="pointer-events-none absolute right-3 top-3 z-[999]">
+            <PollingStatusBadge status={pollingStatus} lastUpdatedAt={lastVehiclesUpdatedAt} theme={theme} />
+          </div>
+          <div className="pointer-events-auto absolute bottom-3 left-3 z-[999] flex flex-wrap items-center gap-2 rounded-full border border-border bg-surface/90 px-2 py-1 backdrop-blur">
+            {Object.entries(VEHICLE_TYPE_META).map(([rawId, meta]) => {
+              const typeId = Number(rawId)
+              const active = activeVehicleTypes.includes(typeId)
+              return (
+                <button
+                  key={typeId}
+                  type="button"
+                  onClick={() => toggleVehicleType(typeId)}
+                  className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
+                    active
+                      ? 'border-transparent text-white'
+                      : 'border-border bg-surface text-muted hover:bg-surface-alt hover:text-ink'
+                  }`}
+                  style={active ? { backgroundColor: meta.color } : undefined}
+                >
+                  {meta.label}
+                </button>
+              )
+            })}
+          </div>
 
           <TransitMap
-            className={`h-[calc(100vh-9rem)] min-h-[520px] ${planningMode ? 'lg:h-[calc(100vh-8rem)]' : ''}`}
-            stops={legStops}
-            vehicles={planningMode ? [] : vehicles}
+            className="h-[calc(100vh-9rem)] min-h-[520px] lg:h-[calc(100vh-8rem)]"
+            stops={allMapStops}
+            stopStyle="dot"
+            vehicles={vehicles}
             polylines={coloredPolylines}
             focusPositions={focusPositions}
             focusKey={focusKey}
+            highlightedStopId={highlightedVisitedStopId}
+            onStopClick={(stop) => {
+              if (typeof stop.id === 'number') navigate(`/stops/${stop.id}`)
+            }}
+            onStopHover={(stop) => setHighlightedVisitedStopId(stop.id)}
+            onStopHoverEnd={() => setHighlightedVisitedStopId(null)}
             onLegPathClick={(legIndex) => setSelectedLegIndex(legIndex)}
             startPin={fromStop ? [fromStop.latitude, fromStop.longitude] : null}
             endPin={toStop ? [toStop.latitude, toStop.longitude] : null}
             onMapClick={handleMapClick}
           />
-
-          <div className="absolute left-1/2 top-0 z-[1000] w-[min(680px,94vw)] max-h-[72vh] -translate-x-1/2 -translate-y-1/2 overflow-visible rounded-[18px] border border-border bg-surface/95 p-3 shadow-xl backdrop-blur sm:p-4 md:max-h-none">
-            <div className="mb-3 flex items-center gap-2 text-ink">
-              <Route size={18} />
-              <h2 className="text-base font-semibold sm:text-lg">Plan your trip</h2>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-              <div className="relative">
-                <label htmlFor="planner-from" className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                  From
-                </label>
-                <div className="mt-1 flex gap-2">
-                  <input
-                    id="planner-from"
-                    value={fromQuery}
-                    onChange={(event) => {
-                      setFromQuery(event.target.value)
-                      setFromStop(null)
-                    }}
-                    placeholder="Start stop"
-                    className="w-full rounded-panel border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setPickingMode(pickingMode === 'from' ? 'none' : 'from')}
-                    title="Pick from map"
-                    className={`flex items-center justify-center rounded-panel border px-3 transition ${
-                      pickingMode === 'from'
-                        ? 'border-accent bg-accent text-white'
-                        : 'border-border bg-surface text-muted hover:bg-surface-alt hover:text-ink'
-                    }`}
-                  >
-                    <MapPin size={16} />
-                  </button>
-                </div>
-                {fromQuery && !fromStop ? (
-                  <div className="absolute left-0 right-0 top-full z-20 mt-2 grid max-h-48 gap-1 overflow-auto rounded-panel border border-border bg-surface p-2 shadow-lg">
-                    {fromMatches.map((stop) => (
-                      <button
-                        key={stop.id}
-                        type="button"
-                        onClick={() => {
-                          setFromStop(stop)
-                          setFromQuery(stop.name)
-                        }}
-                        className="rounded-panel px-2 py-1 text-left text-sm text-ink transition hover:bg-surface-alt"
-                      >
-                        {stop.name}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="relative">
-                <label htmlFor="planner-to" className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                  To
-                </label>
-                <div className="mt-1 flex gap-2">
-                  <input
-                    id="planner-to"
-                    value={toQuery}
-                    onChange={(event) => {
-                      setToQuery(event.target.value)
-                      setToStop(null)
-                    }}
-                    placeholder="Destination stop"
-                    className="w-full rounded-panel border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setPickingMode(pickingMode === 'to' ? 'none' : 'to')}
-                    title="Pick from map"
-                    className={`flex items-center justify-center rounded-panel border px-3 transition ${
-                      pickingMode === 'to'
-                        ? 'border-accent bg-accent text-white'
-                        : 'border-border bg-surface text-muted hover:bg-surface-alt hover:text-ink'
-                    }`}
-                  >
-                    <MapPin size={16} />
-                  </button>
-                </div>
-                {toQuery && !toStop ? (
-                  <div className="absolute left-0 right-0 top-full z-20 mt-2 grid max-h-48 gap-1 overflow-auto rounded-panel border border-border bg-surface p-2 shadow-lg">
-                    {toMatches.map((stop) => (
-                      <button
-                        key={stop.id}
-                        type="button"
-                        onClick={() => {
-                          setToStop(stop)
-                          setToQuery(stop.name)
-                        }}
-                        className="rounded-panel px-2 py-1 text-left text-sm text-ink transition hover:bg-surface-alt"
-                      >
-                        {stop.name}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              <button
-                type="button"
-                onClick={onPlanRoute}
-                disabled={!fromStop || !toStop || loading}
-                className="mt-2 inline-flex h-fit items-center justify-center gap-2 rounded-panel border border-accent bg-accent px-4 py-2 text-sm font-semibold text-white transition md:mt-6 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Search size={15} />
-                {loading ? 'Planning...' : 'Find route'}
-              </button>
-            </div>
-
-          </div>
         </section>
       </div>
     </div>

@@ -35,6 +35,29 @@ public interface LineReviewRepository extends JpaRepository<LineReview, Long> {
                         Long lineId,
                         ModerationStatus moderationStatus);
 
+        Optional<LineReview> findByReviewerUserIdAndLineId(Long reviewerUserId, Long lineId);
+
+        @Query("SELECT AVG(lr.rating) FROM LineReview lr WHERE lr.moderationStatus = com.sarajevotransit.feedbackservice.model.ModerationStatus.VISIBLE")
+        Double globalAverageRating();
+
+        @Query("SELECT COUNT(lr) FROM LineReview lr WHERE lr.moderationStatus = com.sarajevotransit.feedbackservice.model.ModerationStatus.VISIBLE")
+        long countVisible();
+
+        @Query("SELECT lr.rating AS rating, COUNT(lr) AS cnt FROM LineReview lr WHERE lr.moderationStatus = com.sarajevotransit.feedbackservice.model.ModerationStatus.VISIBLE GROUP BY lr.rating ORDER BY lr.rating")
+        List<Object[]> ratingDistribution();
+
+        @Query(value = """
+                SELECT TO_CHAR(created_at, 'YYYY-MM') AS month,
+                       AVG(rating)                     AS avgRating,
+                       COUNT(*)                        AS cnt
+                FROM reviews
+                WHERE moderation_status = 'VISIBLE'
+                  AND created_at >= NOW() - INTERVAL '6 months'
+                GROUP BY TO_CHAR(created_at, 'YYYY-MM')
+                ORDER BY month
+                """, nativeQuery = true)
+        List<Object[]> ratingTrend();
+
         @Query("""
                         select new com.sarajevotransit.feedbackservice.dto.LineRatingSummaryResponse(
                             lr.lineId,

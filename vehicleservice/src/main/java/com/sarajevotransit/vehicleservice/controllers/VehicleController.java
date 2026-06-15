@@ -9,22 +9,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.sarajevotransit.vehicleservice.dtos.CreateServiceRecordRequestDto;
-import com.sarajevotransit.vehicleservice.dtos.CreateVehicleRequestDto;
-import com.sarajevotransit.vehicleservice.dtos.LocationHistoryResponseDto;
-import com.sarajevotransit.vehicleservice.dtos.LocationUpdateRequestDto;
-import com.sarajevotransit.vehicleservice.dtos.ServiceRecordResponseDto;
-import com.sarajevotransit.vehicleservice.dtos.UpdateVehicleRequestDto;
-import com.sarajevotransit.vehicleservice.dtos.VehicleBatchStatusUpdateDto;
-import com.sarajevotransit.vehicleservice.dtos.VehicleResponseDTO;
-import com.sarajevotransit.vehicleservice.dtos.VehicleStatusBatchItemDto;
-import com.sarajevotransit.vehicleservice.dtos.VehicleStatusUpdateDto;
+import com.sarajevotransit.vehicleservice.dtos.*;
+import com.sarajevotransit.vehicleservice.service.MaintenanceAlertService;
 import com.sarajevotransit.vehicleservice.mappers.LocationHistoryMapper;
 import com.sarajevotransit.vehicleservice.mappers.ServiceRecordMapper;
 import com.sarajevotransit.vehicleservice.mappers.VehicleMapper;
 import com.sarajevotransit.vehicleservice.model.ServiceRecord;
 import com.sarajevotransit.vehicleservice.model.Vehicle;
 import com.sarajevotransit.vehicleservice.service.VehicleService;
+import com.sarajevotransit.vehicleservice.service.MaintenanceAlertService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -50,6 +43,7 @@ import org.springframework.http.ResponseEntity;
 public class VehicleController {
 
     private final VehicleService vehicleService;
+    private final MaintenanceAlertService maintenanceAlertService;
     private final VehicleMapper vehicleMapper;
     private final ServiceRecordMapper serviceRecordMapper;
     private final LocationHistoryMapper locationHistoryMapper;
@@ -79,15 +73,39 @@ public class VehicleController {
                 .body(vehicleMapper.toResponse(vehicleService.getVehicleById(id)));
     }
 
-    // @PutMapping("/{id}")
-    // public ResponseEntity<VehicleResponseDTO> updateVehicle(
-    // @PathVariable Long id,
-    // @RequestBody @Valid UpdateVehicleRequestDto dto) {
-    // Vehicle existing = vehicleService.getVehicleById(id);
-    // vehicleMapper.updateEntityFromDto(dto, existing);
-    // return
-    // ResponseEntity.ok(vehicleMapper.toResponse(vehicleService.updateVehicle(existing)));
-    // }
+    @PutMapping("/{id}")
+    public ResponseEntity<VehicleResponseDTO> updateVehicle(
+            @PathVariable Long id,
+            @RequestBody UpdateVehicleFullDto dto) {
+        Vehicle updated = vehicleService.updateVehicleFull(id,
+                dto.getRegistrationNumber(), dto.getInternalId(), dto.getType(),
+                dto.getCapacity(), dto.getManufactureDate(), dto.getStatus(),
+                dto.getServiceCycleIntervalDays());
+        return ResponseEntity.ok(vehicleMapper.toResponse(updated));
+    }
+
+    @PatchMapping("/{id}/assign-line")
+    public ResponseEntity<VehicleResponseDTO> assignLine(
+            @PathVariable Long id,
+            @RequestBody AssignLineRequestDto dto) {
+        Vehicle updated = vehicleService.assignLine(id, dto.getLineId(), dto.getLineCode(), dto.getLineName());
+        return ResponseEntity.ok(vehicleMapper.toResponse(updated));
+    }
+
+    @PatchMapping("/{id}/assign-driver")
+    public ResponseEntity<VehicleResponseDTO> assignDriver(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Long> body) {
+        Long driverId = body.get("driverId");
+        Vehicle updated = vehicleService.assignDriver(id, driverId);
+        return ResponseEntity.ok(vehicleMapper.toResponse(updated));
+    }
+
+    @GetMapping("/maintenance-alerts")
+    @Operation(security = {})
+    public ResponseEntity<java.util.List<MaintenanceAlertDto>> getMaintenanceAlerts() {
+        return ResponseEntity.ok(maintenanceAlertService.getOverdueVehicles());
+    }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<VehicleResponseDTO> setVehicleStatus(
@@ -105,6 +123,12 @@ public class VehicleController {
                 .map(vehicleMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(response);
+    }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<java.util.Map<String, String>> handleIllegalState(IllegalStateException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(java.util.Map.of("message", ex.getMessage()));
     }
 
     // ── Location ─────────────────────────────────────────────────

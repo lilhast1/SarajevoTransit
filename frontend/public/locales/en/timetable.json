@@ -1,0 +1,13 @@
+{
+  "title": "Timetable",
+  "subtitle": "Select line, direction, and day type.",
+  "select_line": "Select line",
+  "select_direction": "Select direction",
+  "select_day": "Select day type",
+  "weekday": "Weekday",
+  "saturday": "Saturday",
+  "sunday": "Sunday",
+  "departure_grid": "Departure grid",
+  "no_departures": "No departures found for this selection.",
+  "load_failed": "Unable to load timetable data. Please try again."
+}

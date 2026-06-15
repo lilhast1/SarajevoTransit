@@ -1,5 +1,7 @@
 package com.sarajevotransit.feedbackservice.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,6 +38,8 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class ProblemReportService {
+
+    private static final Logger log = LoggerFactory.getLogger(ProblemReportService.class);
 
     private final ProblemReportRepository problemReportRepository;
     private final ProblemReportMapper problemReportMapper;
@@ -129,11 +133,16 @@ public class ProblemReportService {
         ProblemReport report = findReportOrThrow(id);
         report.setStatus(status);
         ProblemReport saved = problemReportRepository.save(report);
-        notificationServiceClient.notifyReportStatusChange(
-                saved.getId(),
-                saved.getLineId(),
-                saved.getReporterUserId(),
-                status.name());
+        try {
+            notificationServiceClient.notifyReportStatusChange(
+                    saved.getId(),
+                    saved.getLineId(),
+                    saved.getReporterUserId(),
+                    saved.getCategory() != null ? saved.getCategory().name() : null,
+                    status.name());
+        } catch (Exception ex) {
+            log.warn("Could not send report status notification for report {}: {}", saved.getId(), ex.getMessage());
+        }
         return problemReportMapper.toResponse(saved);
     }
 

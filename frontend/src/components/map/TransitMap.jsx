@@ -48,6 +48,8 @@ export function TransitMap({
   onStopHover,
   onStopHoverEnd,
   stopStyle = 'pin',
+  onVehicleClick,
+  selectedVehicleId,
 }) {
   const { theme } = useAppContext()
   const [zoom, setZoom] = useState(13)
@@ -116,25 +118,35 @@ export function TransitMap({
           ) : null
         ))}
 
-        {vehicles.map((vehicle) => (
-          <Marker
-            key={vehicle.id}
-            position={[vehicle.latitude, vehicle.longitude]}
-            icon={createVehicleIcon({
-              color: vehicle.color || '#334155',
-              headingDeg: vehicle.headingDeg,
-              isMoving: vehicle.isMoving,
-            })}
-          >
-            <Popup>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold">Line {vehicle.lineCode || '--'}</p>
-                <p className="text-xs text-slate-600">{vehicle.name || 'Vehicle position'}</p>
-                <p className="text-xs text-slate-600">{vehicle.typeLabel || 'Transit vehicle'}</p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {vehicles.map((vehicle) => {
+          const isSelected = selectedVehicleId != null && String(vehicle.id) === String(selectedVehicleId)
+          const markerColor = isSelected ? '#f59e0b' : (vehicle.color || '#334155')
+          return (
+            <Marker
+              key={vehicle.id}
+              position={[vehicle.latitude, vehicle.longitude]}
+              icon={createVehicleIcon({
+                color: markerColor,
+                headingDeg: vehicle.headingDeg,
+                isMoving: vehicle.isMoving,
+              })}
+              eventHandlers={onVehicleClick ? { click: () => onVehicleClick(vehicle) } : undefined}
+            >
+              <Popup>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">Line {vehicle.lineCode || '--'}</p>
+                  <p className="text-xs text-slate-600">{vehicle.name || vehicle.typeLabel || 'Transit vehicle'}</p>
+                  {vehicle.isUnmapped && (
+                    <p className="text-xs text-slate-400 italic">No live tracking</p>
+                  )}
+                  {vehicle.isTaken && (
+                    <p className="text-xs text-slate-400 italic">Already assigned to another vehicle</p>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          )
+        })}
 
         {stops.map((stop) => {
           const isHighlighted = stop.id === highlightedStopId

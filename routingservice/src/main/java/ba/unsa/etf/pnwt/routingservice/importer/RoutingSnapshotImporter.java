@@ -21,6 +21,7 @@ import ba.unsa.etf.pnwt.routingservice.repository.RoutePointRepository;
 import ba.unsa.etf.pnwt.routingservice.repository.StationRepository;
 import ba.unsa.etf.pnwt.routingservice.repository.TimetableRepository;
 import ba.unsa.etf.pnwt.routingservice.repository.VehicleTypeRepository;
+import ba.unsa.etf.pnwt.routingservice.service.OtpRebuildService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
@@ -61,6 +62,7 @@ public class RoutingSnapshotImporter {
     private final DirectionStationRepository directionStationRepository;
     private final RoutePointRepository routePointRepository;
     private final TimetableRepository timetableRepository;
+    private final OtpRebuildService otpRebuildService;
 
     public RoutingSnapshotImporter(
             ObjectMapper objectMapper,
@@ -71,7 +73,8 @@ public class RoutingSnapshotImporter {
             StationRepository stationRepository,
             DirectionStationRepository directionStationRepository,
             RoutePointRepository routePointRepository,
-            TimetableRepository timetableRepository
+            TimetableRepository timetableRepository,
+            OtpRebuildService otpRebuildService
     ) {
         this.objectMapper = objectMapper;
         this.entityManager = entityManager;
@@ -82,6 +85,7 @@ public class RoutingSnapshotImporter {
         this.directionStationRepository = directionStationRepository;
         this.routePointRepository = routePointRepository;
         this.timetableRepository = timetableRepository;
+        this.otpRebuildService = otpRebuildService;
     }
 
     @Transactional
@@ -241,6 +245,8 @@ public class RoutingSnapshotImporter {
         }
 
         saveInChunks(timetablesToSave, timetableRepository::saveAll);
+
+        otpRebuildService.markRebuildNeeded();
 
         return summary;
     }

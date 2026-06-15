@@ -85,6 +85,7 @@ public class OtpProxyOptimalRouteResponse {
         private Long endTime;
         private Double distanceMeters;
         private String points;
+        private List<VisitedStop> visitedStops;
 
         public String getMode() {
             return mode;
@@ -164,6 +165,35 @@ public class OtpProxyOptimalRouteResponse {
 
         public void setPoints(String points) {
             this.points = points;
+        }
+
+        public List<VisitedStop> getVisitedStops() {
+            return visitedStops;
+        }
+
+        public void setVisitedStops(List<VisitedStop> visitedStops) {
+            this.visitedStops = visitedStops;
+        }
+    }
+
+    public static class VisitedStop {
+        private String gtfsId;
+        private String name;
+
+        public String getGtfsId() {
+            return gtfsId;
+        }
+
+        public void setGtfsId(String gtfsId) {
+            this.gtfsId = gtfsId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
         }
     }
 }

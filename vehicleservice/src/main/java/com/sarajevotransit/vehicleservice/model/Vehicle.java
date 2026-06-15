@@ -38,6 +38,17 @@ public class Vehicle {
     private Double lastLon;
     private LocalDateTime lastGpsUpdate;
 
+    // Line assignment (references routing service line)
+    private Long assignedLineId;
+    private String assignedLineCode;
+    private String assignedLineName;
+
+    // Driver assignment (references UserService user with DRIVER role)
+    private Long assignedDriverId;
+
+    // Maintenance cycle in days; null means no scheduled maintenance
+    private Integer serviceCycleIntervalDays;
+
     // Optimistic Locking (standard in JPA to prevent concurrent update issues)
     @Version
     private Long version;

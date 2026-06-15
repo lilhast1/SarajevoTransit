@@ -36,7 +36,6 @@ public class LineReviewService {
 
     @Transactional
     public LineReviewResponse createReview(CreateLineReviewRequest request) {
-        userServiceClient.validateUser(request.getReviewerUserId());
         routingServiceClient.validateLine(request.getLineId());
 
         LocalDate today = LocalDate.now();
@@ -47,8 +46,13 @@ public class LineReviewService {
             throw new BadRequestException("Review is allowed only for rides within the last 30 days.");
         }
 
-        LineReview entity = lineReviewMapper.toEntity(request);
-        entity.setReviewText(trimToNull(entity.getReviewText()));
+        LineReview entity = lineReviewRepository
+                .findByReviewerUserIdAndLineId(request.getReviewerUserId(), request.getLineId())
+                .orElseGet(() -> lineReviewMapper.toEntity(request));
+
+        entity.setRating(request.getRating());
+        entity.setReviewText(trimToNull(request.getReviewText()));
+        entity.setRideDate(request.getRideDate());
         entity.setModerationStatus(ModerationStatus.VISIBLE);
 
         LineReview saved = lineReviewRepository.save(entity);

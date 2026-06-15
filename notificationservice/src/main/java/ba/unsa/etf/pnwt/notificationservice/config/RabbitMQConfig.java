@@ -15,6 +15,16 @@ public class RabbitMQConfig {
     public static final String QUEUE_TICKET_COMPLETED  = "ticket-notification-completed-queue";
     public static final String QUEUE_TICKET_CANCELLED  = "ticket-notification-cancelled-queue";
 
+    public static final String VEHICLE_EXCHANGE               = "vehicle.exchange";
+    public static final String ROUTING_MAINTENANCE_OVERDUE    = "vehicle.maintenance.overdue";
+    public static final String ROUTING_DRIVER_SERVICE_REQUEST = "vehicle.driver.service.request";
+    public static final String ROUTING_DRIVER_CONFLICT        = "vehicle.driver.assignment.conflict";
+    public static final String ROUTING_MAINTENANCE_STATUS     = "vehicle.maintenance.status.changed";
+    public static final String QUEUE_VEHICLE_MAINTENANCE      = "vehicle-maintenance-notification-queue";
+    public static final String QUEUE_DRIVER_SERVICE_REQUEST   = "driver-service-request-notification-queue";
+    public static final String QUEUE_DRIVER_CONFLICT          = "driver-conflict-notification-queue";
+    public static final String QUEUE_MAINTENANCE_STATUS       = "vehicle-maintenance-status-notification-queue";
+
     public static final String TIMETABLE_EXCHANGE            = "timetable.exchange";
     public static final String ROUTING_TIMETABLE_CHANGED     = "timetable.changed";
     public static final String ROUTING_TRIP_DELAY_CHANGED    = "trip.delay.changed";
@@ -26,6 +36,51 @@ public class RabbitMQConfig {
     @Bean
     public TopicExchange ticketSagaExchange() {
         return ExchangeBuilder.topicExchange(EXCHANGE).durable(true).build();
+    }
+
+    @Bean
+    public TopicExchange vehicleExchange() {
+        return ExchangeBuilder.topicExchange(VEHICLE_EXCHANGE).durable(true).build();
+    }
+
+    @Bean
+    public Queue vehicleMaintenanceQueue() {
+        return QueueBuilder.durable(QUEUE_VEHICLE_MAINTENANCE).build();
+    }
+
+    @Bean
+    public Queue driverServiceRequestQueue() {
+        return QueueBuilder.durable(QUEUE_DRIVER_SERVICE_REQUEST).build();
+    }
+
+    @Bean
+    public Queue driverConflictQueue() {
+        return QueueBuilder.durable(QUEUE_DRIVER_CONFLICT).build();
+    }
+
+    @Bean
+    public Binding bindVehicleMaintenance(Queue vehicleMaintenanceQueue, TopicExchange vehicleExchange) {
+        return BindingBuilder.bind(vehicleMaintenanceQueue).to(vehicleExchange).with(ROUTING_MAINTENANCE_OVERDUE);
+    }
+
+    @Bean
+    public Binding bindDriverServiceRequest(Queue driverServiceRequestQueue, TopicExchange vehicleExchange) {
+        return BindingBuilder.bind(driverServiceRequestQueue).to(vehicleExchange).with(ROUTING_DRIVER_SERVICE_REQUEST);
+    }
+
+    @Bean
+    public Binding bindDriverConflict(Queue driverConflictQueue, TopicExchange vehicleExchange) {
+        return BindingBuilder.bind(driverConflictQueue).to(vehicleExchange).with(ROUTING_DRIVER_CONFLICT);
+    }
+
+    @Bean
+    public Queue maintenanceStatusQueue() {
+        return QueueBuilder.durable(QUEUE_MAINTENANCE_STATUS).build();
+    }
+
+    @Bean
+    public Binding bindMaintenanceStatus(Queue maintenanceStatusQueue, TopicExchange vehicleExchange) {
+        return BindingBuilder.bind(maintenanceStatusQueue).to(vehicleExchange).with(ROUTING_MAINTENANCE_STATUS);
     }
 
     @Bean

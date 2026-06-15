@@ -155,8 +155,6 @@ public class UserService {
                 .map(travelHistoryMapper::toResponse);
     }
 
-
-
     @Transactional
     public UserProfileResponse updateUserProfile(Long userId, UpdateUserProfileRequest request) {
         UserProfile user = findUserById(userId);
@@ -253,8 +251,6 @@ public class UserService {
                 .toList();
     }
 
-
-
     @Transactional
     public void deleteTravelHistoryEntry(Long userId, Long entryId) {
         findUserById(userId);
@@ -309,6 +305,12 @@ public class UserService {
                 .map(loyaltyTransactionMapper::toResponse)
                 .toList();
 
+        List<LoyaltyTransactionResponse> coupons = loyaltyTransactionRepository
+                .findByUserIdAndCouponCodeIsNotNullOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(loyaltyTransactionMapper::toResponse)
+                .toList();
+
         List<String> suggestions = getPersonalizedLineSuggestions(userId, 3);
 
         return new UserSummaryResponse(
@@ -316,6 +318,7 @@ public class UserService {
                 travelHistory,
                 purchases,
                 transactions,
+                coupons,
                 suggestions);
     }
 
@@ -403,8 +406,10 @@ public class UserService {
     }
 
     /**
-     * Atomically records a ticket purchase history entry AND earns loyalty points in a single transaction.
-     * Used by the ticket purchase saga so that both writes succeed or both are rolled back.
+     * Atomically records a ticket purchase history entry AND earns loyalty points
+     * in a single transaction.
+     * Used by the ticket purchase saga so that both writes succeed or both are
+     * rolled back.
      *
      * @return loyalty points earned
      */
@@ -422,6 +427,10 @@ public class UserService {
             wallet.setLoyaltyPointsTotal(0);
         }
         wallet.setLoyaltyPointsTotal(wallet.getLoyaltyPointsTotal() + loyaltyPoints);
+        if (wallet.getLoyaltyPointsLifetime() == null) {
+            wallet.setLoyaltyPointsLifetime(0);
+        }
+        wallet.setLoyaltyPointsLifetime(wallet.getLoyaltyPointsLifetime() + loyaltyPoints);
 
         com.sarajevotransit.userservice.model.LoyaltyTransaction lt = new com.sarajevotransit.userservice.model.LoyaltyTransaction();
         lt.setPointsEarned(loyaltyPoints);

@@ -1,17 +1,26 @@
-import { AlertCircle, RefreshCw, Route } from 'lucide-react'
+import { AlertCircle, RefreshCw, Heart, Route, Loader2, LogIn, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { LineBadge } from '../components/common/LineBadge'
-import { ErrorAlert } from '../components/common/Alerts'
-import { EmptyState } from '../components/common/LoadingStates'
+import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
+import { EmptyState, LoadingSkeletons } from '../components/common/LoadingStates'
 import { PanelCard } from '../components/common/PanelCard'
 import { LineDetailLayout } from '../components/lines/LineDetailLayout'
+import { SubscriptionModal } from '../components/common/SubscriptionModal'
+import { useAppContext } from '../context/AppContext'
 import { transitApi } from '../services/transitApi'
+import { ReviewForm } from '../components/reviews/ReviewForm'
+import { ReviewsList } from '../components/reviews/ReviewsList'
+import { StarRating } from '../components/reviews/StarRating'
 
-const typeFilters = ['all', 'tram', 'bus', 'trolleybus', 'minibus']
+const typeFilterKeys = ['all', 'tram', 'bus', 'trolleybus', 'minibus']
 
 export function LinesPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation('lines')
+  const { isAuthenticated, isLineSubscribed, subscribeToLine, unsubscribeFromLine } = useAppContext()
+
   const [lines, setLines] = useState([])
   const [query, setQuery] = useState('')
   const [type, setType] = useState('all')
@@ -29,6 +38,36 @@ export function LinesPage() {
   const [detailError, setDetailError] = useState(null)
   const [directionError, setDirectionError] = useState(null)
 
+  const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false)
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false)
+  const [subscribing, setSubscribing] = useState(false)
+  const [subscriptionMsg, setSubscriptionMsg] = useState(null)
+  const { session } = useAppContext()
+
+  const [reviewSummary, setReviewSummary] = useState(null)
+  const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0)
+
+  useEffect(() => {
+    if (!selectedLineId) return
+    setReviewSummary(null)
+
+    let active = true
+    const loadSummary = async () => {
+      try {
+        const summary = await transitApi.getReviewSummary(selectedLineId)
+        if (active) setReviewSummary(summary)
+      } catch {
+        if (active) setReviewSummary(null)
+      }
+    }
+
+    loadSummary()
+
+    return () => {
+      active = false
+    }
+  }, [selectedLineId, reviewsRefreshKey])
+
   const detailMode = selectedLineId !== null
 
   useEffect(() => {
@@ -43,27 +82,20 @@ export function LinesPage() {
           vehicleType: type === 'all' ? '' : type,
           activeOnly: true,
         })
-        if (active) {
-          setLines(response)
-        }
+        if (active) setLines(response)
       } catch (err) {
         if (active) {
-          setError(err.message || 'Failed to load lines')
+          setError(err.message || t('failed'))
           setLines([])
         }
       } finally {
-        if (active) {
-          setLoading(false)
-        }
+        if (active) setLoading(false)
       }
     }
 
     fetchLines()
-
-    return () => {
-      active = false
-    }
-  }, [query, type, linesRetryKey])
+    return () => { active = false }
+  }, [query, type, linesRetryKey, t])
 
   useEffect(() => {
     if (!selectedLineId) return
@@ -85,21 +117,15 @@ export function LinesPage() {
 
         if (directionResponse.length > 0) {
           let foundDirectionId = null
-
           for (const direction of directionResponse) {
             const dPolyline = await transitApi.getDirectionPolyline(direction.id)
             if (!active) return
-
             if (dPolyline && dPolyline.length > 1) {
               foundDirectionId = direction.id
               break
             }
           }
-
-          if (!foundDirectionId) {
-            foundDirectionId = directionResponse[0].id
-          }
-
+          if (!foundDirectionId) foundDirectionId = directionResponse[0].id
           setSelectedDirectionId(foundDirectionId)
         } else {
           setSelectedDirectionId(null)
@@ -108,7 +134,7 @@ export function LinesPage() {
         }
       } catch (err) {
         if (active) {
-          setDetailError(err.message || 'Failed to load line details')
+          setDetailError(err.message || t('failed'))
           setSelectedLine(null)
           setDirections([])
           setSelectedDirectionId(null)
@@ -116,18 +142,13 @@ export function LinesPage() {
           setPolyline([])
         }
       } finally {
-        if (active) {
-          setDetailLoading(false)
-        }
+        if (active) setDetailLoading(false)
       }
     }
 
     fetchLineDetail()
-
-    return () => {
-      active = false
-    }
-  }, [selectedLineId])
+    return () => { active = false }
+  }, [selectedLineId, t])
 
   useEffect(() => {
     if (!selectedDirectionId) return
@@ -145,7 +166,7 @@ export function LinesPage() {
         setPolyline(directionPolyline)
       } catch (err) {
         if (active) {
-          setDirectionError(err.message || 'Failed to load direction data')
+          setDirectionError(err.message || t('failed'))
           setStops([])
           setPolyline([])
         }
@@ -153,13 +174,17 @@ export function LinesPage() {
     }
 
     fetchDirectionData()
+    return () => { active = false }
+  }, [selectedDirectionId, t])
 
-    return () => {
-      active = false
-    }
-  }, [selectedDirectionId])
+  const countLabel = useMemo(() => {
+    return lines.length === 1 ? t('line_count_one', { count: 1 }) : t('line_count_other', { count: lines.length })
+  }, [lines.length, t])
 
-  const countLabel = useMemo(() => `${lines.length} line${lines.length === 1 ? '' : 's'}`, [lines])
+  const subscribed = useMemo(
+    () => selectedLineId != null && isLineSubscribed(selectedLineId),
+    [isLineSubscribed, selectedLineId],
+  )
 
   const openLineDetail = (lineId) => {
     setSelectedLineId(lineId)
@@ -184,36 +209,72 @@ export function LinesPage() {
     setLinesRetryKey((current) => current + 1)
   }
 
+  async function handleHeartClick() {
+    setSubscriptionMsg(null)
+    if (!isAuthenticated) {
+      setLoginPromptOpen(true)
+      return
+    }
+    if (subscribed) {
+      setSubscribing(true)
+      try {
+        await unsubscribeFromLine(selectedLineId)
+        setSubscriptionMsg({ type: 'success', text: t('unsubscribed_success') })
+      } catch (err) {
+        setSubscriptionMsg({ type: 'error', text: err.message || t('unsubscribed_failed') })
+      } finally {
+        setSubscribing(false)
+      }
+    } else {
+      setSubscriptionModalOpen(true)
+    }
+  }
+
+  async function handleSubscriptionSubmit(data) {
+    if (!selectedLine || !session?.userId) return
+    await subscribeToLine(
+      selectedLineId,
+      selectedLine.code,
+      selectedLine.name,
+      data.startInterval,
+      data.endInterval,
+      data.daysOfWeek,
+    )
+  }
+
   return (
     <div className="space-y-4">
+      {subscriptionMsg && subscriptionMsg.type === 'success' && (
+        <SuccessAlert message={subscriptionMsg.text} onDismiss={() => setSubscriptionMsg(null)} />
+      )}
+      {subscriptionMsg && subscriptionMsg.type === 'error' && (
+        <ErrorAlert error={subscriptionMsg.text} onDismiss={() => setSubscriptionMsg(null)} />
+      )}
+
       {!detailMode ? (
         <PanelCard tone="soft">
-          <h2 className="text-xl font-semibold text-ink">Line Search</h2>
-          <p className="mt-1 text-sm text-muted">Browse all active public transport lines in Sarajevo.</p>
+          <h2 className="text-xl font-semibold text-ink">{t('title')}</h2>
+          <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
 
           <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
-            <label htmlFor="line-search" className="sr-only">
-              Search lines
-            </label>
+            <label htmlFor="line-search" className="sr-only">{t('search_aria')}</label>
             <input
               id="line-search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by line number or name"
+              placeholder={t('search_placeholder')}
               className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
             />
-            <label htmlFor="line-type-filter" className="sr-only">
-              Filter line type
-            </label>
+            <label htmlFor="line-type-filter" className="sr-only">{t('filter_type_aria')}</label>
             <select
               id="line-type-filter"
               value={type}
               onChange={(event) => setType(event.target.value)}
               className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none ring-accent/30 focus:ring"
             >
-              {typeFilters.map((option) => (
+              {typeFilterKeys.map((option) => (
                 <option key={option} value={option}>
-                  {option === 'all' ? 'All types' : option}
+                  {option === 'all' ? t('all_types') : t(`type_${option}`)}
                 </option>
               ))}
             </select>
@@ -223,36 +284,19 @@ export function LinesPage() {
         </PanelCard>
       ) : null}
 
-      {!detailMode && error && (
-        <ErrorAlert
-          error={error}
-          onDismiss={() => setError(null)}
-        />
-      )}
-
-      {detailMode && detailError && (
-        <ErrorAlert
-          error={detailError}
-          onDismiss={() => setDetailError(null)}
-        />
-      )}
-
-      {detailMode && directionError && (
-        <ErrorAlert
-          error={directionError}
-          onDismiss={() => setDirectionError(null)}
-        />
-      )}
+      {!detailMode && error && <ErrorAlert error={error} onDismiss={() => setError(null)} />}
+      {detailMode && detailError && <ErrorAlert error={detailError} onDismiss={() => setDetailError(null)} />}
+      {detailMode && directionError && <ErrorAlert error={directionError} onDismiss={() => setDirectionError(null)} />}
 
       {!detailMode ? (
         <div className="flex flex-col gap-4 sm:flex-row">
           <PanelCard className="min-h-[520px] sm:w-1/3 sm:shrink-0">
-            <h3 className="mb-3 text-base font-semibold text-ink">Matching lines</h3>
-            {loading ? <p className="text-sm text-muted">Loading lines...</p> : null}
+            <h3 className="mb-3 text-base font-semibold text-ink">{t('matching_lines')}</h3>
+            {loading ? <LoadingSkeletons count={5} /> : null}
             {!loading && error ? (
               <EmptyState
                 icon={AlertCircle}
-                title="Failed to load lines"
+                title={t('failed')}
                 description={error}
                 action={
                   <button
@@ -260,13 +304,15 @@ export function LinesPage() {
                     onClick={handleRetry}
                     className="inline-flex items-center gap-2 rounded-lg border border-accent bg-accent px-3 py-2 text-sm font-medium text-white transition hover:bg-accent/90"
                   >
-                    <RefreshCw size={14} />
-                    Try again
+                    <RefreshCw size={14} aria-hidden="true" />
+                    {t('failed')}
                   </button>
                 }
               />
             ) : null}
-            {!loading && !error && lines.length === 0 ? <p className="text-sm text-muted">No lines match your search.</p> : null}
+            {!loading && !error && lines.length === 0 ? (
+              <p className="text-sm text-muted">{t('no_match')}</p>
+            ) : null}
 
             <div className="grid gap-2">
               {!error && lines.map((line) => (
@@ -284,11 +330,11 @@ export function LinesPage() {
           </PanelCard>
 
           <PanelCard className="min-h-[520px] flex-1">
-            <h3 className="mb-3 text-base font-semibold text-ink">Route map</h3>
+            <h3 className="mb-3 text-base font-semibold text-ink">{t('route_map')}</h3>
             <div className="flex h-[460px] items-center justify-center rounded-lg border border-dashed border-border bg-surface-soft px-4 text-center">
               <div>
-                <Route className="mx-auto mb-2 text-muted" size={22} />
-                <p className="text-sm text-muted">Select a line to preview its route map and stations.</p>
+                <Route className="mx-auto mb-2 text-muted" size={22} aria-hidden="true" />
+                <p className="text-sm text-muted">{t('select_line_hint')}</p>
               </div>
             </div>
           </PanelCard>
@@ -303,20 +349,127 @@ export function LinesPage() {
           polyline={polyline}
           detailLoading={detailLoading}
           onBack={backToSearch}
-          backLabel="Back to search"
+          backLabel={t('back_to_search')}
           onStopClick={(stopId) => navigate(`/stops/${stopId}`)}
-          subtitle="Direction-aware stop list and route preview."
+          subtitle={t('direction_hint')}
           directionAction={(
             <button
               type="button"
-              onClick={() => alert('Add to favorites functionality is not implemented yet.')}
-              className="inline-flex items-center gap-2 rounded-panel border border-border bg-surface px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-alt"
+              onClick={handleHeartClick}
+              disabled={subscribing}
+              className={`inline-flex items-center gap-2 rounded-panel border px-3 py-2 text-sm font-medium transition disabled:opacity-60 ${
+                subscribed
+                  ? 'border-accent bg-accent text-white'
+                  : 'border-border text-ink hover:bg-surface-alt'
+              }`}
             >
-              <RefreshCw size={14} />
-              Add to favorites
+              {subscribing ? (
+                <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+              ) : (
+                <Heart size={14} fill={subscribed ? 'currentColor' : 'none'} aria-hidden="true" />
+              )}
+              {subscribing ? t('unsubscribing') : subscribed ? t('subscribed') : t('subscribe')}
             </button>
           )}
         />
+      )}
+
+      {/* Reviews section — shown when a line is selected */}
+      {detailMode && (
+        <PanelCard tone="default">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-ink">{t('review_section_title')}</h3>
+              {reviewSummary && reviewSummary.reviewCount > 0 ? (
+                <div className="mt-1 flex items-center gap-2">
+                  <StarRating value={reviewSummary.averageRating} readOnly size={16} />
+                  <span className="text-sm font-medium text-ink">
+                    {Number(reviewSummary.averageRating).toFixed(1)}
+                  </span>
+                  <span className="text-sm text-muted">
+                    ({reviewSummary.reviewCount === 1
+                      ? t('review_count_one', { count: reviewSummary.reviewCount })
+                      : t('review_count_other', { count: reviewSummary.reviewCount })})
+                  </span>
+                </div>
+              ) : (
+                <p className="mt-1 text-sm text-muted">{t('review_no_rating_yet')}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <ReviewsList lineId={selectedLineId} refreshKey={reviewsRefreshKey} />
+          </div>
+
+          <div className="mt-5 border-t border-border pt-4">
+            {isAuthenticated && session?.userId ? (
+              <>
+                <h4 className="mb-3 text-sm font-semibold text-ink">{t('review_write_title')}</h4>
+                <ReviewForm
+                  lineId={selectedLineId}
+                  reviewerUserId={session.userId}
+                  onSuccess={() => setReviewsRefreshKey((k) => k + 1)}
+                />
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Star size={18} className="text-amber-400" fill="currentColor" aria-hidden="true" />
+                <p className="text-sm text-muted">
+                  {t('review_login_prompt')}{' '}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/auth')}
+                    className="text-accent underline-offset-2 hover:underline"
+                  >
+                    {t('go_to_login')}
+                  </button>
+                </p>
+              </div>
+            )}
+          </div>
+        </PanelCard>
+      )}
+
+      <SubscriptionModal
+        isOpen={subscriptionModalOpen}
+        onClose={() => setSubscriptionModalOpen(false)}
+        onSubmit={handleSubscriptionSubmit}
+        lineName={selectedLine?.name}
+      />
+
+      {loginPromptOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setLoginPromptOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-panel border border-border bg-surface p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <LogIn size={18} className="text-accent" aria-hidden="true" />
+              <h2 className="text-base font-semibold text-ink">{t('login_required')}</h2>
+            </div>
+            <p className="mb-5 mt-2 text-sm text-muted">{t('login_required_msg')}</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/auth')}
+                className="flex-1 rounded-panel border border-accent bg-accent py-2 text-sm font-medium text-white"
+              >
+                {t('go_to_login')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoginPromptOpen(false)}
+                className="flex-1 rounded-panel border border-border py-2 text-sm font-medium text-ink hover:bg-surface-alt"
+              >
+                {t('cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

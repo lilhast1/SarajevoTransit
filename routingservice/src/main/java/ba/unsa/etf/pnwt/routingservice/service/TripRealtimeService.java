@@ -5,13 +5,16 @@ import ba.unsa.etf.pnwt.routingservice.dto.TripDelayUpsertRequest;
 import ba.unsa.etf.pnwt.routingservice.event.TripDelayChangedEvent;
 import ba.unsa.etf.pnwt.routingservice.exception.ResourceNotFoundException;
 import ba.unsa.etf.pnwt.routingservice.messaging.TimetableEventPublisher;
+import ba.unsa.etf.pnwt.routingservice.model.ActiveDelay;
 import ba.unsa.etf.pnwt.routingservice.model.Line;
 import ba.unsa.etf.pnwt.routingservice.model.Timetable;
 import ba.unsa.etf.pnwt.routingservice.model.DirectionStation;
 import ba.unsa.etf.pnwt.routingservice.realtime.TripDelayEntry;
+import ba.unsa.etf.pnwt.routingservice.repository.ActiveDelayRepository;
 import ba.unsa.etf.pnwt.routingservice.repository.DirectionStationRepository;
 import ba.unsa.etf.pnwt.routingservice.repository.TimetableRepository;
 import com.google.transit.realtime.GtfsRealtime;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,16 +36,30 @@ public class TripRealtimeService {
     private final TimetableRepository timetableRepository;
     private final DirectionStationRepository directionStationRepository;
     private final TimetableEventPublisher timetableEventPublisher;
+    private final ActiveDelayRepository activeDelayRepository;
     private final Map<String, TripDelayEntry> delays = new ConcurrentHashMap<>();
 
     public TripRealtimeService(
             TimetableRepository timetableRepository,
             DirectionStationRepository directionStationRepository,
-            TimetableEventPublisher timetableEventPublisher
+            TimetableEventPublisher timetableEventPublisher,
+            ActiveDelayRepository activeDelayRepository
     ) {
         this.timetableRepository = timetableRepository;
         this.directionStationRepository = directionStationRepository;
         this.timetableEventPublisher = timetableEventPublisher;
+        this.activeDelayRepository = activeDelayRepository;
+    }
+
+    @PostConstruct
+    public void loadPersistedDelays() {
+        activeDelayRepository.findAll().forEach(ad -> {
+            TripDelayEntry entry = new TripDelayEntry(
+                    ad.getTimetableId(), ad.getDirectionId(), ad.getServiceDate(),
+                    ad.getDelaySeconds(), ad.getReason(),
+                    ad.getLineId(), ad.getLineCode(), ad.getLineName(), ad.getUpdatedAt());
+            delays.put(key(ad.getTimetableId(), ad.getServiceDate()), entry);
+        });
     }
 
     @Transactional
@@ -64,6 +81,10 @@ public class TripRealtimeService {
                 now
         );
         delays.put(key(timetable.getId(), request.getServiceDate()), entry);
+        activeDelayRepository.save(new ActiveDelay(
+                timetable.getId(), request.getServiceDate(), timetable.getDirection().getId(),
+                request.getDelaySeconds(), request.getReason(),
+                line.getId().longValue(), line.getCode(), line.getName(), now));
 
         timetableEventPublisher.publishTripDelayChanged(new TripDelayChangedEvent(
                 UUID.randomUUID().toString(),
@@ -87,6 +108,7 @@ public class TripRealtimeService {
         Timetable timetable = findTimetable(timetableId);
         Line line = timetable.getLine();
         delays.remove(key(timetableId, serviceDate));
+        activeDelayRepository.deleteById(new ActiveDelay.PK(timetableId, serviceDate));
 
         timetableEventPublisher.publishTripDelayChanged(new TripDelayChangedEvent(
                 UUID.randomUUID().toString(),

@@ -5,9 +5,11 @@
 @tailwind utilities;
 
 :root {
-  --accent: oklch(0.61 0.19 23);
-  --accent-soft: oklch(0.93 0.03 22);
-  --accent-strong: oklch(0.54 0.2 22);
+  --accent: oklch(0.50 0.18 265);
+  --accent-soft: oklch(0.92 0.04 265);
+  --accent-strong: oklch(0.42 0.2 265);
+  --accent-subtle: oklch(0.82 0.06 265);
+  --accent-muted: oklch(0.95 0.02 265);
   --surface: oklch(0.98 0.003 228);
   --surface-soft: oklch(0.95 0.008 228);
   --surface-alt: oklch(0.92 0.012 228);
@@ -17,13 +19,19 @@
   --muted: oklch(0.5 0.02 240);
   --line: oklch(0.88 0.02 230);
   --success: oklch(0.65 0.17 155);
+  --success-soft: oklch(0.9 0.06 145);
   --warning: oklch(0.72 0.17 63);
+  --warning-soft: oklch(0.92 0.08 85);
+  --danger: oklch(0.58 0.2 27);
+  --danger-soft: oklch(0.92 0.06 27);
 }
 
 .dark {
-  --accent: oklch(0.67 0.16 22);
-  --accent-soft: oklch(0.25 0.04 20);
-  --accent-strong: oklch(0.59 0.19 22);
+  --accent: oklch(0.62 0.14 265);
+  --accent-soft: oklch(0.24 0.05 265);
+  --accent-strong: oklch(0.54 0.18 265);
+  --accent-subtle: oklch(0.33 0.08 265);
+  --accent-muted: oklch(0.2 0.03 265);
   --surface: oklch(0.18 0.02 240);
   --surface-soft: oklch(0.22 0.02 240);
   --surface-alt: oklch(0.27 0.02 240);
@@ -32,6 +40,9 @@
   --ink: oklch(0.93 0.015 235);
   --muted: oklch(0.74 0.018 236);
   --line: oklch(0.32 0.02 236);
+  --success-soft: oklch(0.22 0.05 145);
+  --warning-soft: oklch(0.24 0.06 85);
+  --danger-soft: oklch(0.24 0.05 27);
 }
 
 * {
@@ -74,4 +85,55 @@ h4 {
   #root {
     background-size: 36px 36px, 36px 36px;
   }
+}
+
+/* Focus rings */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* High contrast mode (manual toggle via .high-contrast on <html>) */
+.high-contrast {
+  --ink: oklch(0.08 0.02 240);
+  --muted: oklch(0.25 0.02 240);
+  --border: oklch(0.5 0.02 232);
+  --surface-alt: oklch(0.88 0.012 228);
+}
+.high-contrast.dark {
+  --ink: oklch(0.98 0.01 235);
+  --muted: oklch(0.88 0.015 236);
+  --border: oklch(0.6 0.02 238);
+  --surface-alt: oklch(0.32 0.02 240);
+}
+.high-contrast *,
+.high-contrast .dark * {
+  border-width: 2px;
+}
+
+/* System high contrast */
+@media (prefers-contrast: more) {
+  :root {
+    --ink: oklch(0.08 0.02 240);
+    --muted: oklch(0.25 0.02 240);
+    --border: oklch(0.5 0.02 232);
+  }
+  .dark {
+    --ink: oklch(0.98 0.01 235);
+    --muted: oklch(0.88 0.015 236);
+    --border: oklch(0.6 0.02 238);
+  }
+}
+
+/* Screen-reader-only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

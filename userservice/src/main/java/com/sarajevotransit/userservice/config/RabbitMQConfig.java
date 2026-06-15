@@ -13,9 +13,11 @@ public class RabbitMQConfig {
     public static final String EXCHANGE = "ticket.saga.exchange";
 
     public static final String ROUTING_USER_UPDATED = "ticket.user.updated";
-    public static final String ROUTING_USER_FAILED  = "ticket.user.failed";
+    public static final String ROUTING_USER_FAILED = "ticket.user.failed";
+    public static final String ROUTING_RIDE_VALIDATED = "ticket.ride.validated";
 
     public static final String QUEUE_USER_PURCHASE_INITIATED = "ticket-user-update-queue";
+    public static final String QUEUE_USER_RIDE_VALIDATED = "ticket-user-ride-validated-queue";
 
     @Bean
     public TopicExchange ticketSagaExchange() {
@@ -28,8 +30,18 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue userRideValidatedQueue() {
+        return QueueBuilder.durable(QUEUE_USER_RIDE_VALIDATED).build();
+    }
+
+    @Bean
     public Binding bindPurchaseInitiated(Queue userPurchaseInitiatedQueue, TopicExchange ticketSagaExchange) {
         return BindingBuilder.bind(userPurchaseInitiatedQueue).to(ticketSagaExchange).with("ticket.purchase.initiated");
+    }
+
+    @Bean
+    public Binding bindRideValidated(Queue userRideValidatedQueue, TopicExchange ticketSagaExchange) {
+        return BindingBuilder.bind(userRideValidatedQueue).to(ticketSagaExchange).with(ROUTING_RIDE_VALIDATED);
     }
 
     @Bean

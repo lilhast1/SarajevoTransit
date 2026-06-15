@@ -73,7 +73,7 @@ public class MoneymanServiceTest {
             return ticket;
         });
 
-        TicketPurchaseRequest request = new TicketPurchaseRequest(1L, TicketType.SINGLE, 1L);
+        TicketPurchaseRequest request = new TicketPurchaseRequest(1L, TicketType.SINGLE, 1L, null, null);
         Ticket savedTicket = moneymanService.purchaseTicket(request);
 
         assertNotNull(savedTicket);
@@ -150,7 +150,7 @@ public class MoneymanServiceTest {
     void purchaseTicket_InvalidPaymentMethod_ThrowsResourceNotFoundException() {
         when(paymentMethodRepository.findById(1L)).thenReturn(Optional.empty());
 
-        TicketPurchaseRequest request = new TicketPurchaseRequest(1L, TicketType.SINGLE, 1L);
+        TicketPurchaseRequest request = new TicketPurchaseRequest(1L, TicketType.SINGLE, 1L, null, null);
 
         Exception exception = assertThrows(RuntimeException.class, () -> moneymanService.purchaseTicket(request));
         assertTrue(exception.getMessage().contains("Valid payment method not found"));

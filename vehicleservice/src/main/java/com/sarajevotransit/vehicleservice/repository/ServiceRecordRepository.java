@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.sarajevotransit.vehicleservice.model.ServiceRecord;
 
@@ -25,4 +27,10 @@ public interface ServiceRecordRepository extends JpaRepository<ServiceRecord, Lo
     // Check if any open (unfinished) record exists — good for validation before
     // status change
     boolean existsByVehicleIdAndServiceEndIsNull(Long vehicleId);
+
+    @Query("SELECT sr FROM ServiceRecord sr WHERE sr.serviceStart <= :now AND (sr.serviceEnd IS NULL OR sr.serviceEnd > :now)")
+    List<ServiceRecord> findCurrentlyActiveServiceRecords(@Param("now") LocalDateTime now);
+
+    @Query("SELECT sr FROM ServiceRecord sr WHERE sr.serviceEnd IS NOT NULL AND sr.serviceEnd > :from AND sr.serviceEnd <= :to")
+    List<ServiceRecord> findRecentlyEndedServiceRecords(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 }

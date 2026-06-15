@@ -57,4 +57,20 @@ public interface ProblemReportRepository extends JpaRepository<ProblemReport, Lo
 
     @EntityGraph(attributePaths = "photoUrls")
     List<ProblemReport> findByStatusAndReporterUserIdOrderByCreatedAtDesc(ReportStatus status, Long reporterUserId);
+
+    @Query("SELECT pr.category AS cat, COUNT(pr) AS cnt FROM ProblemReport pr GROUP BY pr.category")
+    List<Object[]> countByCategory();
+
+    @Query("SELECT pr.status AS status, COUNT(pr) AS cnt FROM ProblemReport pr GROUP BY pr.status")
+    List<Object[]> countByReportStatus();
+
+    @Query(value = """
+            SELECT line_id AS lineId, COUNT(*) AS cnt
+            FROM incident_reports
+            WHERE line_id IS NOT NULL
+            GROUP BY line_id
+            ORDER BY cnt DESC
+            LIMIT 5
+            """, nativeQuery = true)
+    List<Object[]> topReportedLineIds();
 }

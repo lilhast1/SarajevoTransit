@@ -54,6 +54,7 @@ public class RoutingCrudService {
     private final VehicleTypeRepository vehicleTypeRepository;
     private final RoutingMapper mapper;
     private final TimetableEventPublisher timetableEventPublisher;
+    private final OtpRebuildService otpRebuildService;
 
     public RoutingCrudService(
             LineRepository lineRepository,
@@ -64,7 +65,8 @@ public class RoutingCrudService {
             RoutePointRepository routePointRepository,
             VehicleTypeRepository vehicleTypeRepository,
             RoutingMapper mapper,
-            TimetableEventPublisher timetableEventPublisher
+            TimetableEventPublisher timetableEventPublisher,
+            OtpRebuildService otpRebuildService
     ) {
         this.lineRepository = lineRepository;
         this.directionRepository = directionRepository;
@@ -75,6 +77,7 @@ public class RoutingCrudService {
         this.vehicleTypeRepository = vehicleTypeRepository;
         this.mapper = mapper;
         this.timetableEventPublisher = timetableEventPublisher;
+        this.otpRebuildService = otpRebuildService;
     }
 
     public List<LineResponse> getLines(Boolean activeOnly, Short vehicleTypeId) {
@@ -101,7 +104,9 @@ public class RoutingCrudService {
         VehicleType vehicleType = findVehicleType(request.getVehicleTypeId());
         Line line = new Line();
         applyLineRequest(line, request, vehicleType);
-        return mapper.toLineResponse(lineRepository.save(line));
+        LineResponse response = mapper.toLineResponse(lineRepository.save(line));
+        otpRebuildService.markRebuildNeeded();
+        return response;
     }
 
     public LineResponse updateLine(Integer id, LineRequest request) {
@@ -118,12 +123,14 @@ public class RoutingCrudService {
                 "LINE_UPDATED",
                 Instant.now()
         ));
+        otpRebuildService.markRebuildNeeded();
         return mapper.toLineResponse(saved);
     }
 
     public void deleteLine(Integer id) {
         Line line = findLine(id);
         lineRepository.delete(line);
+        otpRebuildService.markRebuildNeeded();
     }
 
     public List<DirectionResponse> getDirections(Boolean activeOnly, Integer lineId) {
@@ -150,7 +157,9 @@ public class RoutingCrudService {
 
         Direction direction = new Direction();
         applyDirectionRequest(direction, request, line);
-        return mapper.toDirectionResponse(directionRepository.save(direction));
+        DirectionResponse response = mapper.toDirectionResponse(directionRepository.save(direction));
+        otpRebuildService.markRebuildNeeded();
+        return response;
     }
 
     public DirectionResponse updateDirection(Integer id, DirectionRequest request) {
@@ -167,12 +176,14 @@ public class RoutingCrudService {
                 "DIRECTION_UPDATED",
                 Instant.now()
         ));
+        otpRebuildService.markRebuildNeeded();
         return mapper.toDirectionResponse(saved);
     }
 
     public void deleteDirection(Integer id) {
         Direction direction = findDirection(id);
         directionRepository.delete(direction);
+        otpRebuildService.markRebuildNeeded();
     }
 
     public List<StationResponse> getStations(Boolean activeOnly, String name) {
@@ -197,19 +208,24 @@ public class RoutingCrudService {
         validateStationExternalIdOnCreate(request.getExternalId());
         Station station = new Station();
         applyStationRequest(station, request);
-        return mapper.toStationResponse(stationRepository.save(station));
+        StationResponse response = mapper.toStationResponse(stationRepository.save(station));
+        otpRebuildService.markRebuildNeeded();
+        return response;
     }
 
     public StationResponse updateStation(Integer id, StationRequest request) {
         Station station = findStation(id);
         validateStationExternalIdOnUpdate(id, request.getExternalId());
         applyStationRequest(station, request);
-        return mapper.toStationResponse(stationRepository.save(station));
+        StationResponse response = mapper.toStationResponse(stationRepository.save(station));
+        otpRebuildService.markRebuildNeeded();
+        return response;
     }
 
     public void deleteStation(Integer id) {
         Station station = findStation(id);
         stationRepository.delete(station);
+        otpRebuildService.markRebuildNeeded();
     }
 
     public List<TimetableResponse> getTimetables(Integer lineId, Integer directionId, Boolean activeOnly) {
@@ -242,7 +258,9 @@ public class RoutingCrudService {
 
         Timetable timetable = new Timetable();
         applyTimetableRequest(timetable, request, direction, line);
-        return mapper.toTimetableResponse(timetableRepository.save(timetable));
+        TimetableResponse response = mapper.toTimetableResponse(timetableRepository.save(timetable));
+        otpRebuildService.markRebuildNeeded();
+        return response;
     }
 
     public TimetableResponse updateTimetable(Integer id, TimetableRequest request) {
@@ -261,12 +279,14 @@ public class RoutingCrudService {
                 "TIMETABLE_UPDATED",
                 Instant.now()
         ));
+        otpRebuildService.markRebuildNeeded();
         return mapper.toTimetableResponse(saved);
     }
 
     public void deleteTimetable(Integer id) {
         Timetable timetable = findTimetable(id);
         timetableRepository.delete(timetable);
+        otpRebuildService.markRebuildNeeded();
     }
 
     public List<DirectionStationResponse> getDirectionStationsByDirection(Integer directionId) {
@@ -288,7 +308,9 @@ public class RoutingCrudService {
         directionStation.setStopSequence(request.getStopSequence());
         directionStation.setTravelTimeFromPrevSeconds(request.getTravelTimeFromPrevSeconds());
 
-        return mapper.toDirectionStationResponse(directionStationRepository.save(directionStation));
+        DirectionStationResponse response = mapper.toDirectionStationResponse(directionStationRepository.save(directionStation));
+        otpRebuildService.markRebuildNeeded();
+        return response;
     }
 
     public DirectionStationResponse updateDirectionStation(Integer id, DirectionStationRequest request) {
@@ -304,13 +326,16 @@ public class RoutingCrudService {
         directionStation.setStopSequence(request.getStopSequence());
         directionStation.setTravelTimeFromPrevSeconds(request.getTravelTimeFromPrevSeconds());
 
-        return mapper.toDirectionStationResponse(directionStationRepository.save(directionStation));
+        DirectionStationResponse response = mapper.toDirectionStationResponse(directionStationRepository.save(directionStation));
+        otpRebuildService.markRebuildNeeded();
+        return response;
     }
 
     public void deleteDirectionStation(Integer id) {
         DirectionStation directionStation = directionStationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("DirectionStation not found: id=" + id));
         directionStationRepository.delete(directionStation);
+        otpRebuildService.markRebuildNeeded();
     }
 
     public List<RoutePointResponse> getRoutePointsByDirection(Integer directionId) {
@@ -356,7 +381,9 @@ public class RoutingCrudService {
         routePoint.setLatitude(request.getLatitude());
         routePoint.setLongitude(request.getLongitude());
 
-        return mapper.toRoutePointResponse(routePointRepository.save(routePoint));
+        RoutePointResponse response = mapper.toRoutePointResponse(routePointRepository.save(routePoint));
+        otpRebuildService.markRebuildNeeded();
+        return response;
     }
 
     public RoutePointResponse updateRoutePoint(Integer id, RoutePointRequest request) {
@@ -371,13 +398,16 @@ public class RoutingCrudService {
         routePoint.setLatitude(request.getLatitude());
         routePoint.setLongitude(request.getLongitude());
 
-        return mapper.toRoutePointResponse(routePointRepository.save(routePoint));
+        RoutePointResponse response = mapper.toRoutePointResponse(routePointRepository.save(routePoint));
+        otpRebuildService.markRebuildNeeded();
+        return response;
     }
 
     public void deleteRoutePoint(Integer id) {
         RoutePoint routePoint = routePointRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("RoutePoint not found: id=" + id));
         routePointRepository.delete(routePoint);
+        otpRebuildService.markRebuildNeeded();
     }
 
     private void applyLineRequest(Line line, LineRequest request, VehicleType vehicleType) {

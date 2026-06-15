@@ -55,6 +55,9 @@ class UserServiceTest {
     private LoyaltyTransactionRepository loyaltyTransactionRepository;
 
     @Mock
+    private LoyaltyTierConfigService tierConfigService;
+
+    @Mock
     private Validator validator;
 
     @Mock
@@ -64,7 +67,7 @@ class UserServiceTest {
     private UserPreferenceMapper userPreferenceMapper = new UserPreferenceMapper(modelMapper);
 
     @Spy
-    private UserProfileMapper userProfileMapper = new UserProfileMapper(modelMapper);
+    private UserProfileMapper userProfileMapper = new UserProfileMapper(tierConfigService);
 
     @Spy
     private TravelHistoryMapper travelHistoryMapper = new TravelHistoryMapper(modelMapper);

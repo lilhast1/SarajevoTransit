@@ -1,6 +1,7 @@
 import { ArrowLeft, Route } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { LineBadge } from '../common/LineBadge'
+import { LoadingSpinner } from '../common/LoadingStates'
 import { PanelCard } from '../common/PanelCard'
 import { TransitMap } from '../map/TransitMap'
 import { getVehicleTypeMetaByName } from '../../constants/vehicleColors'
@@ -116,7 +117,7 @@ export function LineDetailLayout({
       <div className="flex flex-col gap-4 sm:flex-row">
         <PanelCard className="h-[520px] sm:w-1/3 sm:shrink-0 flex flex-col">
           <h3 className="mb-3 text-base font-semibold text-ink">Stations</h3>
-          {detailLoading ? <p className="text-sm text-muted">Loading line details...</p> : null}
+          {detailLoading ? <LoadingSpinner label="Loading line details..." /> : null}
 
           {!detailLoading && stops.length === 0 ? (
             <p className="text-sm text-muted">No stations available for this direction.</p>
@@ -158,7 +159,7 @@ export function LineDetailLayout({
 
           {detailLoading ? (
             <div className="flex h-[460px] items-center justify-center rounded-lg border border-border bg-surface-soft">
-              <p className="text-sm text-muted">Loading route map...</p>
+              <LoadingSpinner label="Loading route map..." />
             </div>
           ) : isPolylineEmpty ? (
             <div className="flex h-[460px] flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface-soft px-4 text-center">

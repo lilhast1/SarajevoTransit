@@ -10,7 +10,6 @@ import com.sarajevotransit.otpproxyservice.dto.StopLinesResponse;
 import com.sarajevotransit.otpproxyservice.dto.OtpStopDeparturesGraphQlResponse;
 import com.sarajevotransit.otpproxyservice.dto.StopDeparturesResponse;
 import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -33,17 +32,20 @@ public class OtpProxyService {
     private static final Pattern MODE_PATTERN = Pattern.compile("[A-Z_]+");
 
     private final RestClient restClient;
+    private final OtpColorState otpColorState;
 
-    @Value("${otp.base-url}")
-    private String otpBaseUrl;
-
-    public OtpProxyService(RestClient restClient) {
+    public OtpProxyService(RestClient restClient, OtpColorState otpColorState) {
         this.restClient = restClient;
+        this.otpColorState = otpColorState;
+    }
+
+    private String getOtpBaseUrl() {
+        return otpColorState.getActiveUrl();
     }
 
     public StopsCountResponse fetchStopsCount() {
         OtpGraphQlResponse response = restClient.post()
-                .uri(otpBaseUrl + "/otp/routers/default/index/graphql")
+                .uri(getOtpBaseUrl() + "/otp/routers/default/index/graphql")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("query", STOPS_QUERY))
                 .retrieve()
@@ -59,7 +61,7 @@ public class OtpProxyService {
 
     public StopLinesResponse fetchStopLines(String stopId) {
         OtpStopLinesGraphQlResponse response = restClient.post()
-                .uri(otpBaseUrl + "/otp/routers/default/index/graphql")
+                .uri(getOtpBaseUrl() + "/otp/routers/default/index/graphql")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of(
                         "query", STOP_LINES_QUERY,
@@ -88,7 +90,7 @@ public class OtpProxyService {
 
     public StopDeparturesResponse fetchStopDepartures(String stopId, int limit) {
         OtpStopDeparturesGraphQlResponse response = restClient.post()
-                .uri(otpBaseUrl + "/otp/routers/default/index/graphql")
+                .uri(getOtpBaseUrl() + "/otp/routers/default/index/graphql")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of(
                         "query", STOP_DEPARTURES_QUERY,
@@ -158,7 +160,7 @@ public class OtpProxyService {
         );
 
         OtpPlanGraphQlResponse graphQlResponse = restClient.post()
-                .uri(otpBaseUrl + "/otp/routers/default/index/graphql")
+                .uri(getOtpBaseUrl() + "/otp/routers/default/index/graphql")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("query", query))
                 .retrieve()
@@ -201,6 +203,17 @@ public class OtpProxyService {
                         mappedLeg.setEndTime(toEpochMillis(leg.getEnd() != null ? leg.getEnd().getScheduledTime() : null));
                         mappedLeg.setDistanceMeters(leg.getDistance());
                         mappedLeg.setPoints(leg.getLegGeometry() != null ? leg.getLegGeometry().getPoints() : null);
+                        if (leg.getStopCalls() != null) {
+                            mappedLeg.setVisitedStops(leg.getStopCalls().stream()
+                                    .filter(sc -> sc.getStopLocation() != null)
+                                    .map(sc -> {
+                                        var vs = new OptimalRouteResponse.VisitedStop();
+                                        vs.setGtfsId(sc.getStopLocation().getGtfsId());
+                                        vs.setName(sc.getStopLocation().getName());
+                                        return vs;
+                                    })
+                                    .collect(Collectors.toList()));
+                        }
                         legs.add(mappedLeg);
                     }
                 }
@@ -245,7 +258,7 @@ public class OtpProxyService {
                 + ") {"
                 + " itineraries {"
                 + " duration walkDistance numberOfTransfers"
-                + " legs { mode route { shortName longName type } from { name } to { name } start { scheduledTime } end { scheduledTime } distance legGeometry { points } }"
+                + " legs { mode route { shortName longName type } from { name } to { name } start { scheduledTime } end { scheduledTime } distance legGeometry { points } stopCalls { stopLocation { ... on Stop { gtfsId name } } } }"
                 + " }"
                 + " }"
                 + "}";

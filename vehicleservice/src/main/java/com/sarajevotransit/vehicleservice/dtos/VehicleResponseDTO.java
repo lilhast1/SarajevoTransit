@@ -20,5 +20,10 @@ public class VehicleResponseDTO {
     Double lastLat;
     Double lastLon;
     LocalDateTime lastGpsUpdate;
+    Long assignedLineId;
+    String assignedLineCode;
+    String assignedLineName;
+    Long assignedDriverId;
+    Integer serviceCycleIntervalDays;
     Long version;
 }

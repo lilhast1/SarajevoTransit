@@ -11,6 +11,8 @@ import com.sarajevotransit.userservice.dto.UserPreferenceResponse;
 import com.sarajevotransit.userservice.dto.UserProfileResponse;
 import com.sarajevotransit.userservice.dto.UserSummaryResponse;
 import com.sarajevotransit.userservice.exception.ForbiddenException;
+import com.sarajevotransit.userservice.model.UserRole;
+import com.sarajevotransit.userservice.repository.UserProfileRepository;
 import com.sarajevotransit.userservice.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -49,6 +51,7 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final UserProfileRepository userProfileRepository;
     private final HttpServletRequest httpRequest;
 
     @PostMapping
@@ -179,6 +182,32 @@ public class UserController {
             @RequestParam(defaultValue = "3") @Min(1) @Max(10) int limit) {
         requireOwnerOrAdmin(userId);
         return userService.getPersonalizedLineSuggestions(userId, limit);
+    }
+
+    @GetMapping("/by-role/{role}")
+    @Operation(security = {})
+    public ResponseEntity<List<java.util.Map<String, Object>>> getUsersByRole(@PathVariable UserRole role) {
+        var users = userProfileRepository.findByRole(role);
+        var result = users.stream()
+                .map(u -> java.util.Map.<String, Object>of(
+                        "id", u.getId(),
+                        "email", u.getEmail(),
+                        "fullName", u.getFullName() != null ? u.getFullName() : ""))
+                .toList();
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/by-role")
+    @Operation(security = {})
+    public ResponseEntity<List<java.util.Map<String, Object>>> getUsersByRoleParam(@RequestParam UserRole role) {
+        var users = userProfileRepository.findByRole(role);
+        var result = users.stream()
+                .map(u -> java.util.Map.<String, Object>of(
+                        "id", u.getId(),
+                        "email", u.getEmail(),
+                        "fullName", u.getFullName() != null ? u.getFullName() : ""))
+                .toList();
+        return ResponseEntity.ok(result);
     }
 
     private void requireOwnerOrAdmin(Long resourceUserId) {

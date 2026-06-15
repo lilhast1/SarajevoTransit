@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { ChevronDown, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 function useDebounce(value, delay) {
   const [debounced, setDebounced] = useState(value)
@@ -35,6 +36,7 @@ export function SearchableSelect({
   placeholder = 'Select…',
   disabled = false,
 }) {
+  const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [asyncItems, setAsyncItems] = useState([])
@@ -109,9 +111,9 @@ export function SearchableSelect({
               onClick={handleClear}
               onKeyDown={(e) => e.key === 'Enter' && handleClear(e)}
               className="rounded p-0.5 text-muted hover:text-ink"
-              aria-label="Clear selection"
+              aria-label={t('clear_selection')}
             >
-              <X size={13} />
+              <X size={13} aria-hidden="true" />
             </span>
           )}
           <ChevronDown size={14} className="text-muted" />
@@ -126,16 +128,16 @@ export function SearchableSelect({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search…"
+              placeholder={t('search_placeholder')}
               className="w-full bg-transparent text-sm text-ink placeholder:text-muted focus:outline-none"
             />
           </div>
           <ul className="max-h-52 overflow-auto py-1">
             {loading && (
-              <li className="px-3 py-2 text-xs text-muted">Loading…</li>
+              <li className="px-3 py-2 text-xs text-muted">{t('loading_long')}</li>
             )}
             {!loading && filtered.length === 0 && (
-              <li className="px-3 py-2 text-xs text-muted">No results</li>
+              <li className="px-3 py-2 text-xs text-muted">{t('no_results')}</li>
             )}
             {!loading && filtered.map((item) => (
               <li

@@ -1,8 +1,9 @@
 package com.sarajevotransit.feedbackservice.client;
 
-import com.sarajevotransit.feedbackservice.exception.BadRequestException;
 import com.sarajevotransit.feedbackservice.exception.ServiceUnavailableException;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
@@ -11,11 +12,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationServiceClient {
+
+    private static final Logger log = LoggerFactory.getLogger(NotificationServiceClient.class);
 
     private final RestClient.Builder restClientBuilder;
     private final LoadBalancerClient loadBalancerClient;
@@ -23,13 +27,23 @@ public class NotificationServiceClient {
     @Value("${service.notification.id:notificationservice}")
     private String notificationServiceId;
 
-    public void notifyReportStatusChange(Long reportId, Long lineId, Long userId, String newStatus) {
-        postNotification(Map.of(
-                "userId", userId,
-                "lineId", lineId,
-                "type", "GENERAL",
-                "title", "Problem report status changed",
-                "content", "Report " + reportId + " is now " + newStatus));
+    public void notifyReportStatusChange(Long reportId, Long lineId, Long userId, String category, String newStatus) {
+        String humanStatus = switch (newStatus) {
+            case "IN_PROGRESS" -> "In Progress";
+            case "RESOLVED"    -> "Resolved";
+            default            -> "Received";
+        };
+        String humanCategory = category == null ? "problem" :
+                category.charAt(0) + category.substring(1).toLowerCase().replace('_', ' ');
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("userId", userId);
+        payload.put("type", "REPORT_STATUS_CHANGE");
+        payload.put("title", "Report status updated to " + humanStatus);
+        payload.put("content", "Your " + humanCategory + " report #" + reportId + " is now " + humanStatus + ".");
+        if (lineId != null) payload.put("lineId", lineId);
+
+        postNotification(payload);
     }
 
     public void notifyModerationFlag(Long reviewId, Long lineId, Long userId) {

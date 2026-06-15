@@ -1,0 +1,13 @@
+{
+  "title": "Users",
+  "subtitle": "View and manage registered users.",
+  "col_id": "ID",
+  "col_name": "Full Name",
+  "col_email": "Email",
+  "col_role": "Role",
+  "col_joined": "Joined",
+  "col_actions": "Actions",
+  "you": "You",
+  "delete": "Delete",
+  "delete_confirm": "Delete this user? This action cannot be undone — all user data will be removed."
+}

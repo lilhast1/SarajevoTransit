@@ -1,7 +1,9 @@
 import { Heart } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { LineBadge } from '../components/common/LineBadge'
+import { ErrorAlert } from '../components/common/Alerts'
 import { PanelCard } from '../components/common/PanelCard'
 import { TransitMap } from '../components/map/TransitMap'
 import { useAppContext } from '../context/AppContext'
@@ -9,12 +11,14 @@ import { transitApi } from '../services/transitApi'
 import { minutesUntil } from '../utils/formatters'
 
 export function StopDetailPage() {
+  const { t } = useTranslation('stops')
   const { id } = useParams()
   const stopId = Number(id)
   const { favorites, toggleFavoriteStop } = useAppContext()
 
   const [stop, setStop] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [departuresLimit, setDeparturesLimit] = useState(5)
   const [loadingMore, setLoadingMore] = useState(false)
 
@@ -62,14 +66,23 @@ export function StopDetailPage() {
   useEffect(() => {
     let active = true
     setLoading(true)
-    transitApi
-      .getStopById(stopId)
-      .then((response) => {
+    setError(null)
+
+    const loadStop = async () => {
+      try {
+        const response = await transitApi.getStopById(stopId)
         if (active) setStop(response)
-      })
-      .finally(() => {
+      } catch (err) {
+        if (active) {
+          setStop(null)
+          setError(err.message || 'Failed to load stop details')
+        }
+      } finally {
         if (active) setLoading(false)
-      })
+      }
+    }
+
+    loadStop()
 
     return () => {
       active = false
@@ -81,17 +94,18 @@ export function StopDetailPage() {
   if (loading) {
     return (
       <PanelCard tone="soft">
-        <p className="text-sm text-muted">Loading stop detail...</p>
+        <p className="text-sm text-muted">{t('loading')}</p>
       </PanelCard>
     )
   }
 
   if (!stop) {
     return (
-      <PanelCard>
-        <p className="text-sm text-muted">Stop not found.</p>
+      <PanelCard className="space-y-3">
+        {error ? <ErrorAlert error={error} /> : null}
+        <p className="text-sm text-muted">{error ? error : t('stop_not_found')}</p>
         <Link to="/stops" className="mt-3 inline-block text-sm font-medium text-accent">
-          Back to stops
+          {t('back')}
         </Link>
       </PanelCard>
     )
@@ -115,14 +129,14 @@ export function StopDetailPage() {
                 : 'border-border text-ink hover:bg-surface-alt'
             }`}
           >
-            <Heart size={16} />
-            {favorite ? 'Favorited' : 'Add to favourites'}
+            <Heart size={16} aria-hidden="true" />
+            {favorite ? t('favourited') : t('add_favourite')}
           </button>
         </div>
       </PanelCard>
 
       <PanelCard>
-        <h3 className="mb-3 text-base font-semibold text-ink">Stop map</h3>
+        <h3 className="mb-3 text-base font-semibold text-ink">{t('stop_map')}</h3>
         <TransitMap
           stops={[stop]}
           polyline={selectedPolyline || []}
@@ -134,7 +148,7 @@ export function StopDetailPage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
         <PanelCard tone="default" className="flex h-[400px] flex-col">
-          <h3 className="shrink-0 text-base font-semibold text-ink">Lines serving this stop</h3>
+          <h3 className="shrink-0 text-base font-semibold text-ink">{t('lines_serving')}</h3>
           <div className="mt-3 grid flex-1 content-start gap-2 overflow-y-auto pr-2">
             {stop.lines.map((line) => (
               console.log(line) ||
@@ -151,7 +165,7 @@ export function StopDetailPage() {
         </PanelCard>
 
         <PanelCard tone="default" className="flex h-[400px] flex-col">
-          <h3 className="shrink-0 text-base font-semibold text-ink">Next departures</h3>
+          <h3 className="shrink-0 text-base font-semibold text-ink">{t('next_departures')}</h3>
           <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-2">
             {stop.departures.map((departure) => (
               <div
@@ -165,7 +179,7 @@ export function StopDetailPage() {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-ink">{departure.departureTime}</p>
-                  <p className="text-xs text-muted">in {minutesUntil(departure.departureTime)} min</p>
+                  <p className="text-xs text-muted">{t('in_minutes', { minutes: minutesUntil(departure.departureTime) })}</p>
                 </div>
               </div>
             ))}
@@ -174,7 +188,7 @@ export function StopDetailPage() {
               disabled={loadingMore}
               className="mt-2 w-full rounded-lg py-2 text-sm font-medium text-accent transition hover:bg-surface-soft disabled:opacity-50"
             >
-              {loadingMore ? 'Loading...' : 'Show more'}
+              {loadingMore ? t('loading_short') : t('show_more')}
             </button>
           </div>
         </PanelCard>

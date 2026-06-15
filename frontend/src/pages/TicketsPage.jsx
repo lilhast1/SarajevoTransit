@@ -1,16 +1,10 @@
 import { AlertCircle, CheckCircle, CreditCard, RefreshCw, Ticket, Trash2, X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ErrorAlert, SuccessAlert } from '../components/common/Alerts'
 import { useAppContext } from '../context/AppContext'
 import { gatewayClient } from '../services/gatewayClient'
-
-const TICKET_TYPES = [
-  { type: 'SINGLE', label: 'Single', price: '1.80 BAM', duration: 'Valid 1 hour' },
-  { type: 'DAILY', label: 'Daily', price: '5.00 BAM', duration: 'Valid 24 hours' },
-  { type: 'WEEKLY', label: 'Weekly', price: '20.00 BAM', duration: 'Valid 7 days' },
-  { type: 'MONTHLY', label: 'Monthly', price: '50.00 BAM', duration: 'Valid 30 days' },
-]
 
 const TICKET_STATUS_STYLES = {
   ACTIVE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -20,16 +14,15 @@ const TICKET_STATUS_STYLES = {
   CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 }
 
-// Stripe shared test PaymentMethod tokens — each charges (or declines) in Stripe test mode.
 const STRIPE_TEST_CARDS = [
-  { token: 'pm_card_visa', label: 'Visa — success', lastFour: '4242', cardType: 'VISA' },
-  { token: 'pm_card_mastercard', label: 'Mastercard — success', lastFour: '4444', cardType: 'MASTERCARD' },
-  { token: 'pm_card_amex', label: 'Amex — success', lastFour: '8431', cardType: 'AMEX' },
-  { token: 'pm_card_visa_chargeDeclined', label: 'Visa — declined', lastFour: '0002', cardType: 'VISA' },
+  { token: 'pm_card_visa', label: 'Visa ? success', lastFour: '4242', cardType: 'VISA' },
+  { token: 'pm_card_mastercard', label: 'Mastercard ? success', lastFour: '4444', cardType: 'MASTERCARD' },
+  { token: 'pm_card_amex', label: 'Amex ? success', lastFour: '8431', cardType: 'AMEX' },
+  { token: 'pm_card_visa_chargeDeclined', label: 'Visa ? declined', lastFour: '0002', cardType: 'VISA' },
 ]
 
 function formatDatetime(iso) {
-  if (!iso) return '—'
+  if (!iso) return '?'
   return new Date(iso).toLocaleString([], {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -37,8 +30,15 @@ function formatDatetime(iso) {
 }
 
 function TicketRow({ ticket }) {
+  const { t } = useTranslation('tickets')
+  const TICKET_TYPES_LOCAL = [
+    { type: 'SINGLE', label: t('type_single') },
+    { type: 'DAILY', label: t('type_daily') },
+    { type: 'WEEKLY', label: t('type_weekly') },
+    { type: 'MONTHLY', label: t('type_monthly') },
+  ]
   const statusStyle = TICKET_STATUS_STYLES[ticket.status] || 'bg-surface-alt text-muted'
-  const typeInfo = TICKET_TYPES.find((t) => t.type === ticket.type)
+  const typeInfo = TICKET_TYPES_LOCAL.find((ti) => ti.type === ticket.type)
 
   return (
     <div className="rounded-panel border border-border px-4 py-3">
@@ -56,8 +56,8 @@ function TicketRow({ ticket }) {
       </div>
 
       <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted">
-        <span>Purchased: {formatDatetime(ticket.purchaseDate)}</span>
-        {ticket.validUntil && <span>Valid until: {formatDatetime(ticket.validUntil)}</span>}
+        <span>{t('purchased', { date: formatDatetime(ticket.purchaseDate) })}</span>
+        {ticket.validUntil && <span>{t('valid_until', { date: formatDatetime(ticket.validUntil) })}</span>}
       </div>
 
       {ticket.status === 'ACTIVE' && ticket.qrCodeData && (
@@ -65,7 +65,6 @@ function TicketRow({ ticket }) {
           <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
             Scan to board
           </p>
-          {/* QR needs a light background to remain scannable in dark mode */}
           <div className="rounded bg-white p-2">
             <QRCodeSVG value={ticket.qrCodeData} size={148} level="M" />
           </div>
@@ -79,6 +78,7 @@ function TicketRow({ ticket }) {
 }
 
 function PaymentMethodCard({ method, selected, onSelect, onRemove, removing }) {
+  const { t } = useTranslation('tickets')
   return (
     <button
       type="button"
@@ -96,11 +96,11 @@ function PaymentMethodCard({ method, selected, onSelect, onRemove, removing }) {
           {selected && <CheckCircle size={10} className="text-white" />}
         </div>
         <CreditCard size={14} className="text-muted" />
-        <span className="text-sm text-ink">•••• {method.lastFour}</span>
+        <span className="text-sm text-ink">???? {method.lastFour}</span>
         <span className="text-xs text-muted">{method.cardType}</span>
         {method.isDefault && (
           <span className="rounded bg-surface-alt px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-            Default
+            {t('default_label')}
           </span>
         )}
       </div>
@@ -109,9 +109,9 @@ function PaymentMethodCard({ method, selected, onSelect, onRemove, removing }) {
         onClick={(e) => { e.stopPropagation(); onRemove(method.id) }}
         disabled={removing}
         className="rounded p-1 text-muted transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950/30"
-        aria-label="Remove card"
+        aria-label={t('remove_card')}
       >
-        <Trash2 size={13} />
+        <Trash2 size={13} aria-hidden="true" />
       </button>
     </button>
   )
@@ -119,6 +119,7 @@ function PaymentMethodCard({ method, selected, onSelect, onRemove, removing }) {
 
 function AddCardForm({ onAdded, userId }) {
   const [selectedToken, setSelectedToken] = useState(STRIPE_TEST_CARDS[0].token)
+  const { t } = useTranslation('tickets')
   const [isDefault, setIsDefault] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -157,7 +158,7 @@ function AddCardForm({ onAdded, userId }) {
       >
         {STRIPE_TEST_CARDS.map((c) => (
           <option key={c.token} value={c.token}>
-            {c.label} •••• {c.lastFour}
+            {c.label} ???? {c.lastFour}
           </option>
         ))}
       </select>
@@ -168,7 +169,7 @@ function AddCardForm({ onAdded, userId }) {
           onChange={(e) => setIsDefault(e.target.checked)}
           className="accent-accent"
         />
-        Set as default
+        {t('set_default')}
       </label>
       {error && <ErrorAlert error={error} onDismiss={() => setError(null)} />}
       <button
@@ -176,7 +177,7 @@ function AddCardForm({ onAdded, userId }) {
         disabled={submitting}
         className="self-end rounded-panel bg-accent px-4 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
       >
-        {submitting ? 'Adding…' : 'Add Card'}
+        {submitting ? t('adding') : t('add_card')}
       </button>
     </form>
   )
@@ -184,6 +185,13 @@ function AddCardForm({ onAdded, userId }) {
 
 export function TicketsPage() {
   const { isAuthenticated, session } = useAppContext()
+  const { t } = useTranslation('tickets')
+  const TICKET_TYPES = [
+    { type: 'SINGLE', label: t('type_single'), price: t('price_single'), duration: t('validity_single') },
+    { type: 'DAILY', label: t('type_daily'), price: t('price_daily'), duration: t('validity_daily') },
+    { type: 'WEEKLY', label: t('type_weekly'), price: t('price_weekly'), duration: t('validity_weekly') },
+    { type: 'MONTHLY', label: t('type_monthly'), price: t('price_monthly'), duration: t('validity_monthly') },
+  ]
 
   const [selectedType, setSelectedType] = useState(null)
   const [selectedMethodId, setSelectedMethodId] = useState(null)
@@ -191,10 +199,13 @@ export function TicketsPage() {
   const [purchasing, setPurchasing] = useState(false)
   const [purchaseError, setPurchaseError] = useState(null)
   const [purchaseSuccess, setPurchaseSuccess] = useState(null)
+  const [couponCode, setCouponCode] = useState('')
 
   const [methods, setMethods] = useState([])
   const [methodsLoading, setMethodsLoading] = useState(true)
+  const [methodsError, setMethodsError] = useState(null)
   const [removingId, setRemovingId] = useState(null)
+  const [userCoupons, setUserCoupons] = useState([])
 
   const [tickets, setTickets] = useState([])
   const [ticketsLoading, setTicketsLoading] = useState(true)
@@ -204,10 +215,22 @@ export function TicketsPage() {
     if (!isAuthenticated || !session?.userId) return
     loadMethods()
     loadTickets()
+    loadCoupons()
   }, [isAuthenticated, session?.userId])
+
+  async function loadCoupons() {
+    try {
+      const data = await gatewayClient.getUserLoyaltyCoupons(session.userId)
+      const list = Array.isArray(data) ? data : []
+      setUserCoupons(list.filter((c) => c.active === true))
+    } catch {
+      setUserCoupons([])
+    }
+  }
 
   async function loadMethods() {
     setMethodsLoading(true)
+    setMethodsError(null)
     try {
       const data = await gatewayClient.getPaymentMethods(session.userId)
       const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : []
@@ -217,8 +240,10 @@ export function TicketsPage() {
         setSelectedMethodId(def.id)
       }
       if (list.length === 0) setShowAddCard(true)
-    } catch {
-      // silent — user will see empty list
+    } catch (err) {
+      setMethods([])
+      setSelectedMethodId(null)
+      setMethodsError(err.message || t('payment_methods_load_failed'))
     } finally {
       setMethodsLoading(false)
     }
@@ -244,14 +269,29 @@ export function TicketsPage() {
     setPurchaseError(null)
     setPurchaseSuccess(null)
     try {
-      await gatewayClient.purchaseTicket({
+      const payload = {
         userId: session.userId,
         ticketType: selectedType,
         paymentMethodId: selectedMethodId,
-      })
-      setPurchaseSuccess('Ticket purchased! It may take a moment to activate.')
+      }
+      if (couponCode && couponCode.trim().length > 0) {
+        const code = couponCode.trim()
+        const selectedCoupon = userCoupons.find((c) => c.couponCode === code)
+        if (selectedCoupon?.couponType === 'FREE_RIDE' && selectedType !== 'SINGLE') {
+          throw new Error('Free ride coupons can only be used with single ride tickets')
+        }
+        payload.couponCode = code
+        if (selectedCoupon?.couponType === 'FREE_RIDE' && selectedCoupon?.rideCode) {
+          payload.rideCode = selectedCoupon.rideCode
+        }
+      }
+
+      await gatewayClient.purchaseTicket(payload)
+      setPurchaseSuccess(t('ticket_purchased'))
       setSelectedType(null)
+      setCouponCode('')
       await loadTickets()
+      await loadCoupons()
     } catch (err) {
       setPurchaseError(err.message || 'Purchase failed')
     } finally {
@@ -261,6 +301,7 @@ export function TicketsPage() {
 
   async function handleRemoveMethod(methodId) {
     setRemovingId(methodId)
+    setMethodsError(null)
     try {
       await gatewayClient.removePaymentMethod(methodId)
       setMethods((prev) => prev.filter((m) => m.id !== methodId))
@@ -268,8 +309,8 @@ export function TicketsPage() {
         const remaining = methods.filter((m) => m.id !== methodId)
         setSelectedMethodId(remaining.length > 0 ? remaining[0].id : null)
       }
-    } catch {
-      // silent
+    } catch (err) {
+      setMethodsError(err.message || t('remove_card_failed'))
     } finally {
       setRemovingId(null)
     }
@@ -285,7 +326,7 @@ export function TicketsPage() {
     return (
       <div className="flex items-center gap-2 rounded-panel border border-border px-4 py-10 text-muted">
         <AlertCircle size={16} />
-        <span className="text-sm">Sign in to access your tickets and wallet.</span>
+        <span className="text-sm">{t('login_required')}</span>
       </div>
     )
   }
@@ -294,15 +335,15 @@ export function TicketsPage() {
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <div>
         <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
-          <Ticket size={18} />
-          Tickets
+          <Ticket size={18} aria-hidden="true" />
+          {t('title')}
         </h2>
         <p className="text-xs text-muted">{session?.email}</p>
       </div>
 
-      {/* ── Buy a ticket ── */}
+      {/* ?? Buy a ticket ?? */}
       <section className="rounded-panel border border-border p-4">
-        <h3 className="mb-3 text-sm font-semibold text-ink">Buy a Ticket</h3>
+        <h3 className="mb-3 text-sm font-semibold text-ink">{t('buy_title')}</h3>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {TICKET_TYPES.map((t) => (
@@ -325,12 +366,14 @@ export function TicketsPage() {
 
         {selectedType && (
           <div className="mt-4 flex flex-col gap-2">
-            <p className="text-xs font-semibold text-muted">Pay with</p>
+            <p className="text-xs font-semibold text-muted">{t('pay_with')}</p>
 
             {methodsLoading ? (
-              <p className="text-sm text-muted">Loading payment methods…</p>
+              <p className="text-sm text-muted">{t('loading_payment')}</p>
             ) : (
               <>
+                {methodsError && <ErrorAlert error={methodsError} onDismiss={() => setMethodsError(null)} />}
+
                 {methods.map((m) => (
                   <PaymentMethodCard
                     key={m.id}
@@ -348,7 +391,7 @@ export function TicketsPage() {
                     onClick={() => setShowAddCard((v) => !v)}
                     className="self-start text-xs text-accent underline-offset-2 hover:underline"
                   >
-                    {showAddCard ? 'Cancel' : '+ Add another card'}
+                    {showAddCard ? t('close') : t('add_card_link')}
                   </button>
                 )}
 
@@ -360,6 +403,34 @@ export function TicketsPage() {
 
             {purchaseError && <ErrorAlert error={purchaseError} onDismiss={() => setPurchaseError(null)} />}
             {purchaseSuccess && <SuccessAlert message={purchaseSuccess} onDismiss={() => setPurchaseSuccess(null)} />}
+
+            <div className="flex flex-col gap-2">
+              <label className="text-xs text-muted">Have a coupon? (optional)</label>
+              {userCoupons.length === 0 ? (
+                <input
+                  type="text"
+                  placeholder="Paste a coupon code (optional)"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  className="w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+                />
+              ) : (
+                <select
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  className="w-full rounded-panel border border-border bg-surface px-3 py-1.5 text-sm text-ink focus:border-accent"
+                >
+                  <option value="">No coupon</option>
+                  {userCoupons
+                    .filter((c) => c.couponType !== 'FREE_RIDE' || selectedType === 'SINGLE')
+                    .map((c) => (
+                    <option key={c.couponCode} value={c.couponCode}>
+                      {c.couponCode}{c.couponType === 'DISCOUNT' && c.discountPercent ? ` ? ${c.discountPercent}% off` : c.couponType === 'FREE_RIDE' ? ` ? Free ride (${c.rideCode})` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
 
             <div className="flex items-center justify-between pt-1">
               <button
@@ -376,23 +447,23 @@ export function TicketsPage() {
                 disabled={purchasing || !selectedMethodId}
                 className="rounded-panel bg-accent px-5 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
               >
-                {purchasing ? 'Processing…' : `Buy — ${TICKET_TYPES.find((t) => t.type === selectedType)?.price}`}
+                {purchasing ? t('processing') : t('buy_btn', { price: TICKET_TYPES.find((tt) => tt.type === selectedType)?.price })}
               </button>
             </div>
           </div>
         )}
       </section>
 
-      {/* ── My Tickets ── */}
+      {/* ?? My Tickets ?? */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-ink">My Tickets</h3>
+          <h3 className="text-sm font-semibold text-ink">{t('my_tickets')}</h3>
           <button
             type="button"
             onClick={loadTickets}
             disabled={ticketsLoading}
             className="rounded-panel border border-border p-1.5 text-muted transition hover:bg-surface-alt hover:text-ink"
-            aria-label="Refresh tickets"
+            aria-label={t('refresh_tickets')}
           >
             <RefreshCw size={13} className={ticketsLoading ? 'animate-spin' : ''} />
           </button>
@@ -401,30 +472,32 @@ export function TicketsPage() {
         {ticketsError && <ErrorAlert error={ticketsError} />}
 
         {!ticketsLoading && tickets.length === 0 && !ticketsError && (
-          <p className="text-sm text-muted">No tickets yet. Buy your first ticket above.</p>
+          <p className="text-sm text-muted">{t('no_tickets')}</p>
         )}
 
         {tickets.map((t) => <TicketRow key={t.id} ticket={t} />)}
       </section>
 
-      {/* ── Payment Methods ── */}
+      {/* ?? Payment Methods ?? */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-ink">Payment Methods</h3>
+          <h3 className="text-sm font-semibold text-ink">{t('payment_methods')}</h3>
         </div>
 
+        {methodsError && <ErrorAlert error={methodsError} onDismiss={() => setMethodsError(null)} />}
+
         {!methodsLoading && methods.length === 0 && !showAddCard && (
-          <p className="text-sm text-muted">No payment methods saved.</p>
+          <p className="text-sm text-muted">{t('no_payment_methods')}</p>
         )}
 
         {methods.map((m) => (
           <div key={m.id} className="flex items-center gap-2 rounded-panel border border-border px-3 py-2.5">
             <CreditCard size={14} className="shrink-0 text-muted" />
-            <span className="flex-1 text-sm text-ink">•••• {m.lastFour}</span>
+            <span className="flex-1 text-sm text-ink">???? {m.lastFour}</span>
             <span className="text-xs text-muted">{m.cardType}</span>
             {m.isDefault && (
               <span className="rounded bg-surface-alt px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-                Default
+                {t('default_label')}
               </span>
             )}
             <button
@@ -432,9 +505,9 @@ export function TicketsPage() {
               onClick={() => handleRemoveMethod(m.id)}
               disabled={removingId === m.id}
               className="rounded p-1 text-muted transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950/30"
-              aria-label="Remove card"
+              aria-label={t('remove_card')}
             >
-              <Trash2 size={13} />
+              <Trash2 size={13} aria-hidden="true" />
             </button>
           </div>
         ))}
@@ -445,7 +518,7 @@ export function TicketsPage() {
             onClick={() => setShowAddCard(true)}
             className="self-start text-xs text-accent underline-offset-2 hover:underline"
           >
-            + Add card
+            {t('add_card_btn')}
           </button>
         )}
 

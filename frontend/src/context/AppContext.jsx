@@ -1,11 +1,31 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 import { saveAuthSession, getAuthSession, clearAuthSession, enrichSessionWithMetadata, secondsUntilExpiry } from '../utils/authStorage'
 import { gatewayClient } from '../services/gatewayClient'
+import { transitApi } from '../services/transitApi'
+import {
+  arePreferencesEqual,
+  mapLanguageCode,
+  resolveCurrentTheme,
+  toApiLanguageCode,
+  toApiThemeMode,
+} from '../utils/preferenceMappers'
+import i18n from '../i18n'
 
 const STORAGE_KEYS = {
   theme: 'sarajevo-transit-theme',
   favorites: 'sarajevo-transit-favorites',
   history: 'sarajevo-transit-history',
+  language: 'sarajevo-transit-language',
+  textSize: 'sarajevo-transit-text-size',
+  highContrast: 'sarajevo-transit-high-contrast',
+}
+
+const SUPPORTED_LANGUAGES = ['en', 'bs', 'sr', 'hr']
+
+function getInitialLanguage() {
+  const stored = window.localStorage.getItem(STORAGE_KEYS.language)
+  if (SUPPORTED_LANGUAGES.includes(stored)) return stored
+  return 'en'
 }
 
 const AppContext = createContext(null)
@@ -28,15 +48,39 @@ function readStorage(key, fallback) {
 
 export function AppProvider({ children }) {
   const [theme, setTheme] = useState(getInitialTheme)
+  const [language, setLanguageState] = useState(getInitialLanguage)
+  const [textSize, setTextSize] = useState(() => window.localStorage.getItem(STORAGE_KEYS.textSize) || 'normal')
+  const [highContrast, setHighContrast] = useState(() => window.localStorage.getItem(STORAGE_KEYS.highContrast) === 'true')
   const [session, setSession] = useState(() => getAuthSession())
   const [favorites, setFavorites] = useState(() => readStorage(STORAGE_KEYS.favorites, { lines: [], stops: [] }))
   const [tripHistory, setTripHistory] = useState(() => readStorage(STORAGE_KEYS.history, []))
   const [sessionModal, setSessionModal] = useState({ open: false, refreshExpired: false })
+  const [subscribedLines, setSubscribedLines] = useState({})
+  const [subscriptionsRefreshKey, setSubscriptionsRefreshKey] = useState(0)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [recentNotifications, setRecentNotifications] = useState([])
+  const [preference, setPreference] = useState(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
     window.localStorage.setItem(STORAGE_KEYS.theme, theme)
   }, [theme])
+
+  useEffect(() => {
+    document.documentElement.lang = language
+    window.localStorage.setItem(STORAGE_KEYS.language, language)
+    i18n.changeLanguage(language)
+  }, [language])
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = textSize === 'large' ? '112%' : ''
+    window.localStorage.setItem(STORAGE_KEYS.textSize, textSize)
+  }, [textSize])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('high-contrast', highContrast)
+    window.localStorage.setItem(STORAGE_KEYS.highContrast, String(highContrast))
+  }, [highContrast])
 
   useEffect(() => {
     if (session) {
@@ -53,6 +97,116 @@ export function AppProvider({ children }) {
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(tripHistory.slice(0, 30)))
   }, [tripHistory])
+
+  // Load active subscriptions from backend when user logs in
+  useEffect(() => {
+    if (!session?.userId) {
+      setSubscribedLines({})
+      return
+    }
+    let active = true
+    transitApi.getUserSubscriptions(session.userId).then((subs) => {
+      if (!active) return
+      const map = {}
+      subs.forEach((sub) => {
+        if (sub.isActive) map[sub.lineId] = sub.id
+      })
+      setSubscribedLines(map)
+    }).catch(() => {
+      // Silently fail — subscriptions are not critical for page rendering
+    })
+    return () => { active = false }
+  }, [session?.userId, subscriptionsRefreshKey])
+
+  useEffect(() => {
+    if (!session?.userId) {
+      setPreference(null)
+      return
+    }
+    let active = true
+    transitApi.getUserSummary(session.userId).then((summary) => {
+      if (!active) return
+      const pref = summary?.profile?.preference
+      if (!pref) return
+      setPreference(pref)
+      setLanguageState(mapLanguageCode(pref.languageCode))
+      setTheme(resolveCurrentTheme(pref.themeMode, null))
+      setTextSize(pref.largeTextEnabled ? 'large' : 'normal')
+      setHighContrast(Boolean(pref.highContrastEnabled))
+    }).catch(() => {
+    })
+    return () => { active = false }
+  }, [session?.userId])
+
+  useEffect(() => {
+    if (!session?.userId || !preference) return
+    const apiFromState = {
+      languageCode: toApiLanguageCode(language),
+      themeMode: toApiThemeMode(theme),
+      notificationChannel: preference.notificationChannel,
+      highContrastEnabled: highContrast,
+      largeTextEnabled: textSize === 'large',
+      screenReaderEnabled: preference.screenReaderEnabled,
+    }
+    if (arePreferencesEqual(apiFromState, preference)) return
+    let active = true
+    transitApi.updateUserPreferences(session.userId, apiFromState)
+      .then((updated) => { if (active) setPreference(updated) })
+      .catch(() => { if (active) {} })
+    return () => { active = false }
+  }, [session?.userId, preference, language, theme, textSize, highContrast])
+
+  // Poll unread notifications count every 30s when logged in
+  useEffect(() => {
+    if (!session?.userId) {
+      setUnreadCount(0)
+      setRecentNotifications([])
+      return
+    }
+    let active = true
+
+    async function poll() {
+      try {
+        const countResult = await transitApi.getUnreadCount(session.userId)
+        if (!active) return
+        const count = typeof countResult === 'object' ? (countResult.count ?? 0) : Number(countResult) || 0
+
+        setUnreadCount((prev) => {
+          if (count > prev) {
+            transitApi.getUnreadNotifications(session.userId)
+              .then((items) => {
+                const latest = items?.[0]
+                window.dispatchEvent(new CustomEvent('new-notification', {
+                  detail: { title: latest?.title ?? null },
+                }))
+              })
+              .catch(() => window.dispatchEvent(new CustomEvent('new-notification', { detail: { title: null } })))
+          }
+          return count
+        })
+      } catch {
+        // Silently fail — notifications are not critical
+      }
+    }
+
+    poll()
+    const id = setInterval(poll, 10000)
+    return () => { active = false; clearInterval(id) }
+  }, [session?.userId])
+
+  // Show browser notification when new-notification event fires
+  useEffect(() => {
+    function handleNewNotification(e) {
+      if (Notification.permission === 'granted') {
+        new Notification('SarajevoTransit', {
+          body: e.detail?.title ?? 'You have a new notification.',
+          icon: '/favicon.ico',
+        })
+      }
+    }
+    window.addEventListener('new-notification', handleNewNotification)
+    return () => window.removeEventListener('new-notification', handleNewNotification)
+  }, [])
 
   // Show modal when access token is within 2 minutes of expiry
   useEffect(() => {
@@ -85,11 +239,28 @@ export function AppProvider({ children }) {
     }
   }, [session])
 
+  const savePreferences = useCallback(async (apiPayload) => {
+    if (!session?.userId) throw new Error('Not authenticated')
+    const updated = await transitApi.updateUserPreferences(session.userId, apiPayload)
+    setPreference(updated)
+    setLanguageState(mapLanguageCode(updated.languageCode))
+    setTheme(resolveCurrentTheme(updated.themeMode, null))
+    setTextSize(updated.largeTextEnabled ? 'large' : 'normal')
+    setHighContrast(Boolean(updated.highContrastEnabled))
+    return updated
+  }, [session?.userId])
+
   const value = useMemo(
     () => ({
       theme,
       setTheme,
       toggleTheme: () => setTheme((current) => (current === 'dark' ? 'light' : 'dark')),
+      language,
+      setLanguage: (lang) => { if (SUPPORTED_LANGUAGES.includes(lang)) setLanguageState(lang) },
+      textSize,
+      toggleTextSize: () => setTextSize((s) => (s === 'normal' ? 'large' : 'normal')),
+      highContrast,
+      toggleHighContrast: () => setHighContrast((v) => !v),
       session,
       isAuthenticated: Boolean(session?.accessToken),
       isAdmin: session?.role === 'ADMIN',
@@ -115,10 +286,70 @@ export function AppProvider({ children }) {
             : [...current.stops, stopId],
         }))
       },
+      subscribedLines,
+      isLineSubscribed: (lineId) => Object.prototype.hasOwnProperty.call(subscribedLines, lineId),
+      subscribeToLine: async (lineId, lineCode, lineName, startInterval, endInterval, daysOfWeek) => {
+        const sub = await transitApi.subscribeToLine({ userId: session?.userId, lineId, lineCode, lineName, startInterval, endInterval, daysOfWeek })
+        setSubscribedLines((prev) => ({ ...prev, [lineId]: sub.id }))
+        setFavorites((prev) => ({
+          ...prev,
+          lines: prev.lines.includes(lineId) ? prev.lines : [...prev.lines, lineId],
+        }))
+        return sub
+      },
+      unsubscribeFromLine: async (lineId) => {
+        const subId = subscribedLines[lineId]
+        if (!subId) return
+        await transitApi.unsubscribeFromLine(subId)
+        setSubscribedLines((prev) => {
+          const next = { ...prev }
+          delete next[lineId]
+          return next
+        })
+        setFavorites((prev) => ({
+          ...prev,
+          lines: prev.lines.filter((id) => id !== lineId),
+        }))
+      },
+      refreshSubscriptions: () => setSubscriptionsRefreshKey((k) => k + 1),
+      updateLineSubscription: async (subscriptionId, data) => {
+        return transitApi.updateSubscription(subscriptionId, data)
+      },
+      preference,
+      savePreferences,
+      unreadCount,
+      recentNotifications,
+      fetchRecentNotifications: async () => {
+        if (!session?.userId) return
+        try {
+          const data = await transitApi.getUnreadNotifications(session.userId)
+          setRecentNotifications(data || [])
+        } catch {
+          setRecentNotifications([])
+        }
+      },
+      markAsRead: async (id) => {
+        await transitApi.markAsRead(id)
+        setRecentNotifications((prev) => prev.filter((n) => n.id !== id))
+        setUnreadCount((prev) => Math.max(0, prev - 1))
+      },
+      markAllAsRead: async () => {
+        if (!session?.userId) return
+        await transitApi.markAllAsRead(session.userId)
+        setUnreadCount(0)
+        setRecentNotifications([])
+      },
+      requestNotificationPermission: async () => {
+        if (!('Notification' in window)) return 'denied'
+        if (Notification.permission === 'default') {
+          return Notification.requestPermission()
+        }
+        return Notification.permission
+      },
       tripHistory,
       addTripHistoryItem: (item) => setTripHistory((current) => [item, ...current].slice(0, 30)),
     }),
-    [favorites, session, sessionModal, refreshSession, theme, tripHistory],
+    [favorites, session, sessionModal, refreshSession, theme, language, textSize, highContrast, tripHistory, subscribedLines, subscriptionsRefreshKey, unreadCount, recentNotifications, preference, savePreferences],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
